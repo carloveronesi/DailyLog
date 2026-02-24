@@ -32,7 +32,30 @@ export function useCalendarData(initialYear, initialMonth) {
             d.setDate(start.getDate() + i);
             cells.push(d);
         }
-        return cells;
+
+        const weeks = [];
+        for (let i = 0; i < 6; i++) {
+            weeks.push(cells.slice(i * 7, i * 7 + 7));
+        }
+
+        const isCurrentMonth = (d) => d.getFullYear() === year && d.getMonth() === month;
+        const hasCurrentMonthDay = (week) => week.some((d) => isCurrentMonth(d));
+        const hasCurrentMonthWorkday = (week) => week.some((d) => {
+            if (!isCurrentMonth(d)) return false;
+            const jsDay = d.getDay(); // 0 Sun, 6 Sat
+            return jsDay >= 1 && jsDay <= 5;
+        });
+
+        // Remove full leading/trailing rows that don't contain any day of the selected month.
+        while (weeks.length > 0 && !hasCurrentMonthDay(weeks[0])) weeks.shift();
+        while (weeks.length > 0 && !hasCurrentMonthDay(weeks[weeks.length - 1])) weeks.pop();
+
+        // If the month spans 6 weeks but first/last row has only weekends of the selected month,
+        // hide that row to keep the calendar compact and focused on working days.
+        if (weeks.length === 6 && !hasCurrentMonthWorkday(weeks[0])) weeks.shift();
+        if (weeks.length === 6 && !hasCurrentMonthWorkday(weeks[weeks.length - 1])) weeks.pop();
+
+        return weeks.flat();
     }, [year, month]);
 
     const monthDataByDate = data?.byDate || {};
