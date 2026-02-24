@@ -162,3 +162,28 @@ Script utili:
 - `npm run dev` avvia Vite + Electron
 - `npm run build:web` build renderer (`dist/`)
 - `npm run dist` build renderer + installer Windows
+
+### Modalita Webapp installabile (PWA)
+
+L'app ora include:
+
+- `manifest.webmanifest`
+- `service worker` (`public/sw.js`)
+- icone PWA in `public/icons/`
+
+Dopo il deploy HTTPS puoi installarla da browser (Chrome/Edge) con `Installa app`.
+
+### Deploy su Firebase Hosting
+
+Prerequisiti una tantum:
+
+1. `npm install -g firebase-tools`
+2. `firebase login`
+3. `firebase use --add` (seleziona il progetto Firebase)
+
+Deploy:
+
+1. `npm install`
+2. `npm run deploy:web`
+
+Il deploy pubblica `dist/` usando la config in `firebase.json`.
