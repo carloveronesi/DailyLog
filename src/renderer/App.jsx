@@ -76,9 +76,9 @@ export default function App() {
   const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
 
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
-        <main className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+    <div className="min-h-screen lg:h-screen lg:flex lg:flex-col lg:overflow-hidden">
+      <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
+        <main className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 lg:flex-1 lg:min-h-0">
           <CalendarGrid
             year={year}
             month={month}
@@ -88,15 +88,19 @@ export default function App() {
             clientColors={settings.clientColors}
           />
 
-          <aside className="space-y-4">
-            <Header
-              year={year}
-              month={month}
-              prevMonth={prevMonth}
-              nextMonth={nextMonth}
-              goToday={goToday}
-            />
-            <SummaryPanel year={year} monthIndex0={month} data={data} clientColors={settings.clientColors} />
+          <aside className="space-y-4 flex flex-col lg:h-full lg:overflow-hidden">
+            <div className="shrink-0">
+              <Header
+                year={year}
+                month={month}
+                prevMonth={prevMonth}
+                nextMonth={nextMonth}
+                goToday={goToday}
+              />
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto rounded-3xl pb-2">
+              <SummaryPanel year={year} monthIndex0={month} data={data} clientColors={settings.clientColors} />
+            </div>
           </aside>
         </main>
       </div>

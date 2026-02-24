@@ -11,7 +11,7 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
   const pmBadge = badgePresentation(pm, clientColors);
 
   const base =
-    "rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[132px] flex flex-col gap-2";
+    "rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[100px] lg:min-h-0 lg:h-full flex flex-col gap-2";
   const cursor = isClickable ? "cursor-pointer" : "cursor-default";
   const bg = !isCurrentMonth
     ? "bg-slate-300/70 border-slate-400 text-slate-600 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-500"
