@@ -15,6 +15,7 @@
     "productName": "DailyLog",
     "files": [
       "main.js",
+      "preload.js",
       "dailylog.html",
       "Readme.md"
     ],

@@ -123,3 +123,13 @@ npm run dev
 ```bash
 npm run dist
 ```
+
+### Backup automatico desktop (Electron)
+
+In versione desktop, ad ogni modifica viene scritto automaticamente un backup JSON.
+
+Percorso predefinito:
+
+`%USERPROFILE%\\Documents\\DailyLog\\backup\\dailylog_auto_backup.json`
+
+Puoi cambiare la cartella da `Settings` nell'app. Se la cartella non esiste, viene creata automaticamente.
