@@ -27,7 +27,7 @@ export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEdit
                             isCurrentMonth={isCurrentMonth}
                             isWeekend={isWeekend}
                             entries={entries}
-                            onClick={() => openEditor(d)}
+                            onClick={(slot) => openEditor(d, slot)}
                         />
                     );
                 })}

@@ -46,17 +46,20 @@ export default function App() {
   } = useBackupSync(data, year, month);
 
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  function openEditor(date) {
+  function openEditor(date, slot = null) {
     setSelectedDate(date);
+    setSelectedSlot(slot);
     setEditorOpen(true);
   }
 
   function closeEditor() {
     setEditorOpen(false);
     setSelectedDate(null);
+    setSelectedSlot(null);
   }
 
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
@@ -142,6 +145,7 @@ export default function App() {
         {selectedDate ? (
           <Editor
             date={selectedDate}
+            initialSlot={selectedSlot}
             existingEntries={existingEntries}
             onSave={(entries) => {
               upsertDay(selectedDate, entries);
