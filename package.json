@@ -1,0 +1,35 @@
+{
+  "name": "dailylog-desktop",
+  "version": "1.0.0",
+  "author": "c.veronesi",
+  "description": "DailyLog desktop app built with Electron",
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.dailylog.desktop",
+    "productName": "DailyLog",
+    "files": [
+      "main.js",
+      "dailylog.html",
+      "Readme.md"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        "nsis"
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

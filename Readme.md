@@ -104,3 +104,22 @@ Un solo file: `dailylog.html`.
 * Campi aggiuntivi: categoria issue, blockers, outcome, next steps, link.
 * Gestire più righe per lo stesso slot (es. due attività la mattina) con “stack” e somma 0.5 ripartita.
 * Backup più robusto: esportazione automatica, o salvataggio su file locale (senza server) se possibile.
+### Esecuzione desktop con Electron
+
+1. Installa dipendenze:
+
+```bash
+npm install
+```
+
+2. Avvia l'app desktop in sviluppo:
+
+```bash
+npm run dev
+```
+
+3. Crea installer Windows (NSIS) in `release/`:
+
+```bash
+npm run dist
+```
