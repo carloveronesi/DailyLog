@@ -33,7 +33,14 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
       .map(([client, days]) => ({ client, days }))
       .sort((a, b) => b.days - a.days);
 
-    return { clients, internal, vacation, event };
+    const clientDays = clients.reduce((sum, c) => sum + c.days, 0);
+    const worked = clientDays + internal + event;
+    const otherActivities = [
+      { key: "internal", label: "Internal", days: internal },
+      { key: "event", label: "Eventi", days: event },
+    ].filter((activity) => activity.days > 0);
+
+    return { clients, internal, vacation, event, worked, otherActivities };
   }, [data]);
 
   return (
@@ -41,24 +48,17 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Riepilogo mese</div>
-          <div className="mt-1 text-lg font-bold tracking-tight dark:text-slate-100">
-            {monthNameIT(monthIndex0)} {year}
-          </div>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Internal</div>
-          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.internal.toFixed(1)} gg</div>
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni lavorati</div>
+          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.worked.toFixed(1)} gg</div>
         </div>
         <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
           <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ferie</div>
           <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.vacation.toFixed(1)} gg</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Eventi</div>
-          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.event.toFixed(1)} gg</div>
         </div>
       </div>
 
@@ -78,6 +78,25 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
                   <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
                 </div>
                 <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.days.toFixed(1)} gg</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4">
+        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Altre attivita</div>
+        {totals.otherActivities.length === 0 ? (
+          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna altra attivita registrata.</div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {totals.otherActivities.map((activity) => (
+              <div
+                key={activity.key}
+                className="flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50"
+              >
+                <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{activity.days.toFixed(1)} gg</div>
               </div>
             ))}
           </div>

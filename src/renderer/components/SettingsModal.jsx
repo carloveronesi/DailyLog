@@ -1,4 +1,6 @@
-import { Button, Modal } from "./ui";
+import { useRef } from "react";
+import { importAll } from "../services/storage";
+import { Button, Icon, Modal } from "./ui";
 import { getClientColor, normalizeClientKey, normalizeHexColor } from "../domain/tasks";
 
 export function SettingsModal({
@@ -12,7 +14,25 @@ export function SettingsModal({
   pickDesktopBackupDir,
   useDefaultDesktopBackupDir,
   clientNames = [],
+  exportAll,
+  onImportSuccess,
 }) {
+  const fileInputRef = useRef(null);
+
+  async function handleImport(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const count = await importAll(f);
+      alert(`Import completato. Voci aggiornate: ${count}`);
+      if (onImportSuccess) onImportSuccess();
+    } catch (err) {
+      alert(`Import fallito: ${err?.message || err}`);
+    } finally {
+      e.target.value = "";
+    }
+  }
+
   function setClientColor(clientName, color) {
     const key = normalizeClientKey(clientName);
     const normalized = normalizeHexColor(color);
@@ -94,6 +114,28 @@ export function SettingsModal({
               })}
             </div>
           )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Import / Export</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Esporta tutti i dati in JSON oppure importa un backup esistente.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200" onClick={exportAll} type="button">
+              <Icon name="download" className="mr-2" />
+              Export
+            </Button>
+            <Button
+              className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+              onClick={() => fileInputRef.current?.click()}
+              type="button"
+            >
+              <Icon name="upload" className="mr-2" />
+              Import
+            </Button>
+            <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImport} />
+          </div>
         </div>
 
         {hasDesktopBridge ? (

@@ -61,6 +61,12 @@ export default function App() {
     setSelectedSlot(null);
   }
 
+  function handleImportSuccess() {
+    // Force a reload of data from localStorage after import.
+    setData(null);
+    goToday();
+  }
+
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
@@ -82,13 +88,6 @@ export default function App() {
           nextMonth={nextMonth}
           goToday={goToday}
           openSettings={() => setSettingsOpen(true)}
-          exportAll={exportAll}
-          onImportSuccess={() => {
-            // Force a reload of data from localStorage by resetting month
-            const d = new Date(year, month, 1);
-            setData(null); // Triggers re-render if needed, but goToday is safer
-            goToday();
-          }}
         />
 
         <main className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
@@ -118,6 +117,8 @@ export default function App() {
         pickDesktopBackupDir={pickDesktopBackupDir}
         useDefaultDesktopBackupDir={useDefaultDesktopBackupDir}
         clientNames={clientNames}
+        exportAll={exportAll}
+        onImportSuccess={handleImportSuccess}
       />
 
       <Modal open={editorOpen} title={selectedDate ? "Modifica giornata" : "Modifica"} onClose={closeEditor}>

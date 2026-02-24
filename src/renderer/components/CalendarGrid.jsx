@@ -33,10 +33,6 @@ export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEdit
                     );
                 })}
             </div>
-
-            <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                Weekend evidenziati in rosso. Click disponibile solo sui giorni feriali del mese corrente.
-            </div>
         </section>
     );
 }
