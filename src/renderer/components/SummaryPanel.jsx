@@ -80,8 +80,6 @@ export function SummaryPanel({ year, monthIndex0, data }) {
           </div>
         )}
       </div>
-
-      <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">Nota: 1 slot (mattina/pomeriggio) vale 0.5 giornata.</div>
     </div>
   );
 }

@@ -102,29 +102,6 @@ export default function App() {
 
           <aside className="space-y-4">
             <SummaryPanel year={year} monthIndex0={month} data={data} />
-
-            <div className="rounded-3xl border border-slate-200/90 bg-white/85 backdrop-blur p-4 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Legenda</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {TASK_TYPES.map((t) => (
-                  <div key={t.id} className={"rounded-lg px-2 py-1 text-xs font-semibold " + badgeStyle(t.id)}>
-                    {t.label}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                Dati salvati in locale nel browser (localStorage). Fai Export ogni tanto per backup.
-              </div>
-              {!hasDesktopBridge ? (
-                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  {supportsAutoBackup ? backupStatus : "Backup auto su file non supportato da questo browser."}
-                </div>
-              ) : null}
-              {hasDesktopBridge ? <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">{desktopBackupStatus}</div> : null}
-              {hasDesktopBridge && desktopBackupPath ? (
-                <div className="mt-1 break-all text-[11px] text-slate-500 dark:text-slate-400">Percorso backup desktop: {desktopBackupPath}</div>
-              ) : null}
-            </div>
           </aside>
         </main>
       </div>
