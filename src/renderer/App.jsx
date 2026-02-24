@@ -1,15 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Editor } from "./components/Editor";
 import { SettingsModal } from "./components/SettingsModal";
 import { SummaryPanel } from "./components/SummaryPanel";
 import { Header } from "./components/Header";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { Modal } from "./components/ui";
-import { TASK_TYPES, badgeStyle } from "./domain/tasks";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { ymd } from "./utils/date";
-import { exportAll } from "./services/storage";
+import { exportAll, listStoredClients } from "./services/storage";
 
 export default function App() {
   const today = new Date();
@@ -64,6 +63,7 @@ export default function App() {
 
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
+  const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
 
   return (
     <div className="min-h-screen">
@@ -98,10 +98,11 @@ export default function App() {
             gridDates={gridDates}
             monthDataByDate={monthDataByDate}
             openEditor={openEditor}
+            clientColors={settings.clientColors}
           />
 
           <aside className="space-y-4">
-            <SummaryPanel year={year} monthIndex0={month} data={data} />
+            <SummaryPanel year={year} monthIndex0={month} data={data} clientColors={settings.clientColors} />
           </aside>
         </main>
       </div>
@@ -116,6 +117,7 @@ export default function App() {
         desktopBackupPath={desktopBackupPath}
         pickDesktopBackupDir={pickDesktopBackupDir}
         useDefaultDesktopBackupDir={useDefaultDesktopBackupDir}
+        clientNames={clientNames}
       />
 
       <Modal open={editorOpen} title={selectedDate ? "Modifica giornata" : "Modifica"} onClose={closeEditor}>
@@ -133,6 +135,7 @@ export default function App() {
               closeEditor();
             }}
             topClients={topMonthClients}
+            clientColors={settings.clientColors}
           />
         ) : null}
       </Modal>

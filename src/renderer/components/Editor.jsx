@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { SLOT, TASK_TYPES, badgeStyle, defaultEntry, displayLabel } from "../domain/tasks";
+import { SLOT, TASK_TYPES, badgePresentation, defaultEntry, displayLabel } from "../domain/tasks";
 import { pad2 } from "../utils/date";
 import { Button, Icon, Segmented } from "./ui";
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot }) {
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, clientColors = {} }) {
   const [mode, setMode] = useState("half"); // 'half'|'full'
   const [slot, setSlot] = useState(initialSlot || SLOT.AM);
 
@@ -20,6 +20,8 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
   const active = slot === SLOT.AM ? entryAM : entryPM;
   const setActive = (next) => (slot === SLOT.AM ? setEntryAM(next) : setEntryPM(next));
+  const entryAMBadge = badgePresentation(entryAM, clientColors);
+  const entryPMBadge = badgePresentation(entryPM, clientColors);
 
   const setField = (k, v) => setActive({ ...active, [k]: v });
 
@@ -191,7 +193,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
             <div className="text-sm font-black text-slate-400 pr-1">{date.getDate()}</div>
             <div className="flex flex-1 flex-col gap-2 mt-2">
               {mode === "full" ? (
-                <div className={"flex-1 rounded-[14px] flex items-center justify-center px-2 py-1 shadow-sm " + badgeStyle(entryAM.type)}>
+                <div className={"flex-1 rounded-[14px] flex items-center justify-center px-2 py-1 shadow-sm " + entryAMBadge.className} style={entryAMBadge.style}>
                   <div className="w-full text-center truncate text-sm font-black tracking-tight">
                     {displayLabel(entryAM)}
                   </div>
@@ -199,7 +201,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
               ) : (
                 <>
                   {entryAM && displayLabel(entryAM) ? (
-                    <div className={"flex-1 rounded-xl flex items-center justify-center px-2 py-1 shadow-sm " + badgeStyle(entryAM.type)}>
+                    <div className={"flex-1 rounded-xl flex items-center justify-center px-2 py-1 shadow-sm " + entryAMBadge.className} style={entryAMBadge.style}>
                       <div className="w-full text-center text-ellipsis overflow-hidden text-xs font-black leading-tight">
                         {displayLabel(entryAM)}
                       </div>
@@ -209,7 +211,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
                   )}
 
                   {entryPM && displayLabel(entryPM) ? (
-                    <div className={"flex-1 rounded-xl flex items-center justify-center px-2 py-1 shadow-sm " + badgeStyle(entryPM.type)}>
+                    <div className={"flex-1 rounded-xl flex items-center justify-center px-2 py-1 shadow-sm " + entryPMBadge.className} style={entryPMBadge.style}>
                       <div className="w-full text-center text-ellipsis overflow-hidden text-xs font-black leading-tight">
                         {displayLabel(entryPM)}
                       </div>

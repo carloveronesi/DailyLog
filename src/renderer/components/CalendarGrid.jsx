@@ -1,7 +1,7 @@
 import { DayCell } from "./DayCell";
 import { ymd } from "../utils/date";
 
-export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEditor }) {
+export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEditor, clientColors = {} }) {
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (
@@ -28,13 +28,14 @@ export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEdit
                             isWeekend={isWeekend}
                             entries={entries}
                             onClick={(slot) => openEditor(d, slot)}
+                            clientColors={clientColors}
                         />
                     );
                 })}
             </div>
 
             <div className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                Weekend evidenziati in rosso. Click su un giorno per inserire o modificare (0.5 o 1 giornata).
+                Weekend evidenziati in rosso. Click disponibile solo sui giorni feriali del mese corrente.
             </div>
         </section>
     );

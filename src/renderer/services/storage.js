@@ -5,10 +5,39 @@ export const SETTINGS_KEY = STORAGE_PREFIX + "__settings";
 export const DEFAULT_SETTINGS = {
   desktopBackupDir: "",
   minimizeToTrayOnMinimize: false,
+  clientColors: {},
 };
 const BACKUP_DB_NAME = "dailylog-backup-v1";
 const BACKUP_STORE_NAME = "settings";
 const BACKUP_HANDLE_KEY = "auto-backup-file-handle";
+
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+function normalizeHexColor(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!HEX_COLOR_RE.test(raw)) return "";
+  if (raw.length === 4) {
+    const expanded = raw
+      .slice(1)
+      .split("")
+      .map((c) => c + c)
+      .join("");
+    return `#${expanded.toUpperCase()}`;
+  }
+  return raw.toUpperCase();
+}
+
+function normalizeClientColors(raw) {
+  if (!raw || typeof raw !== "object") return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const key = (k || "").trim().toLocaleLowerCase("it-IT");
+    const color = normalizeHexColor(v);
+    if (!key || !color) continue;
+    out[key] = color;
+  }
+  return out;
+}
 
 export function normalizeSettings(raw) {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_SETTINGS };
@@ -16,6 +45,7 @@ export function normalizeSettings(raw) {
     ...DEFAULT_SETTINGS,
     desktopBackupDir: typeof raw.desktopBackupDir === "string" ? raw.desktopBackupDir : "",
     minimizeToTrayOnMinimize: Boolean(raw.minimizeToTrayOnMinimize),
+    clientColors: normalizeClientColors(raw.clientColors),
   };
 }
 
@@ -59,6 +89,42 @@ export function loadMonthData(year, monthIndex0) {
 export function saveMonthData(year, monthIndex0, data) {
   const key = STORAGE_PREFIX + ymKey(year, monthIndex0);
   localStorage.setItem(key, JSON.stringify(data));
+}
+
+export function listStoredClients() {
+  const byKey = new Map();
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const storageKey = localStorage.key(i);
+    if (!storageKey || !storageKey.startsWith(STORAGE_PREFIX)) continue;
+    if (storageKey === SETTINGS_KEY) continue;
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const byDate = parsed?.byDate;
+      if (!byDate || typeof byDate !== "object") continue;
+
+      for (const dateKey of Object.keys(byDate)) {
+        const day = byDate[dateKey];
+        for (const slot of ["AM", "PM"]) {
+          const entry = day?.[slot];
+          if (!entry || entry.type !== "client") continue;
+
+          const name = (entry.client || "").trim();
+          if (!name) continue;
+
+          const normalized = name.toLocaleLowerCase("it-IT");
+          if (!byKey.has(normalized)) byKey.set(normalized, name);
+        }
+      }
+    } catch {
+      // Ignore malformed month payloads.
+    }
+  }
+
+  return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b, "it"));
 }
 
 function openBackupDb() {

@@ -1,12 +1,14 @@
-import { badgeStyle, displayLabel } from "../domain/tasks";
+import { badgePresentation, displayLabel } from "../domain/tasks";
 
-export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick }) {
+export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, clientColors = {} }) {
   const d = date.getDate();
   const am = entries?.AM;
   const pm = entries?.PM;
   const isFullDay = am && pm && JSON.stringify(am) === JSON.stringify(pm);
   const isWeekendDay = isCurrentMonth && isWeekend;
   const isClickable = isCurrentMonth && !isWeekend && typeof onClick === "function";
+  const amBadge = badgePresentation(am, clientColors);
+  const pmBadge = badgePresentation(pm, clientColors);
 
   const base =
     "rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[132px] flex flex-col gap-2";
@@ -38,7 +40,9 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick }) {
           {isFullDay ? (
             <div
               onClick={(e) => handleSlotClick(e, "AM")}
-              className={"flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform hover:scale-[1.01] " + badgeStyle(am.type)}>
+              className={"flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform hover:scale-[1.01] " + amBadge.className}
+              style={amBadge.style}
+            >
               <div className="w-full text-center truncate text-sm font-bold tracking-tight">
                 {displayLabel(am)}
               </div>
@@ -48,7 +52,9 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick }) {
               {am ? (
                 <div
                   onClick={(e) => handleSlotClick(e, "AM")}
-                  className={"flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + badgeStyle(am.type)}>
+                  className={"flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + amBadge.className}
+                  style={amBadge.style}
+                >
                   <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
                     {displayLabel(am)}
                   </div>
@@ -62,7 +68,9 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick }) {
               {pm ? (
                 <div
                   onClick={(e) => handleSlotClick(e, "PM")}
-                  className={"flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + badgeStyle(pm.type)}>
+                  className={"flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + pmBadge.className}
+                  style={pmBadge.style}
+                >
                   <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
                     {displayLabel(pm)}
                   </div>

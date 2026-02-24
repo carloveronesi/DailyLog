@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { SLOT } from "../domain/tasks";
+import { getClientColor, SLOT } from "../domain/tasks";
 import { monthNameIT } from "../utils/date";
 
-export function SummaryPanel({ year, monthIndex0, data }) {
+export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
   const totals = useMemo(() => {
     const byClient = new Map();
     let internal = 0;
@@ -73,7 +73,10 @@ export function SummaryPanel({ year, monthIndex0, data }) {
                 key={c.client}
                 className="flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50"
               >
-                <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
+                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                </div>
                 <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.days.toFixed(1)} gg</div>
               </div>
             ))}
