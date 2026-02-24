@@ -63,6 +63,19 @@ export function Icon({ name, className = "" }) {
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     );
+  if (name === "sun")
+    return (
+      <svg className={common} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5" />
+        <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+      </svg>
+    );
+  if (name === "moon")
+    return (
+      <svg className={common} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+      </svg>
+    );
   return null;
 }
 
@@ -79,12 +92,12 @@ export function Modal({ open, title, children, onClose }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl rounded-3xl bg-white/95 backdrop-blur border border-slate-200 shadow-soft">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <div className="text-base font-semibold">{title}</div>
+      <div className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-2xl rounded-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur border border-slate-200 dark:border-slate-700 shadow-soft dark:shadow-soft-dark">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="text-base font-semibold dark:text-slate-100">{title}</div>
           <button
-            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100"
+            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
             onClick={onClose}
             aria-label="Chiudi"
           >
@@ -99,13 +112,13 @@ export function Modal({ open, title, children, onClose }) {
 
 export function Segmented({ value, onChange, options }) {
   return (
-    <div className="inline-flex rounded-2xl border border-slate-200/90 bg-slate-100/80 p-1">
+    <div className="inline-flex rounded-2xl border border-slate-200/90 bg-slate-100/80 p-1 dark:border-slate-700/80 dark:bg-slate-900/50">
       {options.map((opt) => (
         <button
           key={opt.value}
           className={
             "px-3 py-1.5 text-sm font-semibold rounded-xl transition " +
-            (value === opt.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-white/80")
+            (value === opt.value ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 hover:bg-white/80 dark:text-slate-400 dark:hover:bg-slate-800/80")
           }
           onClick={() => onChange(opt.value)}
           type="button"

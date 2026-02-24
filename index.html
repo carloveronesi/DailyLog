@@ -18,6 +18,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -25,13 +26,14 @@
             },
             boxShadow: {
               soft: "0 16px 35px rgba(15, 23, 42, 0.12)",
+              'soft-dark': "0 16px 35px rgba(0, 0, 0, 0.4)",
             },
           },
         },
       };
     </script>
   </head>
-  <body class="text-slate-900 antialiased">
+  <body class="bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-100 antialiased">
     <div id="root"></div>
     <script type="module" src="/src/renderer/main.jsx"></script>
   </body>
