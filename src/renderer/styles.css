@@ -1,0 +1,14 @@
+:root {
+  --bg-a: #f1f6ff;
+  --bg-b: #e7edf7;
+  --ink: #0f172a;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 520px at -10% -20%, rgba(29, 78, 216, 0.14), transparent 58%),
+    radial-gradient(900px 460px at 110% -12%, rgba(8, 145, 178, 0.14), transparent 56%),
+    linear-gradient(180deg, var(--bg-a), var(--bg-b));
+}

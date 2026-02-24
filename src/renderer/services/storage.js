@@ -1,0 +1,186 @@
+import { ymKey } from "../utils/date";
+
+export const STORAGE_PREFIX = "dailylog:v1:";
+export const SETTINGS_KEY = STORAGE_PREFIX + "__settings";
+export const DEFAULT_SETTINGS = {
+  desktopBackupDir: "",
+  minimizeToTrayOnMinimize: false,
+};
+const BACKUP_DB_NAME = "dailylog-backup-v1";
+const BACKUP_STORE_NAME = "settings";
+const BACKUP_HANDLE_KEY = "auto-backup-file-handle";
+
+export function normalizeSettings(raw) {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_SETTINGS };
+  return {
+    ...DEFAULT_SETTINGS,
+    desktopBackupDir: typeof raw.desktopBackupDir === "string" ? raw.desktopBackupDir : "",
+    minimizeToTrayOnMinimize: Boolean(raw.minimizeToTrayOnMinimize),
+  };
+}
+
+export function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    return normalizeSettings(JSON.parse(raw));
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export function saveSettings(settings) {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalizeSettings(settings)));
+}
+
+export function collectExportData() {
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(STORAGE_PREFIX)) out[k] = localStorage.getItem(k);
+  }
+  return out;
+}
+
+export function loadMonthData(year, monthIndex0) {
+  const key = STORAGE_PREFIX + ymKey(year, monthIndex0);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return { byDate: {} };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return { byDate: {} };
+    if (!parsed.byDate || typeof parsed.byDate !== "object") return { byDate: {} };
+    return parsed;
+  } catch {
+    return { byDate: {} };
+  }
+}
+
+export function saveMonthData(year, monthIndex0, data) {
+  const key = STORAGE_PREFIX + ymKey(year, monthIndex0);
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function openBackupDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error("IndexedDB non disponibile"));
+      return;
+    }
+
+    const req = window.indexedDB.open(BACKUP_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(BACKUP_STORE_NAME)) {
+        db.createObjectStore(BACKUP_STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("Apertura IndexedDB fallita"));
+  });
+}
+
+export async function persistBackupHandle(fileHandle) {
+  const db = await openBackupDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKUP_STORE_NAME, "readwrite");
+    tx.objectStore(BACKUP_STORE_NAME).put(fileHandle, BACKUP_HANDLE_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error || new Error("Salvataggio handle fallito"));
+    };
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error || new Error("Salvataggio handle annullato"));
+    };
+  });
+}
+
+export async function restoreBackupHandle() {
+  const db = await openBackupDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKUP_STORE_NAME, "readonly");
+    const req = tx.objectStore(BACKUP_STORE_NAME).get(BACKUP_HANDLE_KEY);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error || new Error("Lettura handle fallita"));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error || new Error("Lettura handle fallita"));
+    };
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error || new Error("Lettura handle annullata"));
+    };
+  });
+}
+
+export async function clearPersistedBackupHandle() {
+  const db = await openBackupDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKUP_STORE_NAME, "readwrite");
+    tx.objectStore(BACKUP_STORE_NAME).delete(BACKUP_HANDLE_KEY);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error || new Error("Pulizia handle fallita"));
+    };
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error || new Error("Pulizia handle annullata"));
+    };
+  });
+}
+
+export function exportAll() {
+  const out = collectExportData();
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dailylog_export_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function ensureFilePermission(fileHandle) {
+  try {
+    const opts = { mode: "readwrite" };
+    if ((await fileHandle.queryPermission(opts)) === "granted") return true;
+    if ((await fileHandle.requestPermission(opts)) === "granted") return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export async function writeBackupToFile(fileHandle) {
+  const payload = JSON.stringify(collectExportData(), null, 2);
+  const writable = await fileHandle.createWritable();
+  await writable.write(payload);
+  await writable.close();
+}
+
+export async function importAll(file) {
+  const text = await file.text();
+  const obj = JSON.parse(text);
+  if (!obj || typeof obj !== "object") throw new Error("Formato JSON non valido");
+  const keys = Object.keys(obj);
+  let count = 0;
+  for (const k of keys) {
+    if (k.startsWith(STORAGE_PREFIX) && typeof obj[k] === "string") {
+      localStorage.setItem(k, obj[k]);
+      count++;
+    }
+  }
+  return count;
+}

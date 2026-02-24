@@ -1,6 +1,12 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell, Tray } = require("electron");
 const fs = require("fs/promises");
+const fsSync = require("fs");
 const path = require("path");
+
+let mainWindow = null;
+let tray = null;
+let minimizeToTrayOnMinimize = false;
+const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 
 function resolveBackupPaths(customDir) {
   const fallbackDir = path.join(app.getPath("documents"), "DailyLog", "backup");
@@ -15,8 +21,51 @@ function resolveBackupPaths(customDir) {
   return { backupDir, backupFile };
 }
 
+function getTrayIconPath() {
+  return path.join(__dirname, "assets", "tray.ico");
+}
+
+function destroyTray() {
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
+
+function showMainWindow() {
+  if (!mainWindow) return;
+  mainWindow.show();
+  mainWindow.focus();
+  destroyTray();
+}
+
+function ensureTray() {
+  if (tray) return tray;
+
+  const iconPath = getTrayIconPath();
+  const trayIconSource = fsSync.existsSync(iconPath) ? iconPath : process.execPath;
+  tray = new Tray(trayIconSource);
+  tray.setToolTip("DailyLog");
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Apri DailyLog", click: () => showMainWindow() },
+      { type: "separator" },
+      {
+        label: "Esci",
+        click: () => {
+          app.quit();
+        },
+      },
+    ])
+  );
+  tray.on("double-click", () => showMainWindow());
+  tray.on("click", () => showMainWindow());
+
+  return tray;
+}
+
 function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 980,
@@ -30,11 +79,30 @@ function createWindow() {
     },
   });
 
-  win.loadFile(path.join(__dirname, "dailylog.html"));
+  if (devServerUrl) {
+    mainWindow.loadURL(devServerUrl);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "dist", "index.html"));
+  }
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: "deny" };
+  });
+
+  mainWindow.on("minimize", (event) => {
+    if (!minimizeToTrayOnMinimize) return;
+    event.preventDefault();
+    ensureTray();
+    mainWindow.hide();
+  });
+
+  mainWindow.on("show", () => {
+    destroyTray();
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 }
 
@@ -71,6 +139,14 @@ ipcMain.handle("backup:pickDir", async (event, currentDir) => {
 
   if (result.canceled || !result.filePaths?.length) return null;
   return result.filePaths[0];
+});
+
+ipcMain.handle("app:setMinimizeToTray", async (_event, enabled) => {
+  minimizeToTrayOnMinimize = Boolean(enabled);
+  if (!minimizeToTrayOnMinimize && mainWindow && mainWindow.isVisible()) {
+    destroyTray();
+  }
+  return minimizeToTrayOnMinimize;
 });
 
 app.whenReady().then(() => {

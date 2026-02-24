@@ -133,3 +133,32 @@ Percorso predefinito:
 `%USERPROFILE%\\Documents\\DailyLog\\backup\\dailylog_auto_backup.json`
 
 Puoi cambiare la cartella da `Settings` nell'app. Se la cartella non esiste, viene creata automaticamente.
+
+### Tray su minimize
+
+In `Settings` puoi attivare l'opzione per minimizzare in tray.
+Quando attiva, il click su minimizza nasconde la finestra e mostra l'icona tray con menu `Apri DailyLog` / `Esci`.
+
+### Refactor struttura (Renderer modulare)
+
+La UI non e piu nel file monolitico `dailylog.html`: ora il renderer e modulare con Vite + React.
+
+Struttura principale:
+
+- `src/renderer/App.jsx`
+- `src/renderer/components/*`
+- `src/renderer/services/*`
+- `src/renderer/domain/*`
+- `src/renderer/utils/*`
+
+Entry point web:
+
+- `index.html` -> `src/renderer/main.jsx`
+
+`dailylog.html` resta come entry legacy che reindirizza a `index.html`.
+
+Script utili:
+
+- `npm run dev` avvia Vite + Electron
+- `npm run build:web` build renderer (`dist/`)
+- `npm run dist` build renderer + installer Windows

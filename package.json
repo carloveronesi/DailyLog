@@ -5,10 +5,13 @@
   "description": "DailyLog desktop app built with Electron",
   "main": "main.js",
   "scripts": {
-    "dev": "electron .",
+    "dev:web": "vite",
+    "dev:electron": "wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:electron\"",
+    "build:web": "vite build",
     "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --win nsis"
+    "pack": "npm run build:web && electron-builder --dir",
+    "dist": "npm run build:web && electron-builder --win nsis"
   },
   "build": {
     "appId": "com.dailylog.desktop",
@@ -16,7 +19,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "dailylog.html",
+      "assets/**/*",
+      "dist/**/*",
       "Readme.md"
     ],
     "directories": {
@@ -29,8 +33,17 @@
       ]
     }
   },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
     "electron": "^35.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "vite": "^6.4.1",
+    "wait-on": "^9.0.1"
   }
 }
