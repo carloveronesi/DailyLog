@@ -1,4 +1,4 @@
-const CACHE_VERSION = "dailylog-cache-v1";
+﻿const CACHE_VERSION = "dailylog-cache-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -27,9 +27,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request).catch(() => caches.match("./index.html"))
-    );
+    event.respondWith(fetch(request).catch(() => caches.match("./index.html")));
     return;
   }
 
