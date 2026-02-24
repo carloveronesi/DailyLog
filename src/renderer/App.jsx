@@ -4,7 +4,7 @@ import { SettingsModal } from "./components/SettingsModal";
 import { SummaryPanel } from "./components/SummaryPanel";
 import { Header } from "./components/Header";
 import { CalendarGrid } from "./components/CalendarGrid";
-import { Modal } from "./components/ui";
+import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { ymd } from "./utils/date";
@@ -67,6 +67,10 @@ export default function App() {
     goToday();
   }
 
+  function toggleTheme() {
+    setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
+  }
+
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
@@ -74,23 +78,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
-        <Header
-          year={year}
-          month={month}
-          settings={settings}
-          setSettings={setSettings}
-          hasDesktopBridge={hasDesktopBridge}
-          backupFileHandle={backupFileHandle}
-          supportsAutoBackup={supportsAutoBackup}
-          enableAutoBackup={enableAutoBackup}
-          disableAutoBackup={disableAutoBackup}
-          prevMonth={prevMonth}
-          nextMonth={nextMonth}
-          goToday={goToday}
-          openSettings={() => setSettingsOpen(true)}
-        />
-
-        <main className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+        <main className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
           <CalendarGrid
             year={year}
             month={month}
@@ -101,9 +89,53 @@ export default function App() {
           />
 
           <aside className="space-y-4">
+            <Header
+              year={year}
+              month={month}
+              prevMonth={prevMonth}
+              nextMonth={nextMonth}
+              goToday={goToday}
+            />
             <SummaryPanel year={year} monthIndex0={month} data={data} clientColors={settings.clientColors} />
           </aside>
         </main>
+      </div>
+
+      <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-white/90 p-2 shadow-soft backdrop-blur dark:border-slate-700/80 dark:bg-slate-800/90">
+        <Button
+          className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+          onClick={() => setSettingsOpen(true)}
+          type="button"
+          title="Impostazioni"
+        >
+          <Icon name="settings" className="mr-2" />
+          Settings
+        </Button>
+
+        <Button
+          className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+          onClick={toggleTheme}
+          type="button"
+          title="Cambia Tema"
+        >
+          <Icon name={settings.theme === "dark" ? "sun" : "moon"} />
+        </Button>
+
+        {!hasDesktopBridge ? (
+          <Button
+            className={
+              backupFileHandle
+                ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                : "bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+            }
+            onClick={backupFileHandle ? disableAutoBackup : enableAutoBackup}
+            type="button"
+            title={backupFileHandle ? "Disattiva backup automatico su file" : "Collega file per backup automatico"}
+            disabled={!supportsAutoBackup && !backupFileHandle}
+          >
+            {backupFileHandle ? "Backup attivo" : "Backup auto"}
+          </Button>
+        ) : null}
       </div>
 
       <SettingsModal
