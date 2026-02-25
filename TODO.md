@@ -1,0 +1,3 @@
+- ICONA per indicare se c'è o non c'è la nota
+- possibilità di cambiare nome del cliente da impostazioni
+- aggiungere task più brevi es (2h) . Da capire poi conteggio ore finale, magari in un'altra schermata
