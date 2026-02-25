@@ -1,10 +1,10 @@
-import { badgePresentation, displayLabel } from "../domain/tasks";
+import { badgePresentation, displayLabel, isSameTaskEntry } from "../domain/tasks";
 
 export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, clientColors = {} }) {
   const d = date.getDate();
   const am = entries?.AM;
   const pm = entries?.PM;
-  const isFullDay = am && pm && JSON.stringify(am) === JSON.stringify(pm);
+  const isFullDay = isSameTaskEntry(am, pm);
   const isWeekendDay = isCurrentMonth && isWeekend;
   const isClickable = isCurrentMonth && !isWeekend && typeof onClick === "function";
   const amBadge = badgePresentation(am, clientColors);

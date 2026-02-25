@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SLOT, TASK_TYPES, badgePresentation, defaultEntry, displayLabel } from "../domain/tasks";
+import { SLOT, TASK_TYPES, badgePresentation, defaultEntry, displayLabel, isSameTaskEntry } from "../domain/tasks";
 import { pad2 } from "../utils/date";
 import { Button, Icon, Segmented } from "./ui";
 
@@ -14,7 +14,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setEntryAM(existingEntries?.AM || defaultEntry());
     setEntryPM(existingEntries?.PM || defaultEntry());
     // heuristics: if AM and PM are equal, default to full-day
-    const eq = JSON.stringify(existingEntries?.AM || null) === JSON.stringify(existingEntries?.PM || null);
+    const eq = isSameTaskEntry(existingEntries?.AM, existingEntries?.PM);
     setMode(existingEntries?.AM && existingEntries?.PM && eq ? "full" : "half");
   }, [existingEntries]);
 

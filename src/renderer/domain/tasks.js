@@ -134,3 +134,13 @@ export function displayLabel(entry) {
   if (entry.type === "event") return entry.title?.trim() ? entry.title.trim() : "Evento";
   return entry.title?.trim() ? entry.title.trim() : "Internal";
 }
+
+export function isSameTaskEntry(a, b) {
+  if (!a || !b) return false;
+  const typeA = a.type || "internal";
+  const typeB = b.type || "internal";
+  if (typeA !== typeB) return false;
+  const labelA = displayLabel(a).trim().toLocaleLowerCase("it-IT");
+  const labelB = displayLabel(b).trim().toLocaleLowerCase("it-IT");
+  return labelA !== "" && labelA === labelB;
+}
