@@ -60,21 +60,32 @@ npm run build
 npm run preview
 ```
 
-### Deploy Firebase Hosting
+### Deploy GitHub Pages
 
-Prerequisiti una tantum:
+Il repository include il workflow:
+
+- `.github/workflows/deploy-pages.yml`
+
+Passi una tantum su GitHub:
+
+1. Apri `Settings > Pages`.
+2. In `Build and deployment`, seleziona `Source: GitHub Actions`.
+3. Fai push su `main` (o `master`): il workflow builda `dist/` e pubblica su Pages.
+
+URL finale tipico:
+
+- `https://<utente>.github.io/<repo>/`
+
+### Deploy Firebase Hosting (opzionale)
+
+Se preferisci mantenere Firebase Hosting:
 
 1. `npm install -g firebase-tools`
 2. `firebase login`
 3. `firebase use --add`
+4. `npm run deploy:web`
 
-Deploy:
-
-```bash
-npm run deploy:web
-```
-
-Pubblica la cartella `dist/` usando `firebase.json`.
+La pubblicazione usa `firebase.json` e la cartella `dist/`.
 
 ### Installazione come web app
 
