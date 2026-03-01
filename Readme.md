@@ -1,4 +1,8 @@
-﻿## DailyLog Webapp (PWA)
+﻿<p align="center">
+  <img src="public/icons/icon-192.png" alt="DailyLog logo" width="128" />
+</p>
+
+## DailyLog Webapp (PWA)
 
 Web app locale per tracciare il lavoro giornaliero con calendario mensile.
 
