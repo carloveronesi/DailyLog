@@ -76,8 +76,8 @@ export default function App() {
   const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
 
   return (
-    <div className="min-h-screen lg:h-screen lg:flex lg:flex-col lg:overflow-hidden">
-      <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
+    <div className="min-h-screen lg:h-screen lg:flex lg:flex-col lg:overflow-y-auto">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-3 pb-3 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
         <main className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 lg:flex-1 lg:min-h-0">
           <CalendarGrid
             year={year}
