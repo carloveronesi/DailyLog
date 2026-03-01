@@ -1,3 +1,9 @@
 - ICONA per indicare se c'è o non c'è la nota
-- possibilità di cambiare nome del cliente da impostazioni
+- selettore/filtro per cliente: se nel riepilogo mese clicchi su un cliente/task, vedi solo i blocchi di quel task del mese, nascondendo gli altri task
+- aggiungere un contatore dei giorni lavorativi del mese (es. 20)
+- aggiungere voce "festività" tipo 1o maggio
+- scheda progetto dove puoi mettere le info di progetto
+    - possibilità di cambiare nome del cliente da impostazioni
 - aggiungere task più brevi es (2h) . Da capire poi conteggio ore finale, magari in un'altra schermata
+- Notifiche a metà/fine giornata per salvare task
+- todo-list
