@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { getClientColor, SLOT } from "../domain/tasks";
-import { monthNameIT } from "../utils/date";
 
 function isClientFilterActive(activeFilter, clientName) {
   return activeFilter?.kind === "client" && activeFilter.client === clientName;
@@ -23,6 +22,13 @@ export function SummaryPanel({
     let internal = 0;
     let vacation = 0;
     let event = 0;
+
+    const lastDayOfMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+    let workingDaysInMonth = 0;
+    for (let day = 1; day <= lastDayOfMonth; day++) {
+      const dow = new Date(year, monthIndex0, day).getDay();
+      if (dow !== 0 && dow !== 6) workingDaysInMonth += 1;
+    }
 
     const byDate = data?.byDate || {};
     for (const dateKey of Object.keys(byDate)) {
@@ -52,11 +58,12 @@ export function SummaryPanel({
     const worked = clientDays + internal + event;
     const otherActivities = [
       { key: "internal", label: "Internal", days: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
+      { key: "vacation", label: "Ferie", days: vacation, dotClassName: "bg-emerald-400 dark:bg-emerald-500" },
       { key: "event", label: "Eventi", days: event, dotClassName: "bg-purple-400 dark:bg-purple-500" },
     ].filter((activity) => activity.days > 0);
 
-    return { clients, internal, vacation, event, worked, otherActivities };
-  }, [data]);
+    return { clients, internal, vacation, event, worked, workingDaysInMonth, otherActivities };
+  }, [data, year, monthIndex0]);
 
   return (
     <div
@@ -71,12 +78,12 @@ export function SummaryPanel({
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni lavorati</div>
-          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.worked.toFixed(1)} gg</div>
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni lavorativi totali</div>
+          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.workingDaysInMonth} gg</div>
         </div>
         <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ferie</div>
-          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.vacation.toFixed(1)} gg</div>
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni compilati</div>
+          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.worked.toFixed(1)} gg</div>
         </div>
       </div>
 
@@ -110,9 +117,9 @@ export function SummaryPanel({
       </div>
 
       <div className="mt-4">
-        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Altre attivita</div>
+        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Altre attività</div>
         {totals.otherActivities.length === 0 ? (
-          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna altra attivita registrata.</div>
+          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna altra attività registrata.</div>
         ) : (
           <div className="mt-2 space-y-2">
             {totals.otherActivities.map((activity) => (
