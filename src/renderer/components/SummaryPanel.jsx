@@ -36,8 +36,8 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
     const clientDays = clients.reduce((sum, c) => sum + c.days, 0);
     const worked = clientDays + internal + event;
     const otherActivities = [
-      { key: "internal", label: "Internal", days: internal },
-      { key: "event", label: "Eventi", days: event },
+      { key: "internal", label: "Internal", days: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
+      { key: "event", label: "Eventi", days: event, dotClassName: "bg-purple-400 dark:bg-purple-500" },
     ].filter((activity) => activity.days > 0);
 
     return { clients, internal, vacation, event, worked, otherActivities };
@@ -95,7 +95,12 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
                 key={activity.key}
                 className="flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50"
               >
-                <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={"h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20 " + activity.dotClassName}
+                  />
+                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+                </div>
                 <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{activity.days.toFixed(1)} gg</div>
               </div>
             ))}
