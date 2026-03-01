@@ -9,6 +9,24 @@ function isTypeFilterActive(activeFilter, type) {
   return activeFilter?.kind === "type" && activeFilter.type === type;
 }
 
+function isClientFilterFaded(fixedFilter, clientName) {
+  if (!fixedFilter) return false;
+  if (fixedFilter.kind === "client") {
+    return fixedFilter.client !== clientName;
+  }
+  // Se il filtro fisso è su un tipo, oscura tutti i clienti
+  return fixedFilter.kind === "type";
+}
+
+function isTypeFilterFaded(fixedFilter, type) {
+  if (!fixedFilter) return false;
+  if (fixedFilter.kind === "type") {
+    return fixedFilter.type !== type;
+  }
+  // Se il filtro fisso è su un cliente, oscura tutti i tipi
+  return fixedFilter.kind === "client";
+}
+
 export function SummaryPanel({
   year,
   monthIndex0,
@@ -16,6 +34,8 @@ export function SummaryPanel({
   clientColors = {},
   onHoverFilterChange,
   activeFilter = null,
+  fixedFilter = null,
+  onFixedFilterChange,
 }) {
   const totals = useMemo(() => {
     const byClient = new Map();
@@ -96,13 +116,21 @@ export function SummaryPanel({
             {totals.clients.map((c) => (
               <div
                 key={c.client}
-                onMouseEnter={() => onHoverFilterChange?.({ kind: "client", client: c.client })}
-                onMouseLeave={() => onHoverFilterChange?.(null)}
+                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
+                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                onClick={() => {
+                  if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
+                    onFixedFilterChange?.(null);
+                  } else {
+                    onFixedFilterChange?.({ kind: "client", client: c.client });
+                  }
+                }}
                 className={
-                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 " +
+                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
                   (isClientFilterActive(activeFilter, c.client)
                     ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                    : "hover:border-sky-200 dark:hover:border-sky-700")
+                    : "hover:border-sky-200 dark:hover:border-sky-700") +
+                  (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
                 }
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -125,13 +153,21 @@ export function SummaryPanel({
             {totals.otherActivities.map((activity) => (
               <div
                 key={activity.key}
-                onMouseEnter={() => onHoverFilterChange?.({ kind: "type", type: activity.key })}
-                onMouseLeave={() => onHoverFilterChange?.(null)}
+                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "type", type: activity.key })}
+                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                onClick={() => {
+                  if (fixedFilter?.kind === "type" && fixedFilter.type === activity.key) {
+                    onFixedFilterChange?.(null);
+                  } else {
+                    onFixedFilterChange?.({ kind: "type", type: activity.key });
+                  }
+                }}
                 className={
-                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 " +
+                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
                   (isTypeFilterActive(activeFilter, activity.key)
                     ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                    : "hover:border-sky-200 dark:hover:border-sky-700")
+                    : "hover:border-sky-200 dark:hover:border-sky-700") +
+                  (isTypeFilterFaded(fixedFilter, activity.key) ? " opacity-40 dark:opacity-40" : "")
                 }
               >
                 <div className="flex items-center gap-2 min-w-0">
