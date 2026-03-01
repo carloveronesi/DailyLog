@@ -1,7 +1,26 @@
 import { DayCell } from "./DayCell";
 import { ymd } from "../utils/date";
 
-export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEditor, clientColors = {} }) {
+function matchesVisibleFilter(entry, visibleFilter) {
+    if (!entry || !visibleFilter) return true;
+    if (visibleFilter.kind === "client") {
+        return entry.type === "client" && (entry.client || "").trim() === visibleFilter.client;
+    }
+    if (visibleFilter.kind === "type") {
+        return entry.type === visibleFilter.type;
+    }
+    return true;
+}
+
+export function CalendarGrid({
+    year,
+    month,
+    gridDates,
+    monthDataByDate,
+    openEditor,
+    clientColors = {},
+    visibleFilter = null,
+}) {
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (
@@ -19,7 +38,13 @@ export function CalendarGrid({ year, month, gridDates, monthDataByDate, openEdit
                     const isCurrentMonth = d.getMonth() === month && d.getFullYear() === year;
                     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                     const key = ymd(d);
-                    const entries = monthDataByDate[key] || null;
+                    const rawEntries = monthDataByDate[key] || null;
+                    const entries = !rawEntries || !visibleFilter
+                        ? rawEntries
+                        : {
+                            AM: matchesVisibleFilter(rawEntries.AM, visibleFilter) ? rawEntries.AM : null,
+                            PM: matchesVisibleFilter(rawEntries.PM, visibleFilter) ? rawEntries.PM : null,
+                        };
                     return (
                         <DayCell
                             key={key}

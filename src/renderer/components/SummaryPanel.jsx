@@ -2,7 +2,22 @@ import { useMemo } from "react";
 import { getClientColor, SLOT } from "../domain/tasks";
 import { monthNameIT } from "../utils/date";
 
-export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
+function isClientFilterActive(activeFilter, clientName) {
+  return activeFilter?.kind === "client" && activeFilter.client === clientName;
+}
+
+function isTypeFilterActive(activeFilter, type) {
+  return activeFilter?.kind === "type" && activeFilter.type === type;
+}
+
+export function SummaryPanel({
+  year,
+  monthIndex0,
+  data,
+  clientColors = {},
+  onHoverFilterChange,
+  activeFilter = null,
+}) {
   const totals = useMemo(() => {
     const byClient = new Map();
     let internal = 0;
@@ -44,7 +59,10 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
   }, [data]);
 
   return (
-    <div className="rounded-3xl border border-slate-200/90 bg-white/85 backdrop-blur p-4 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
+    <div
+      className="rounded-3xl border border-slate-200/90 bg-white/85 backdrop-blur p-4 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80"
+      onMouseLeave={() => onHoverFilterChange?.(null)}
+    >
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Riepilogo mese</div>
@@ -71,7 +89,14 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
             {totals.clients.map((c) => (
               <div
                 key={c.client}
-                className="flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50"
+                onMouseEnter={() => onHoverFilterChange?.({ kind: "client", client: c.client })}
+                onMouseLeave={() => onHoverFilterChange?.(null)}
+                className={
+                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 " +
+                  (isClientFilterActive(activeFilter, c.client)
+                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                    : "hover:border-sky-200 dark:hover:border-sky-700")
+                }
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
@@ -93,7 +118,14 @@ export function SummaryPanel({ year, monthIndex0, data, clientColors = {} }) {
             {totals.otherActivities.map((activity) => (
               <div
                 key={activity.key}
-                className="flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50"
+                onMouseEnter={() => onHoverFilterChange?.({ kind: "type", type: activity.key })}
+                onMouseLeave={() => onHoverFilterChange?.(null)}
+                className={
+                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 " +
+                  (isTypeFilterActive(activeFilter, activity.key)
+                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                    : "hover:border-sky-200 dark:hover:border-sky-700")
+                }
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span

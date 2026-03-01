@@ -48,6 +48,7 @@ export default function App() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [summaryHoverFilter, setSummaryHoverFilter] = useState(null);
 
   function openEditor(date, slot = null) {
     setSelectedDate(date);
@@ -86,6 +87,7 @@ export default function App() {
             monthDataByDate={monthDataByDate}
             openEditor={openEditor}
             clientColors={settings.clientColors}
+            visibleFilter={summaryHoverFilter}
           />
 
           <aside className="space-y-4 flex flex-col lg:h-full lg:overflow-hidden">
@@ -99,7 +101,14 @@ export default function App() {
               />
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto rounded-3xl pb-2">
-              <SummaryPanel year={year} monthIndex0={month} data={data} clientColors={settings.clientColors} />
+              <SummaryPanel
+                year={year}
+                monthIndex0={month}
+                data={data}
+                clientColors={settings.clientColors}
+                onHoverFilterChange={setSummaryHoverFilter}
+                activeFilter={summaryHoverFilter}
+              />
             </div>
           </aside>
         </main>
