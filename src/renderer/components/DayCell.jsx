@@ -1,5 +1,28 @@
 import { badgePresentation, displayLabel, isSameTaskEntry } from "../domain/tasks";
 
+function hasMissingNotes(entry) {
+  if (!entry || entry.type === "vacation" || entry.type === "event") return false;
+  return !(entry.notes || "").trim();
+}
+
+function MissingNotesLed() {
+  return (
+    <div
+      className="absolute right-[0.3rem] top-[0.3rem] z-10 group"
+      title="Mancano i dettagli del log"
+      aria-label="Mancano i dettagli del log"
+    >
+      <span
+        aria-hidden="true"
+        className="block h-2.5 w-2.5 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85"
+      />
+      <div className="pointer-events-none absolute bottom-full right-0 mb-2 translate-y-1 whitespace-nowrap rounded-md bg-slate-900/95 px-2 py-1 text-[10px] font-medium text-white opacity-0 shadow-lg transition-all duration-150 group-hover:translate-y-0 group-hover:opacity-100 dark:bg-slate-100 dark:text-slate-900">
+        Mancano i dettagli del log
+      </div>
+    </div>
+  );
+}
+
 export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, clientColors = {} }) {
   const d = date.getDate();
   const am = entries?.AM;
@@ -40,9 +63,10 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
           {isFullDay ? (
             <div
               onClick={(e) => handleSlotClick(e, "AM")}
-              className={"flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform hover:scale-[1.01] " + amBadge.className}
+              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform hover:scale-[1.01] " + amBadge.className}
               style={amBadge.style}
             >
+              {hasMissingNotes(am) ? <MissingNotesLed /> : null}
               <div className="w-full text-center truncate text-sm font-bold tracking-tight">
                 {displayLabel(am)}
               </div>
@@ -52,9 +76,10 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
               {am ? (
                 <div
                   onClick={(e) => handleSlotClick(e, "AM")}
-                  className={"flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + amBadge.className}
+                  className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + amBadge.className}
                   style={amBadge.style}
                 >
+                  {hasMissingNotes(am) ? <MissingNotesLed /> : null}
                   <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
                     {displayLabel(am)}
                   </div>
@@ -68,9 +93,10 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
               {pm ? (
                 <div
                   onClick={(e) => handleSlotClick(e, "PM")}
-                  className={"flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + pmBadge.className}
+                  className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + pmBadge.className}
                   style={pmBadge.style}
                 >
+                  {hasMissingNotes(pm) ? <MissingNotesLed /> : null}
                   <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
                     {displayLabel(pm)}
                   </div>

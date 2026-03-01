@@ -1,4 +1,3 @@
-- ICONA per indicare se c'è o non c'è la nota
 - aggiungere un contatore dei giorni lavorativi del mese (es. 20)
 - aggiungere voce "festività" tipo 1o maggio
 - scheda progetto dove puoi mettere le info di progetto
