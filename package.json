@@ -11,7 +11,7 @@
     "build:web": "vite build",
     "preview": "vite preview",
     "preview:web": "vite preview",
-    "deploy:web": "npm run build && firebase deploy --only hosting"
+    "deploy:web": "npm run build && npx --yes firebase-tools deploy --only hosting"
   },
   "dependencies": {
     "react": "^18.3.1",

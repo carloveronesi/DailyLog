@@ -1,4 +1,3 @@
-- aggiungere un contatore dei giorni lavorativi del mese (es. 20)
 - aggiungere voce "festività" tipo 1o maggio
 - scheda progetto dove puoi mettere le info di progetto
     - possibilità di cambiare nome del cliente da impostazioni
