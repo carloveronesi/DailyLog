@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getClientColor, SLOT } from "../domain/tasks";
+import { getClientColor, HOURS_PER_DAY, SLOT } from "../domain/tasks";
 
 function isClientFilterActive(activeFilter, clientName) {
   return activeFilter?.kind === "client" && activeFilter.client === clientName;
@@ -57,6 +57,20 @@ export function SummaryPanel({
         const e = day?.[s];
         if (!e) continue;
         const weight = 0.5;
+        if (e.type === "client") {
+          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
+          byClient.set(c, (byClient.get(c) || 0) + weight);
+        } else if (e.type === "internal") {
+          internal += weight;
+        } else if (e.type === "vacation") {
+          vacation += weight;
+        } else if (e.type === "event") {
+          event += weight;
+        }
+      }
+      for (const e of Object.values(day?.hours || {})) {
+        if (!e) continue;
+        const weight = 1 / HOURS_PER_DAY;
         if (e.type === "client") {
           const c = (e.client || "(senza nome)").trim() || "(senza nome)";
           byClient.set(c, (byClient.get(c) || 0) + weight);

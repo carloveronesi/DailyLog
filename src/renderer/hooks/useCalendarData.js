@@ -71,6 +71,12 @@ export function useCalendarData(initialYear, initialMonth) {
                 if (!clientName) continue;
                 countByClient.set(clientName, (countByClient.get(clientName) || 0) + 1);
             }
+            for (const e of Object.values(day?.hours || {})) {
+                if (!e || e.type !== "client") continue;
+                const clientName = (e.client || "").trim();
+                if (!clientName) continue;
+                countByClient.set(clientName, (countByClient.get(clientName) || 0) + 1);
+            }
         }
 
         return Array.from(countByClient.entries())
@@ -83,12 +89,14 @@ export function useCalendarData(initialYear, initialMonth) {
         const key = ymd(date);
         setData((prev) => {
             const next = { ...prev, byDate: { ...(prev.byDate || {}) } };
+            const hours = entries.hours && Object.keys(entries.hours).length > 0 ? entries.hours : undefined;
             const normalized = {
                 AM: entries.AM || null,
                 PM: entries.PM || null,
+                ...(hours ? { hours } : {}),
             };
-            // If both slots are null, delete day
-            if (!normalized.AM && !normalized.PM) {
+            const isEmpty = !normalized.AM && !normalized.PM && !normalized.hours;
+            if (isEmpty) {
                 delete next.byDate[key];
             } else {
                 next.byDate[key] = normalized;

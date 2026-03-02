@@ -118,6 +118,15 @@ export function listStoredClients() {
           const normalized = name.toLocaleLowerCase("it-IT");
           if (!byKey.has(normalized)) byKey.set(normalized, name);
         }
+        for (const entry of Object.values(day?.hours || {})) {
+          if (!entry || entry.type !== "client") continue;
+
+          const name = (entry.client || "").trim();
+          if (!name) continue;
+
+          const normalized = name.toLocaleLowerCase("it-IT");
+          if (!byKey.has(normalized)) byKey.set(normalized, name);
+        }
       }
     } catch {
       // Ignore malformed month payloads.

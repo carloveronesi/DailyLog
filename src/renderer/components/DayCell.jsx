@@ -1,4 +1,4 @@
-import { badgePresentation, displayLabel, isSameTaskEntry } from "../domain/tasks";
+import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, hourKey, hourLabel, isSameTaskEntry, MORNING_HOURS, AFTERNOON_HOURS } from "../domain/tasks";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -23,15 +23,68 @@ function MissingNotesLed() {
   );
 }
 
+function HourStrip({ hour, entry, onClick, clientColors }) {
+  const badge = badgePresentation(entry, clientColors);
+  if (!entry) {
+    return (
+      <div
+        onClick={onClick}
+        className="flex-1 rounded border border-dashed border-slate-300/80 hover:bg-slate-100/50 dark:border-slate-600/60 dark:hover:bg-slate-700/30 transition-colors opacity-60"
+        title={hourLabel(hour)}
+      />
+    );
+  }
+  return (
+    <div
+      onClick={onClick}
+      className={"relative flex-1 rounded flex items-center justify-center px-1 min-h-0 shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + badge.className}
+      style={badge.style}
+      title={hourLabel(hour) + " — " + displayLabel(entry)}
+    >
+      {hasMissingNotes(entry) ? <MissingNotesLed /> : null}
+      <div className="w-full text-center text-ellipsis overflow-hidden text-[9px] font-bold leading-tight">
+        {displayLabel(entry)}
+      </div>
+    </div>
+  );
+}
+
+function HalfBlock({ entry, slot, onClick, clientColors, emptyClass }) {
+  const badge = badgePresentation(entry, clientColors);
+  if (!entry) {
+    return (
+      <div
+        onClick={onClick}
+        className={"flex-1 rounded border border-dashed border-slate-300/80 hover:bg-slate-100/50 dark:border-slate-600/60 dark:hover:bg-slate-700/30 transition-colors opacity-60 min-h-[36px] " + (emptyClass || "")}
+      />
+    );
+  }
+  return (
+    <div
+      onClick={onClick}
+      className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + badge.className}
+      style={badge.style}
+    >
+      {hasMissingNotes(entry) ? <MissingNotesLed /> : null}
+      <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
+        {displayLabel(entry)}
+      </div>
+    </div>
+  );
+}
+
 export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, clientColors = {} }) {
   const d = date.getDate();
   const am = entries?.AM;
   const pm = entries?.PM;
-  const isFullDay = isSameTaskEntry(am, pm);
+  const morningHoursActive = hasMorningHours(entries);
+  const afternoonHoursActive = hasAfternoonHours(entries);
+
+  // Full day: AM === PM, no hourly entries
+  const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
+
   const isWeekendDay = isCurrentMonth && isWeekend;
   const isClickable = isCurrentMonth && !isWeekend && typeof onClick === "function";
-  const amBadge = badgePresentation(am, clientColors);
-  const pmBadge = badgePresentation(pm, clientColors);
 
   const base =
     "rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[100px] lg:min-h-0 lg:h-full flex flex-col gap-2";
@@ -46,11 +99,13 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
     ? "text-sm font-semibold text-slate-600 dark:text-slate-500"
     : "text-sm font-semibold " + (isWeekend ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-300");
 
-  const handleSlotClick = (e, slot) => {
+  const handleClick = (e, slot) => {
     e.stopPropagation();
     if (!isClickable) return;
     onClick(slot);
   };
+
+  const amBadge = badgePresentation(am, clientColors);
 
   return (
     <div className={base + " " + cursor + " " + bg} onClick={isClickable ? () => onClick() : undefined}>
@@ -61,8 +116,9 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
       {isCurrentMonth && !isWeekend ? (
         <div className="flex flex-1 flex-col gap-1.5 mt-1.5">
           {isFullDay ? (
+            // Full day: single large block
             <div
-              onClick={(e) => handleSlotClick(e, "AM")}
+              onClick={(e) => handleClick(e, "AM")}
               className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform hover:scale-[1.01] " + amBadge.className}
               style={amBadge.style}
             >
@@ -73,38 +129,56 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
             </div>
           ) : (
             <>
-              {am ? (
-                <div
-                  onClick={(e) => handleSlotClick(e, "AM")}
-                  className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + amBadge.className}
-                  style={amBadge.style}
-                >
-                  {hasMissingNotes(am) ? <MissingNotesLed /> : null}
-                  <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
-                    {displayLabel(am)}
-                  </div>
+              {/* Morning section */}
+              {morningHoursActive ? (
+                <div className="flex flex-1 flex-col gap-0.5">
+                  {MORNING_HOURS.map((h) => {
+                    const key = hourKey(h);
+                    const entry = entries?.hours?.[key] || null;
+                    return (
+                      <HourStrip
+                        key={h}
+                        hour={h}
+                        entry={entry}
+                        onClick={(e) => handleClick(e, h)}
+                        clientColors={clientColors}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
-                <div
-                  onClick={(e) => handleSlotClick(e, "AM")}
-                  className="flex-1 rounded border border-dashed border-slate-300/80 hover:bg-slate-100/50 dark:border-slate-600/60 dark:hover:bg-slate-700/30 transition-colors opacity-60 min-h-[36px]" />
+                <HalfBlock
+                  entry={am}
+                  slot="AM"
+                  onClick={(e) => handleClick(e, "AM")}
+                  clientColors={clientColors}
+                />
               )}
 
-              {pm ? (
-                <div
-                  onClick={(e) => handleSlotClick(e, "PM")}
-                  className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + pmBadge.className}
-                  style={pmBadge.style}
-                >
-                  {hasMissingNotes(pm) ? <MissingNotesLed /> : null}
-                  <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
-                    {displayLabel(pm)}
-                  </div>
+              {/* Afternoon section */}
+              {afternoonHoursActive ? (
+                <div className="flex flex-1 flex-col gap-0.5">
+                  {AFTERNOON_HOURS.map((h) => {
+                    const key = hourKey(h);
+                    const entry = entries?.hours?.[key] || null;
+                    return (
+                      <HourStrip
+                        key={h}
+                        hour={h}
+                        entry={entry}
+                        onClick={(e) => handleClick(e, h)}
+                        clientColors={clientColors}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
-                <div
-                  onClick={(e) => handleSlotClick(e, "PM")}
-                  className="flex-1 rounded border border-dashed border-slate-300/80 hover:bg-slate-100/50 dark:border-slate-600/60 dark:hover:bg-slate-700/30 transition-colors opacity-60 min-h-[36px]" />
+                <HalfBlock
+                  entry={pm}
+                  slot="PM"
+                  onClick={(e) => handleClick(e, "PM")}
+                  clientColors={clientColors}
+                />
               )}
             </>
           )}

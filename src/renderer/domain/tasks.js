@@ -27,6 +27,29 @@ export const SLOT = {
   PM: "PM",
 };
 
+export const MORNING_HOURS = [9, 10, 11, 12];
+export const AFTERNOON_HOURS = [14, 15, 16, 17];
+export const WORK_HOURS = [...MORNING_HOURS, ...AFTERNOON_HOURS];
+export const HOURS_PER_DAY = WORK_HOURS.length; // 8
+
+export function hourKey(h) {
+  return String(h).padStart(2, "0");
+}
+
+export function hourLabel(h) {
+  return String(h).padStart(2, "0") + ":00";
+}
+
+export function hasMorningHours(dayData) {
+  if (!dayData?.hours) return false;
+  return MORNING_HOURS.some((h) => dayData.hours[hourKey(h)]);
+}
+
+export function hasAfternoonHours(dayData) {
+  if (!dayData?.hours) return false;
+  return AFTERNOON_HOURS.some((h) => dayData.hours[hourKey(h)]);
+}
+
 export function defaultEntry() {
   return {
     type: "internal",

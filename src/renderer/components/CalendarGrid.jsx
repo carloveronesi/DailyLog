@@ -39,12 +39,18 @@ export function CalendarGrid({
                     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                     const key = ymd(d);
                     const rawEntries = monthDataByDate[key] || null;
-                    const entries = !rawEntries || !visibleFilter
-                        ? rawEntries
-                        : {
+                    let entries = rawEntries;
+                    if (rawEntries && visibleFilter) {
+                        const filteredHours = {};
+                        for (const [k, e] of Object.entries(rawEntries.hours || {})) {
+                            if (matchesVisibleFilter(e, visibleFilter)) filteredHours[k] = e;
+                        }
+                        entries = {
                             AM: matchesVisibleFilter(rawEntries.AM, visibleFilter) ? rawEntries.AM : null,
                             PM: matchesVisibleFilter(rawEntries.PM, visibleFilter) ? rawEntries.PM : null,
+                            hours: filteredHours,
                         };
+                    }
                     return (
                         <DayCell
                             key={key}

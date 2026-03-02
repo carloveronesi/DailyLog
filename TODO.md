@@ -1,3 +1,5 @@
+- al momento la lista dei clienti si resetta da un mese all'altro
+- Aggiungere maggiori dettagli nelle note. Tipo "what went wrong" 
 - aggiungere voce "festività" tipo 1o maggio
 - scheda progetto dove puoi mettere le info di progetto
     - possibilità di cambiare nome del cliente da impostazioni
