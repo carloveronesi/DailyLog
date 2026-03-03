@@ -1,0 +1,201 @@
+import { useMemo } from "react";
+import { getClientColor, HOURS_PER_DAY, SLOT } from "../domain/tasks";
+
+function isClientFilterActive(activeFilter, clientName) {
+  return activeFilter?.kind === "client" && activeFilter.client === clientName;
+}
+
+function isTypeFilterActive(activeFilter, type) {
+  return activeFilter?.kind === "type" && activeFilter.type === type;
+}
+
+function isClientFilterFaded(fixedFilter, clientName) {
+  if (!fixedFilter) return false;
+  if (fixedFilter.kind === "client") {
+    return fixedFilter.client !== clientName;
+  }
+  // Se il filtro fisso è su un tipo, oscura tutti i clienti
+  return fixedFilter.kind === "type";
+}
+
+function isTypeFilterFaded(fixedFilter, type) {
+  if (!fixedFilter) return false;
+  if (fixedFilter.kind === "type") {
+    return fixedFilter.type !== type;
+  }
+  // Se il filtro fisso è su un cliente, oscura tutti i tipi
+  return fixedFilter.kind === "client";
+}
+
+export function SummaryPanel({
+  year,
+  monthIndex0,
+  data,
+  clientColors = {},
+  onHoverFilterChange,
+  activeFilter = null,
+  fixedFilter = null,
+  onFixedFilterChange,
+}) {
+  const totals = useMemo(() => {
+    const byClient = new Map();
+    let internal = 0;
+    let vacation = 0;
+    let event = 0;
+
+    const lastDayOfMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+    let workingDaysInMonth = 0;
+    for (let day = 1; day <= lastDayOfMonth; day++) {
+      const dow = new Date(year, monthIndex0, day).getDay();
+      if (dow !== 0 && dow !== 6) workingDaysInMonth += 1;
+    }
+
+    const byDate = data?.byDate || {};
+    for (const dateKey of Object.keys(byDate)) {
+      const day = byDate[dateKey];
+      for (const s of [SLOT.AM, SLOT.PM]) {
+        const e = day?.[s];
+        if (!e) continue;
+        const weight = 0.5;
+        if (e.type === "client") {
+          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
+          byClient.set(c, (byClient.get(c) || 0) + weight);
+        } else if (e.type === "internal") {
+          internal += weight;
+        } else if (e.type === "vacation") {
+          vacation += weight;
+        } else if (e.type === "event") {
+          event += weight;
+        }
+      }
+      for (const e of Object.values(day?.hours || {})) {
+        if (!e) continue;
+        const weight = 1 / HOURS_PER_DAY;
+        if (e.type === "client") {
+          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
+          byClient.set(c, (byClient.get(c) || 0) + weight);
+        } else if (e.type === "internal") {
+          internal += weight;
+        } else if (e.type === "vacation") {
+          vacation += weight;
+        } else if (e.type === "event") {
+          event += weight;
+        }
+      }
+    }
+
+    const clients = Array.from(byClient.entries())
+      .map(([client, days]) => ({ client, days }))
+      .sort((a, b) => b.days - a.days);
+
+    const clientDays = clients.reduce((sum, c) => sum + c.days, 0);
+    const worked = clientDays + internal + event;
+    const otherActivities = [
+      { key: "internal", label: "Internal", days: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
+      { key: "vacation", label: "Ferie", days: vacation, dotClassName: "bg-emerald-400 dark:bg-emerald-500" },
+      { key: "event", label: "Eventi", days: event, dotClassName: "bg-purple-400 dark:bg-purple-500" },
+    ].filter((activity) => activity.days > 0);
+
+    return { clients, internal, vacation, event, worked, workingDaysInMonth, otherActivities };
+  }, [data, year, monthIndex0]);
+
+  return (
+    <div
+      className="rounded-3xl border border-slate-200/90 bg-white/85 backdrop-blur p-4 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80"
+      onMouseLeave={() => onHoverFilterChange?.(null)}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Riepilogo mese</div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni lavorativi totali</div>
+          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.workingDaysInMonth} gg</div>
+        </div>
+        <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni compilati</div>
+          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.worked.toFixed(1)} gg</div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Clienti</div>
+        {totals.clients.length === 0 ? (
+          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna giornata cliente registrata.</div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {totals.clients.map((c) => (
+              <div
+                key={c.client}
+                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
+                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                onClick={() => {
+                  if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
+                    onFixedFilterChange?.(null);
+                  } else {
+                    onFixedFilterChange?.({ kind: "client", client: c.client });
+                  }
+                }}
+                className={
+                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
+                  (isClientFilterActive(activeFilter, c.client)
+                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                    : "hover:border-sky-200 dark:hover:border-sky-700") +
+                  (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
+                }
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
+                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                </div>
+                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.days.toFixed(1)} gg</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4">
+        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Altre attività</div>
+        {totals.otherActivities.length === 0 ? (
+          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna altra attività registrata.</div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {totals.otherActivities.map((activity) => (
+              <div
+                key={activity.key}
+                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "type", type: activity.key })}
+                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                onClick={() => {
+                  if (fixedFilter?.kind === "type" && fixedFilter.type === activity.key) {
+                    onFixedFilterChange?.(null);
+                  } else {
+                    onFixedFilterChange?.({ kind: "type", type: activity.key });
+                  }
+                }}
+                className={
+                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
+                  (isTypeFilterActive(activeFilter, activity.key)
+                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                    : "hover:border-sky-200 dark:hover:border-sky-700") +
+                  (isTypeFilterFaded(fixedFilter, activity.key) ? " opacity-40 dark:opacity-40" : "")
+                }
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={"h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20 " + activity.dotClassName}
+                  />
+                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+                </div>
+                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{activity.days.toFixed(1)} gg</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

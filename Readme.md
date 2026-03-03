@@ -1,106 +1,101 @@
-## Contesto progetto: DailyLog Webapp (single-file, local-first)
+﻿<p align="center">
+  <img src="public/icons/icon-192.png" alt="DailyLog logo" width="128" />
+</p>
 
-Ho una webapp minimale per tracciare il lavoro giornaliero, pensata come alternativa semplice a un Excel che era diventato complesso.
+## DailyLog Webapp (PWA)
+
+Web app locale per tracciare il lavoro giornaliero con calendario mensile.
 
 ### Obiettivo
 
-* Tenere traccia di cosa faccio ogni giorno a lavoro.
-* A fine mese, contare velocemente quante giornate ho lavorato per cliente.
-* Mantenere anche un “diario” di note, blockers e next steps.
+- Tracciare attivita giornaliere.
+- Contare a fine mese le giornate per cliente.
+- Tenere note operative (blocker, next step, diario).
 
-### UX desiderata
+### Funzionalita principali
 
-* Vista principale: **calendario mensile** (lun-dom), weekend evidenziati.
-* Ogni giorno è diviso in **due celle/slot**:
+- Calendario mensile lun-dom con weekend evidenziati.
+- Ogni giorno ha due slot: `AM` e `PM`.
+- Editor giornaliero con task da `0.5` o `1` giornata.
+- Tipi task: `internal`, `client`, `vacation`, `event`.
+- Riepilogo mensile (totali e clienti).
+- Persistenza local-first su `localStorage`.
+- Export/Import JSON di tutte le chiavi `dailylog:v1:*`.
+- Modalita PWA installabile con `manifest` + `service worker`.
 
-  * **Mattina (AM)**
-  * **Pomeriggio (PM)**
-* Click su un giorno apre un editor (modal).
-* Inserimento task con durata:
+### Struttura progetto
 
-  * **0.5 giornata**: compilo solo AM oppure PM
-  * **1 giornata**: una sola voce, applicata a entrambi gli slot AM e PM
+- `index.html` -> entry web
+- `src/renderer/main.jsx` -> bootstrap React
+- `src/renderer/App.jsx` -> app principale
+- `src/renderer/components/*`
+- `src/renderer/services/*`
+- `src/renderer/domain/*`
+- `src/renderer/utils/*`
+- `public/manifest.webmanifest`
+- `public/sw.js`
+- `dailylog.html` -> entry legacy (redirect a `index.html`)
 
-### Tipologie task supportate
+### Requisiti
 
-1. **Task interni** (`internal`)
-2. **Task per cliente** (`client`)
-3. **Ferie** (`vacation`)
-4. **Eventi** (`event`)
+- Node.js 20+
+- npm
 
-### Dati per ogni slot (schema)
+### Sviluppo locale
 
-Ogni slot può contenere `null` oppure un oggetto:
+1. Installa dipendenze:
 
-```json
-{
-  "type": "internal|client|vacation|event",
-  "title": "string",
-  "client": "string",
-  "notes": "string"
-}
+```bash
+npm install
 ```
 
-Regole:
+2. Avvia in sviluppo:
 
-* Se `type === client`, mostrare e usare `client` come label principale nel calendario.
-* Se `type === vacation`, label predefinita “Ferie”.
-* Se `type === internal`, label predefinita “Internal”.
-* Se `type === event`, label predefinita “Evento” o `title`.
-
-### Persistenza (local-first)
-
-* Niente backend.
-* Persistenza in **localStorage** del browser.
-* Salvataggio per mese: chiave tipo `dailylog:v1:YYYY-MM`.
-* Struttura salvata:
-
-```json
-{
-  "byDate": {
-    "YYYY-MM-DD": {
-      "AM": { ...entry } | null,
-      "PM": { ...entry } | null
-    }
-  }
-}
+```bash
+npm run dev
 ```
 
-### Funzionalità già presenti
+3. Apri `http://localhost:5173`.
 
-* Navigazione mesi (prev, next, today).
-* Editor per giorno (modal) con:
+### Build e preview
 
-  * toggle 0.5 vs 1 giornata
-  * se 0.5: scelta slot AM/PM
-  * tipo task, client/titolo, note
-  * salva e cancella giorno
-* Riepilogo mese:
+```bash
+npm run build
+npm run preview
+```
 
-  * somma slot (AM/PM) come 0.5 giornata
-  * totale per cliente (days)
-  * totali internal, ferie, eventi
-* Export/Import JSON (backup) da localStorage:
+### Deploy GitHub Pages
 
-  * export: scarica file json con tutte le chiavi `dailylog:v1:*`
-  * import: ripristina/aggiorna localStorage dalle chiavi presenti nel json
+Il repository include il workflow:
 
-### Stack e vincoli
+- `.github/workflows/deploy-pages.yml`
 
-* **Single-file HTML** (no build, no npm).
-* UI moderna via **Tailwind CDN**.
-* React via CDN (React 18 UMD), JSX con Babel standalone.
-* Deve restare semplice da aprire con doppio click.
-* Compatibilità: Chrome/Edge.
+Passi una tantum su GitHub:
 
-### File
+1. Apri `Settings > Pages`.
+2. In `Build and deployment`, seleziona `Source: GitHub Actions`.
+3. Fai push su `main` (o `master`): il workflow builda `dist/` e pubblica su Pages.
 
-Un solo file: `dailylog.html`.
+URL finale tipico:
 
-### Miglioramenti futuri (backlog)
+- `https://<utente>.github.io/<repo>/`
 
-* Ricerca full-text sulle note (per mese o globale).
-* Vista “lista” oltre al calendario.
-* Campi aggiuntivi: categoria issue, blockers, outcome, next steps, link.
-* Gestire più righe per lo stesso slot (es. due attività la mattina) con “stack” e somma 0.5 ripartita.
-* Backup più robusto: esportazione automatica, o salvataggio su file locale (senza server) se possibile.
+### Deploy Firebase Hosting (opzionale)
+
+Se preferisci mantenere Firebase Hosting:
+
+1. `npm install -g firebase-tools`
+2. `firebase login`
+3. `firebase use --add`
+4. `npm run deploy:web`
+
+La pubblicazione usa `firebase.json` e la cartella `dist/`.
+
+### Installazione come web app
+
+Dopo deploy HTTPS (o su `localhost`), in Chrome/Edge usa `Installa app`.
+
+### Note dati
+
+- I dati restano nel browser/dispositivo (localStorage).
+- Per backup e migrazione usa `Export`/`Import` JSON.
