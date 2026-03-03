@@ -4,98 +4,87 @@
 
 ## DailyLog Webapp (PWA)
 
-Web app locale per tracciare il lavoro giornaliero con calendario mensile.
+Local web app for tracking daily work with a monthly calendar view.
 
-### Obiettivo
+### Purpose
 
-- Tracciare attivita giornaliere.
-- Contare a fine mese le giornate per cliente.
-- Tenere note operative (blocker, next step, diario).
+- Track daily activities and tasks.
+- Count workdays per client at the end of the month.
+- Keep operational notes (blockers, next steps, activity log).
 
-### Funzionalita principali
+### Key Features
 
-- Calendario mensile lun-dom con weekend evidenziati.
-- Ogni giorno ha due slot: `AM` e `PM`.
-- Editor giornaliero con task da `0.5` o `1` giornata.
-- Tipi task: `internal`, `client`, `vacation`, `event`.
-- Riepilogo mensile (totali e clienti).
-- Persistenza local-first su `localStorage`.
-- Export/Import JSON di tutte le chiavi `dailylog:v1:*`.
-- Modalita PWA installabile con `manifest` + `service worker`.
+- Monthly calendar (Mon-Sun) with highlighted weekends.
+- Each day has two time slots: `AM` and `PM`.
+- Daily editor with tasks valued at `0.5` or `1` day.
+- Task types: `internal`, `client`, `vacation`, `event`.
+- Monthly summary (totals and clients).
+- Local-first persistence using `localStorage`.
+- Export/Import JSON for all `dailylog:v1:*` keys.
+- Installable PWA mode with `manifest` + `service worker`.
 
-### Struttura progetto
+### Project Structure
 
-- `index.html` -> entry web
-- `src/renderer/main.jsx` -> bootstrap React
-- `src/renderer/App.jsx` -> app principale
+- `index.html` -> web entry point
+- `src/renderer/main.jsx` -> React bootstrap
+- `src/renderer/App.jsx` -> main application
 - `src/renderer/components/*`
 - `src/renderer/services/*`
 - `src/renderer/domain/*`
 - `src/renderer/utils/*`
 - `public/manifest.webmanifest`
 - `public/sw.js`
-- `dailylog.html` -> entry legacy (redirect a `index.html`)
+- `dailylog.html` -> legacy entry point (redirects to `index.html`)
 
-### Requisiti
+### Requirements
 
 - Node.js 20+
 - npm
 
-### Sviluppo locale
+### Local Development
 
-1. Installa dipendenze:
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Avvia in sviluppo:
+2. Start development server:
 
 ```bash
 npm run dev
 ```
 
-3. Apri `http://localhost:5173`.
+3. Open `http://localhost:5173`.
 
-### Build e preview
+### Build and Preview
 
 ```bash
 npm run build
 npm run preview
 ```
 
-### Deploy GitHub Pages
+### Deploy to GitHub Pages
 
-Il repository include il workflow:
+The repository includes a workflow:
 
 - `.github/workflows/deploy-pages.yml`
 
-Passi una tantum su GitHub:
+One-time setup on GitHub:
 
-1. Apri `Settings > Pages`.
-2. In `Build and deployment`, seleziona `Source: GitHub Actions`.
-3. Fai push su `main` (o `master`): il workflow builda `dist/` e pubblica su Pages.
+1. Open `Settings > Pages`.
+2. In `Build and deployment`, select `Source: GitHub Actions`.
+3. Push to `main` (or `master`): the workflow builds `dist/` and publishes to Pages.
 
-URL finale tipico:
+Typical final URL:
 
-- `https://<utente>.github.io/<repo>/`
+- `https://<username>.github.io/<repo>/`
 
-### Deploy Firebase Hosting (opzionale)
+### Install as Web App
 
-Se preferisci mantenere Firebase Hosting:
+After deploying to HTTPS (or on `localhost`), use `Install app` in Chrome/Edge.
 
-1. `npm install -g firebase-tools`
-2. `firebase login`
-3. `firebase use --add`
-4. `npm run deploy:web`
+### Data Notes
 
-La pubblicazione usa `firebase.json` e la cartella `dist/`.
-
-### Installazione come web app
-
-Dopo deploy HTTPS (o su `localhost`), in Chrome/Edge usa `Installa app`.
-
-### Note dati
-
-- I dati restano nel browser/dispositivo (localStorage).
-- Per backup e migrazione usa `Export`/`Import` JSON.
+- Data stays in the browser/device (localStorage).
+- Use `Export`/`Import` JSON for backup and migration.

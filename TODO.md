@@ -3,6 +3,5 @@
 - aggiungere voce "festività" tipo 1o maggio
 - scheda progetto dove puoi mettere le info di progetto
     - possibilità di cambiare nome del cliente da impostazioni
-- aggiungere task più brevi es (2h) . Da capire poi conteggio ore finale, magari in un'altra schermata
 - Notifiche a metà/fine giornata per salvare task
 - todo-list

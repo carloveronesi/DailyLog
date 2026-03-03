@@ -6,12 +6,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "dev:web": "vite",
     "build": "vite build",
-    "build:web": "vite build",
-    "preview": "vite preview",
-    "preview:web": "vite preview",
-    "deploy:web": "npm run build && npx --yes firebase-tools deploy --only hosting"
+    "preview": "vite preview"
   },
   "dependencies": {
     "react": "^18.3.1",
