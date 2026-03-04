@@ -65,8 +65,10 @@ export default function App() {
 
   function handleImportSuccess() {
     // Force a reload of data from localStorage after import.
-    setData(null);
-    goToday();
+    // Use a small delay to ensure all storage writes are completed
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   }
 
   function toggleTheme() {
