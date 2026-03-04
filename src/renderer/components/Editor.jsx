@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   AFTERNOON_HOURS,
-  HOURS_PER_DAY,
   MORNING_HOURS,
   TASK_TYPES,
   WORK_HOURS,
@@ -35,6 +34,24 @@ function normalizeForType(e) {
   if (t === "internal" && !out.title.trim()) out.title = "Internal";
   if (t === "event" && !out.title.trim()) out.title = "Evento";
   return out;
+}
+
+function hourBoundaries(hours) {
+  if (!hours || hours.length === 0) return [];
+  return [...hours, hours[hours.length - 1] + 1];
+}
+
+function hoursBetween(hours, startHour, endHour) {
+  const from = Math.min(startHour, endHour);
+  const to = Math.max(startHour, endHour);
+  return hours.filter((h) => h >= from && h < to);
+}
+
+function nearestHourSlot(hours, boundaryHour) {
+  if (!hours || hours.length === 0) return null;
+  if (hours.includes(boundaryHour)) return boundaryHour;
+  if (boundaryHour > hours[hours.length - 1]) return hours[hours.length - 1];
+  return hours[0];
 }
 
 function initFromExisting(existingEntries) {
@@ -228,6 +245,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const initialSection = typeof initialSlot === "number"
     ? (MORNING_HOURS.includes(initialSlot) ? "AM" : "PM")
     : (initialSlot || "AM");
+  const initialHour = typeof initialSlot === "number"
+    ? initialSlot
+    : (initialSection === "AM" ? MORNING_HOURS[0] : AFTERNOON_HOURS[0]);
 
   const [section, setSection] = useState(initialSection);
   const [morningMode, setMorningMode] = useState("half");
@@ -239,9 +259,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     for (const h of WORK_HOURS) init[hourKey(h)] = defaultEntry();
     return init;
   });
-  const [activeHour, setActiveHour] = useState(
-    typeof initialSlot === "number" ? initialSlot : (section === "AM" ? MORNING_HOURS[0] : AFTERNOON_HOURS[0])
-  );
+  const [rangeStartHour, setRangeStartHour] = useState(initialHour);
+  const [rangeEndHour, setRangeEndHour] = useState(initialHour + 1);
+  const [isPickingRangeEnd, setIsPickingRangeEnd] = useState(false);
   const [fullDay, setFullDay] = useState(false);
 
   useEffect(() => {
@@ -254,24 +274,30 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setFullDay(init.fullDay);
   }, [existingEntries]);
 
-  // When section changes, update activeHour to first hour of that section
+  // Current selection state for the active section
   const currentMode = section === "AM" ? morningMode : afternoonMode;
   const currentHours = section === "AM" ? MORNING_HOURS : AFTERNOON_HOURS;
+  const currentHourBoundaries = hourBoundaries(currentHours);
+  const selectedHours = hoursBetween(currentHours, rangeStartHour, rangeEndHour);
+  const rangeFrom = Math.min(rangeStartHour, rangeEndHour);
+  const rangeTo = Math.max(rangeStartHour, rangeEndHour);
 
   function handleSectionChange(newSection) {
     setSection(newSection);
-    if (newSection === "AM") {
-      setActiveHour(MORNING_HOURS[0]);
-    } else {
-      setActiveHour(AFTERNOON_HOURS[0]);
-    }
+    const firstHour = newSection === "AM" ? MORNING_HOURS[0] : AFTERNOON_HOURS[0];
+    setRangeStartHour(firstHour);
+    setRangeEndHour(firstHour + 1);
+    setIsPickingRangeEnd(false);
   }
 
   function handleModeChange(newMode) {
     if (section === "AM") setMorningMode(newMode);
     else setAfternoonMode(newMode);
     if (newMode === "hour") {
-      setActiveHour(currentHours[0]);
+      const firstHour = currentHours[0];
+      setRangeStartHour(firstHour);
+      setRangeEndHour(firstHour + 1);
+      setIsPickingRangeEnd(false);
       setFullDay(false);
     }
   }
@@ -287,13 +313,25 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
   // Active entry for the form
   const activeEntry = (() => {
-    if (currentMode === "hour") return hourEntries[hourKey(activeHour)] || defaultEntry();
+    if (currentMode === "hour") {
+      const fallbackHour = nearestHourSlot(currentHours, rangeFrom) || currentHours[0];
+      const sourceHour = selectedHours.length > 0 ? selectedHours[0] : fallbackHour;
+      return hourEntries[hourKey(sourceHour)] || defaultEntry();
+    }
     return section === "AM" ? entryAM : entryPM;
   })();
 
   function handleEntryChange(newEntry) {
     if (currentMode === "hour") {
-      setHourEntries((prev) => ({ ...prev, [hourKey(activeHour)]: newEntry }));
+      const fallbackHour = nearestHourSlot(currentHours, rangeFrom) || currentHours[0];
+      const targetHours = selectedHours.length > 0 ? selectedHours : [fallbackHour];
+      setHourEntries((prev) => {
+        const next = { ...prev };
+        for (const h of targetHours) {
+          next[hourKey(h)] = newEntry;
+        }
+        return next;
+      });
     } else if (section === "AM") {
       setEntryAM(newEntry);
       if (fullDay) setEntryPM(newEntry);
@@ -301,6 +339,32 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       setEntryPM(newEntry);
       if (fullDay) setEntryAM(newEntry);
     }
+  }
+
+  function handleHourButtonClick(hour) {
+    const maxBoundary = currentHourBoundaries[currentHourBoundaries.length - 1];
+    const minBoundary = currentHourBoundaries[0];
+    const clampedHour = Math.max(minBoundary, Math.min(hour, maxBoundary));
+
+    if (!isPickingRangeEnd) {
+      if (clampedHour === maxBoundary) {
+        const previousBoundary = currentHourBoundaries[currentHourBoundaries.length - 2];
+        setRangeStartHour(previousBoundary);
+        setRangeEndHour(maxBoundary);
+      } else {
+        setRangeStartHour(clampedHour);
+        setRangeEndHour(clampedHour + 1);
+      }
+      setIsPickingRangeEnd(true);
+      return;
+    }
+
+    if (clampedHour === rangeStartHour) {
+      setRangeEndHour(Math.min(maxBoundary, rangeStartHour + 1));
+    } else {
+      setRangeEndHour(clampedHour);
+    }
+    setIsPickingRangeEnd(false);
   }
 
   function buildHours() {
@@ -402,21 +466,39 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
               {/* Hour picker (only in hour mode) */}
               {currentMode === "hour" && (
                 <div className="space-y-1.5">
-                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Ora</div>
+                  <div className="flex items-end justify-between gap-3 flex-wrap">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Ora</div>
+                    <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      {hourLabel(rangeFrom)} - {hourLabel(rangeTo)} ({selectedHours.length}h)
+                    </div>
+                  </div>
+                  <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    {isPickingRangeEnd ? "Ora scegli l'orario di fine." : "Clicca l'orario di inizio, poi quello di fine."}
+                  </div>
+
                   <div className="flex flex-wrap gap-1.5">
-                    {currentHours.map((h) => {
+                    {currentHourBoundaries.map((h) => {
                       const k = hourKey(h);
-                      const hasEntry = hasMeaning(hourEntries[k]);
-                      const isActive = activeHour === h;
+                      const isHourSlot = currentHours.includes(h);
+                      const hasEntry = isHourSlot && hasMeaning(hourEntries[k]);
+                      const isRangeStart = rangeStartHour === h;
+                      const isRangeEnd = rangeEndHour === h;
+                      const isInRange = h > rangeFrom && h < rangeTo;
                       return (
                         <button
                           key={h}
                           type="button"
-                          onClick={() => setActiveHour(h)}
+                          onClick={() => handleHourButtonClick(h)}
                           className={
                             "rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition border " +
-                            (isActive
+                            ((isRangeStart && isRangeEnd)
                               ? "bg-slate-900 text-white border-slate-900 dark:bg-blue-600 dark:border-blue-600"
+                              : isRangeStart
+                                ? "bg-slate-900 text-white border-slate-900 dark:bg-blue-600 dark:border-blue-600"
+                              : isRangeEnd
+                                ? "bg-white text-emerald-700 border-emerald-400 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-600"
+                              : isInRange
+                                ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700"
                               : hasEntry
                                 ? "bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
                                 : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700")
