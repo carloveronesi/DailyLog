@@ -1,4 +1,4 @@
-import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, hourKey, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS } from "../domain/tasks";
+import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS, hourKey } from "../domain/tasks";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -67,12 +67,40 @@ function HalfBlock({ entry, clientColors, emptyClass }) {
   );
 }
 
+function normalizeEntryValue(value) {
+  return (value || "").trim().toLocaleLowerCase("it-IT");
+}
+
+function entryKey(entry) {
+  if (!entry) return "";
+  return [
+    normalizeEntryValue(entry.type),
+    normalizeEntryValue(entry.title),
+    normalizeEntryValue(entry.client),
+    normalizeEntryValue(entry.notes),
+  ].join("|");
+}
+
+function buildHourSummary(hours) {
+  const groups = new Map();
+  for (const entry of Object.values(hours || {})) {
+    if (!entry) continue;
+    const key = entryKey(entry);
+    if (!key) continue;
+    const current = groups.get(key);
+    if (current) current.count += 1;
+    else groups.set(key, { entry, count: 1 });
+  }
+  return Array.from(groups.values()).sort((a, b) => b.count - a.count);
+}
+
 export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {} }) {
   const d = date.getDate();
   const am = entries?.AM;
   const pm = entries?.PM;
   const morningHoursActive = hasMorningHours(entries);
   const afternoonHoursActive = hasAfternoonHours(entries);
+  const hasHourly = !!entries?.hours && Object.keys(entries.hours).length > 0;
 
   // Full day: AM === PM, no hourly entries
   const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
@@ -93,6 +121,10 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
     ? "text-sm font-semibold text-slate-600 dark:text-slate-500"
     : "text-sm font-semibold " + (isWeekend ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-300");
 
+  const hourSummary = hasHourly ? buildHourSummary(entries.hours) : [];
+  const summaryVisible = hourSummary.slice(0, 3);
+  const remaining = hourSummary.length - summaryVisible.length;
+
   return (
     <div className={base + " " + cursor + " " + bg} onClick={isClickable ? () => onDayClick(date) : undefined}>
       <div className="flex items-center justify-between px-0.5">
@@ -111,6 +143,24 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
               <div className="w-full text-center truncate text-sm font-bold tracking-tight">
                 {displayLabel(am)}
               </div>
+            </div>
+          ) : hasHourly ? (
+            <div className="flex flex-col gap-1">
+              {summaryVisible.map((item, idx) => {
+                const badge = badgePresentation(item.entry, clientColors);
+                return (
+                  <div
+                    key={idx}
+                    className={"rounded-full px-2 py-1 text-[11px] font-bold shadow-sm " + badge.className}
+                    style={badge.style}
+                  >
+                    {displayLabel(item.entry)}
+                  </div>
+                );
+              })}
+              {remaining > 0 ? (
+                <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">+{remaining} altri</div>
+              ) : null}
             </div>
           ) : (
             <>
