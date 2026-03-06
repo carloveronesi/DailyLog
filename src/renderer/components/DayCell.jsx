@@ -1,4 +1,4 @@
-import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, hourKey, hourLabel, isSameTaskEntry, MORNING_HOURS, AFTERNOON_HOURS } from "../domain/tasks";
+import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_HOURS, AFTERNOON_HOURS } from "../domain/tasks";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -23,23 +23,19 @@ function MissingNotesLed() {
   );
 }
 
-function HourStrip({ hour, entry, onClick, clientColors }) {
+function HourStrip({ entry, clientColors }) {
   const badge = badgePresentation(entry, clientColors);
   if (!entry) {
     return (
       <div
-        onClick={onClick}
-        className="flex-1 rounded border border-dashed border-slate-300/80 hover:bg-slate-100/50 dark:border-slate-600/60 dark:hover:bg-slate-700/30 transition-colors opacity-60"
-        title={hourLabel(hour)}
+        className="flex-1 rounded border border-dashed border-slate-300/80 dark:border-slate-600/60 transition-colors opacity-60"
       />
     );
   }
   return (
     <div
-      onClick={onClick}
-      className={"relative flex-1 rounded flex items-center justify-center px-1 min-h-0 shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + badge.className}
+      className={"relative flex-1 rounded flex items-center justify-center px-1 min-h-0 shadow-sm transition-all " + badge.className}
       style={badge.style}
-      title={hourLabel(hour) + " — " + displayLabel(entry)}
     >
       {hasMissingNotes(entry) ? <MissingNotesLed /> : null}
       <div className="w-full text-center text-ellipsis overflow-hidden text-[9px] font-bold leading-tight">
@@ -49,20 +45,18 @@ function HourStrip({ hour, entry, onClick, clientColors }) {
   );
 }
 
-function HalfBlock({ entry, slot, onClick, clientColors, emptyClass }) {
+function HalfBlock({ entry, clientColors, emptyClass }) {
   const badge = badgePresentation(entry, clientColors);
   if (!entry) {
     return (
       <div
-        onClick={onClick}
-        className={"flex-1 rounded border border-dashed border-slate-300/80 hover:bg-slate-100/50 dark:border-slate-600/60 dark:hover:bg-slate-700/30 transition-colors opacity-60 min-h-[36px] " + (emptyClass || "")}
+        className={"flex-1 rounded border border-dashed border-slate-300/80 dark:border-slate-600/60 transition-colors opacity-60 min-h-[36px] " + (emptyClass || "")}
       />
     );
   }
   return (
     <div
-      onClick={onClick}
-      className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm hover:brightness-95 dark:hover:brightness-110 transition-all " + badge.className}
+      className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm transition-all " + badge.className}
       style={badge.style}
     >
       {hasMissingNotes(entry) ? <MissingNotesLed /> : null}
@@ -73,7 +67,7 @@ function HalfBlock({ entry, slot, onClick, clientColors, emptyClass }) {
   );
 }
 
-export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, clientColors = {} }) {
+export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {} }) {
   const d = date.getDate();
   const am = entries?.AM;
   const pm = entries?.PM;
@@ -84,7 +78,7 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
   const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
 
   const isWeekendDay = isCurrentMonth && isWeekend;
-  const isClickable = isCurrentMonth && !isWeekend && typeof onClick === "function";
+  const isClickable = isCurrentMonth && !isWeekend && typeof onDayClick === "function";
 
   const base =
     "rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[100px] lg:min-h-0 lg:h-full flex flex-col gap-2";
@@ -99,16 +93,8 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
     ? "text-sm font-semibold text-slate-600 dark:text-slate-500"
     : "text-sm font-semibold " + (isWeekend ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-300");
 
-  const handleClick = (e, slot) => {
-    e.stopPropagation();
-    if (!isClickable) return;
-    onClick(slot);
-  };
-
-  const amBadge = badgePresentation(am, clientColors);
-
   return (
-    <div className={base + " " + cursor + " " + bg} onClick={isClickable ? () => onClick() : undefined}>
+    <div className={base + " " + cursor + " " + bg} onClick={isClickable ? () => onDayClick(date) : undefined}>
       <div className="flex items-center justify-between px-0.5">
         <div className={dayNumCls}>{d}</div>
       </div>
@@ -118,9 +104,8 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
           {isFullDay ? (
             // Full day: single large block
             <div
-              onClick={(e) => handleClick(e, "AM")}
-              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform hover:scale-[1.01] " + amBadge.className}
-              style={amBadge.style}
+              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform " + badgePresentation(am, clientColors).className}
+              style={badgePresentation(am, clientColors).style}
             >
               {hasMissingNotes(am) ? <MissingNotesLed /> : null}
               <div className="w-full text-center truncate text-sm font-bold tracking-tight">
@@ -133,14 +118,11 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
               {morningHoursActive ? (
                 <div className="flex flex-1 flex-col gap-0.5">
                   {MORNING_HOURS.map((h) => {
-                    const key = hourKey(h);
-                    const entry = entries?.hours?.[key] || null;
+                    const entry = entries?.hours?.[String(h).padStart(2, "0")] || null;
                     return (
                       <HourStrip
                         key={h}
-                        hour={h}
                         entry={entry}
-                        onClick={(e) => handleClick(e, h)}
                         clientColors={clientColors}
                       />
                     );
@@ -149,8 +131,6 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
               ) : (
                 <HalfBlock
                   entry={am}
-                  slot="AM"
-                  onClick={(e) => handleClick(e, "AM")}
                   clientColors={clientColors}
                 />
               )}
@@ -159,14 +139,11 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
               {afternoonHoursActive ? (
                 <div className="flex flex-1 flex-col gap-0.5">
                   {AFTERNOON_HOURS.map((h) => {
-                    const key = hourKey(h);
-                    const entry = entries?.hours?.[key] || null;
+                    const entry = entries?.hours?.[String(h).padStart(2, "0")] || null;
                     return (
                       <HourStrip
                         key={h}
-                        hour={h}
                         entry={entry}
-                        onClick={(e) => handleClick(e, h)}
                         clientColors={clientColors}
                       />
                     );
@@ -175,8 +152,6 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onClick, cli
               ) : (
                 <HalfBlock
                   entry={pm}
-                  slot="PM"
-                  onClick={(e) => handleClick(e, "PM")}
                   clientColors={clientColors}
                 />
               )}

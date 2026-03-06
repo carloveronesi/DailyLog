@@ -134,6 +134,12 @@ export function useCalendarData(initialYear, initialMonth) {
         setMonth(today.getMonth());
     }
 
+    function setMonthYear(nextYear, nextMonth) {
+        if (nextYear === year && nextMonth === month) return;
+        setYear(nextYear);
+        setMonth(nextMonth);
+    }
+
     return {
         year,
         month,
@@ -146,6 +152,7 @@ export function useCalendarData(initialYear, initialMonth) {
         prevMonth,
         nextMonth,
         goToday,
+        setMonthYear,
         setData,
     };
 }

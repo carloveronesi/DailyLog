@@ -17,7 +17,7 @@ export function CalendarGrid({
     month,
     gridDates,
     monthDataByDate,
-    openEditor,
+    onDayClick,
     clientColors = {},
     visibleFilter = null,
 }) {
@@ -58,7 +58,7 @@ export function CalendarGrid({
                             isCurrentMonth={isCurrentMonth}
                             isWeekend={isWeekend}
                             entries={entries}
-                            onClick={(slot) => openEditor(d, slot)}
+                            onDayClick={onDayClick}
                             clientColors={clientColors}
                         />
                     );
