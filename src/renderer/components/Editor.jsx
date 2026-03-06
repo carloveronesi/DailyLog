@@ -281,16 +281,20 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       return;
     }
 
-    const hours = {};
+    const existingHours = existingEntries?.hours || {};
+    const nextHours = { ...existingHours };
     const start = Math.min(rangeStartMin, rangeEndMin);
     const end = Math.max(rangeStartMin, rangeEndMin);
-    for (let m = start; m < end; m += SLOT_MINUTES) {
-      const entry = hourEntries[hourKey(m)] || activeEntry;
-      if (hasMeaning(entry)) hours[hourKey(m)] = normalizeForType(entry);
-    }
-    onSave({ AM: null, PM: null, hours: Object.keys(hours).length > 0 ? hours : undefined });
-  }
+    const entry = hasMeaning(activeEntry) ? normalizeForType(activeEntry) : null;
 
+    for (let m = start; m < end; m += SLOT_MINUTES) {
+      const key = hourKey(m);
+      if (entry) nextHours[key] = entry;
+      else delete nextHours[key];
+    }
+
+    onSave({ AM: null, PM: null, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
+  }
   const fmt = (d) => {
     const dd = pad2(d.getDate());
     const mm = pad2(d.getMonth() + 1);
