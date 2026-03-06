@@ -251,7 +251,7 @@ export default function App() {
         onImportSuccess={handleImportSuccess}
       />
 
-      <Modal open={editorOpen} title={selectedDate ? "Modifica giornata" : "Modifica"} onClose={closeEditor}>
+      <Modal open={editorOpen} title={selectedDate ? "Task" : "Task"} onClose={closeEditor}>
         {selectedDate ? (
           <Editor
             date={selectedDate}

@@ -38,7 +38,9 @@ function isSameHourEntry(a, b) {
     normalizeEntryValue(a.type) === normalizeEntryValue(b.type) &&
     normalizeEntryValue(a.title) === normalizeEntryValue(b.title) &&
     normalizeEntryValue(a.client) === normalizeEntryValue(b.client) &&
-    normalizeEntryValue(a.notes) === normalizeEntryValue(b.notes)
+    normalizeEntryValue(a.notes) === normalizeEntryValue(b.notes) &&
+    normalizeEntryValue(a.wentWrong) === normalizeEntryValue(b.wentWrong) &&
+    normalizeEntryValue(a.nextSteps) === normalizeEntryValue(b.nextSteps)
   );
 }
 

@@ -14,9 +14,7 @@ import {
   slotMinutes,
 } from "../domain/tasks";
 import { pad2 } from "../utils/date";
-import { Button, Icon, Segmented } from "./ui";
-
-// ─── helpers ─────────────────────────────────────────────────────────────
+import { Button, Icon } from "./ui";
 
 function hasMeaning(e) {
   if (!e) return false;
@@ -24,6 +22,8 @@ function hasMeaning(e) {
     (e.title && e.title.trim()) ||
     (e.client && e.client.trim()) ||
     (e.notes && e.notes.trim()) ||
+    (e.wentWrong && e.wentWrong.trim()) ||
+    (e.nextSteps && e.nextSteps.trim()) ||
     e.type === "vacation"
   );
 }
@@ -38,32 +38,8 @@ function normalizeForType(e) {
   return out;
 }
 
-function hourBoundaries(slots) {
-  if (!slots || slots.length === 0) return [];
-  return [...slots, slots[slots.length - 1] + SLOT_MINUTES];
-}
-
-function hoursBetween(slots, startMinute, endMinute) {
-  const from = Math.min(startMinute, endMinute);
-  const to = Math.max(startMinute, endMinute);
-  return slots.filter((h) => h >= from && h < to);
-}
-
-function nearestHourSlot(slots, boundaryMinute) {
-  if (!slots || slots.length === 0) return null;
-  if (slots.includes(boundaryMinute)) return boundaryMinute;
-  if (boundaryMinute > slots[slots.length - 1]) return slots[slots.length - 1];
-  return slots[0];
-}
-
 function initFromExisting(existingEntries) {
   const hours = existingEntries?.hours || {};
-  const hasMorning = MORNING_SLOTS.some((h) => hours[hourKey(h)]);
-  const hasAfternoon = AFTERNOON_SLOTS.some((h) => hours[hourKey(h)]);
-
-  const morningMode = hasMorning ? "hour" : "half";
-  const afternoonMode = hasAfternoon ? "hour" : "half";
-
   const entryAM = existingEntries?.AM || defaultEntry();
   const entryPM = existingEntries?.PM || defaultEntry();
 
@@ -74,21 +50,17 @@ function initFromExisting(existingEntries) {
   }
 
   const fullDay =
-    morningMode === "half" &&
-    afternoonMode === "half" &&
     existingEntries?.AM &&
     existingEntries?.PM &&
     isSameTaskEntry(existingEntries.AM, existingEntries.PM);
 
-  return { morningMode, afternoonMode, entryAM, entryPM, hourEntries: allHourEntries, fullDay };
+  return { entryAM, entryPM, hourEntries: allHourEntries, fullDay };
 }
 
 function formatDurationHours(minutes) {
   const hours = minutes / 60;
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
 }
-
-// ─── Entry form ─────────────────────────────────────────────────────────────
 
 function EntryForm({ entry, onChange, topClients, clientColors }) {
   const setField = (k, v) => onChange({ ...entry, [k]: v });
@@ -120,6 +92,13 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
               value={entry.client}
               onChange={(e) => setField("client", e.target.value)}
               placeholder="Es. Generali"
+            />
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titolo task</label>
+            <input
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+              value={entry.title}
+              onChange={(e) => setField("title", e.target.value)}
+              placeholder="Es. Refactor codice"
             />
             {topClients.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 pt-1">
@@ -166,100 +145,47 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
           placeholder="Dettagli..."
         />
       </div>
-    </div>
-  );
-}
 
-// ─── Preview ──────────────────────────────────────────────────────────────
-
-function PreviewHalfBlock({ entry, clientColors }) {
-  const badge = badgePresentation(entry, clientColors);
-  if (!entry || !displayLabel(entry)) {
-    return <div className="flex-1 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 opacity-40 bg-slate-50/50 dark:bg-transparent" />;
-  }
-  return (
-    <div className={"flex-1 rounded-xl flex items-center justify-center px-2 py-1 shadow-sm " + badge.className} style={badge.style}>
-      <div className="w-full text-center text-ellipsis overflow-hidden text-xs font-black leading-tight">
-        {displayLabel(entry)}
-      </div>
-    </div>
-  );
-}
-
-function PreviewHourStrip({ entry, clientColors }) {
-  const badge = badgePresentation(entry, clientColors);
-  if (!entry || !displayLabel(entry)) {
-    return <div className="flex-1 rounded border border-dashed border-slate-200 dark:border-slate-700 opacity-30" />;
-  }
-  return (
-    <div className={"flex-1 rounded flex items-center justify-center px-1 shadow-sm " + badge.className} style={badge.style}>
-      <div className="w-full text-center text-ellipsis overflow-hidden text-[7px] font-black leading-tight">
-        {displayLabel(entry)}
-      </div>
-    </div>
-  );
-}
-
-function EditorPreview({ date, fullDay, morningMode, afternoonMode, entryAM, entryPM, hourEntries, clientColors }) {
-  const amBadge = badgePresentation(entryAM, clientColors);
-  return (
-    <div className="hidden sm:flex flex-col items-center justify-center self-center h-full">
-      <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4 pr-1">Preview</div>
-      <div className="w-[150px] h-[150px] rounded-[32px] border border-slate-200/80 bg-white p-3.5 flex flex-col shadow-xl shadow-slate-200/50 dark:bg-slate-800 dark:border-slate-700 dark:shadow-none">
-        <div className="text-sm font-black text-slate-400 pr-1">{date.getDate()}</div>
-        <div className="flex flex-1 flex-col gap-2 mt-2">
-          {fullDay ? (
-            <div className={"flex-1 rounded-[14px] flex items-center justify-center px-2 py-1 shadow-sm " + amBadge.className} style={amBadge.style}>
-              <div className="w-full text-center truncate text-sm font-black tracking-tight">
-                {displayLabel(entryAM)}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Morning preview */}
-              {morningMode === "hour" ? (
-                <div className="flex flex-1 flex-col gap-0.5">
-                  {MORNING_SLOTS.map((h) => (
-                    <PreviewHourStrip key={h} entry={hourEntries[hourKey(h)]} clientColors={clientColors} />
-                  ))}
-                </div>
-              ) : (
-                <PreviewHalfBlock entry={entryAM && displayLabel(entryAM) ? entryAM : null} clientColors={clientColors} />
-              )}
-
-              {/* Afternoon preview */}
-              {afternoonMode === "hour" ? (
-                <div className="flex flex-1 flex-col gap-0.5">
-                  {AFTERNOON_SLOTS.map((h) => (
-                    <PreviewHourStrip key={h} entry={hourEntries[hourKey(h)]} clientColors={clientColors} />
-                  ))}
-                </div>
-              ) : (
-                <PreviewHalfBlock entry={entryPM && displayLabel(entryPM) ? entryPM : null} clientColors={clientColors} />
-              )}
-            </>
-          )}
+      <div className="space-y-3 md:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cosa è andato male</label>
+            <textarea
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+              rows={3}
+              value={entry.wentWrong}
+              onChange={(e) => setField("wentWrong", e.target.value)}
+              placeholder="Blocchi, criticità, errori..."
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Next steps</label>
+            <textarea
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+              rows={3}
+              value={entry.nextSteps}
+              onChange={(e) => setField("nextSteps", e.target.value)}
+              placeholder="Azioni concrete per andare avanti..."
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Main Editor ──────────────────────────────────────────────────────────────
+function buildEndOptions(startMinute, sectionBoundaries) {
+  const options = [];
+  for (const end of sectionBoundaries) {
+    if (end > startMinute) options.push(end);
+  }
+  return options;
+}
 
 export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {} }) {
   const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
   const initialRangeStart = initialRange?.start ?? initialSlotMin;
-  const initialSection = initialRangeStart !== null
-    ? (MORNING_SLOTS.includes(initialRangeStart) ? "AM" : "PM")
-    : (initialSlot || "AM");
-  const defaultStart = initialSection === "AM" ? MORNING_SLOTS[0] : AFTERNOON_SLOTS[0];
-  const defaultStartMin = initialRangeStart ?? defaultStart;
-  const defaultEndMin = initialRange?.end ?? (defaultStartMin + SLOT_MINUTES);
 
-  const [section, setSection] = useState(initialSection);
-  const [morningMode, setMorningMode] = useState("half");
-  const [afternoonMode, setAfternoonMode] = useState("half");
   const [entryAM, setEntryAM] = useState(defaultEntry());
   const [entryPM, setEntryPM] = useState(defaultEntry());
   const [hourEntries, setHourEntries] = useState(() => {
@@ -267,154 +193,102 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     for (const h of WORK_SLOTS) init[hourKey(h)] = defaultEntry();
     return init;
   });
-  const [rangeStartMin, setRangeStartMin] = useState(defaultStartMin);
-  const [rangeEndMin, setRangeEndMin] = useState(defaultEndMin);
-  const [isPickingRangeEnd, setIsPickingRangeEnd] = useState(false);
+  const [rangeStartMin, setRangeStartMin] = useState(MORNING_SLOTS[0]);
+  const [rangeEndMin, setRangeEndMin] = useState(MORNING_SLOTS[0] + SLOT_MINUTES);
   const [fullDay, setFullDay] = useState(false);
+  const [autoAdjusted, setAutoAdjusted] = useState(false);
 
   useEffect(() => {
     const init = initFromExisting(existingEntries);
-    setMorningMode(init.morningMode);
-    setAfternoonMode(init.afternoonMode);
     setEntryAM(init.entryAM);
     setEntryPM(init.entryPM);
     setHourEntries(init.hourEntries);
     setFullDay(init.fullDay);
+
+    const hourKeys = Object.keys(existingEntries?.hours || {}).map(slotMinutes).filter((v) => Number.isFinite(v));
+    if (hourKeys.length > 0) {
+      const sorted = hourKeys.sort((a, b) => a - b);
+      const start = sorted[0];
+      const end = sorted[sorted.length - 1] + SLOT_MINUTES;
+      setRangeStartMin(start);
+      setRangeEndMin(end);
+    } else if (init.fullDay) {
+      setRangeStartMin(MORNING_SLOTS[0]);
+      setRangeEndMin(AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
+    } else if (existingEntries?.AM && !existingEntries?.PM) {
+      setRangeStartMin(MORNING_SLOTS[0]);
+      setRangeEndMin(MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES);
+    } else if (existingEntries?.PM && !existingEntries?.AM) {
+      setRangeStartMin(AFTERNOON_SLOTS[0]);
+      setRangeEndMin(AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
+    }
   }, [existingEntries]);
 
   useEffect(() => {
     if (initialRangeStart !== null) {
-      const nextSection = MORNING_SLOTS.includes(initialRangeStart) ? "AM" : "PM";
-      setSection(nextSection);
-      if (nextSection === "AM") setMorningMode("hour");
-      else setAfternoonMode("hour");
       setFullDay(false);
       setRangeStartMin(initialRangeStart);
-      setRangeEndMin(defaultEndMin);
-      setIsPickingRangeEnd(false);
+      setRangeEndMin((initialRange?.end ?? (initialRangeStart + SLOT_MINUTES)));
     }
-  }, [initialRangeStart, defaultEndMin]);
+  }, [initialRangeStart, initialRange]);
 
-  const currentMode = section === "AM" ? morningMode : afternoonMode;
-  const currentHours = section === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS;
-  const currentHourBoundaries = hourBoundaries(currentHours);
-  const selectedHours = hoursBetween(currentHours, rangeStartMin, rangeEndMin);
-  const rangeFrom = Math.min(rangeStartMin, rangeEndMin);
-  const rangeTo = Math.max(rangeStartMin, rangeEndMin);
-  const rangeDuration = formatDurationHours(rangeTo - rangeFrom);
-
-  function handleSectionChange(newSection) {
-    setSection(newSection);
-    const firstHour = newSection === "AM" ? MORNING_SLOTS[0] : AFTERNOON_SLOTS[0];
-    setRangeStartMin(firstHour);
-    setRangeEndMin(firstHour + SLOT_MINUTES);
-    setIsPickingRangeEnd(false);
-  }
-
-  function handleModeChange(newMode) {
-    if (section === "AM") setMorningMode(newMode);
-    else setAfternoonMode(newMode);
-    if (newMode === "hour") {
-      const firstHour = currentHours[0];
-      setRangeStartMin(firstHour);
-      setRangeEndMin(firstHour + SLOT_MINUTES);
-      setIsPickingRangeEnd(false);
-      setFullDay(false);
+  const activeEntry = useMemo(() => {
+    if (!fullDay) {
+      const k = hourKey(rangeStartMin);
+      return hourEntries[k] || defaultEntry();
     }
-  }
+    return entryAM;
+  }, [fullDay, entryAM, hourEntries, rangeStartMin]);
 
-  function handleFullDayToggle() {
-    const next = !fullDay;
-    setFullDay(next);
-    if (next) {
-      setMorningMode("half");
-      setAfternoonMode("half");
-    }
-  }
+  const startSection = rangeStartMin < 13 * 60 ? "AM" : "PM";
+  const sectionStartOptions = startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS;
+  const sectionEndBoundary = startSection === "AM" ? 13 * 60 : 18 * 60;
+  const endOptions = buildEndOptions(rangeStartMin, [...sectionStartOptions.map((v) => v + SLOT_MINUTES), sectionEndBoundary]);
 
-  const activeEntry = (() => {
-    if (currentMode === "hour") {
-      const fallbackHour = nearestHourSlot(currentHours, rangeFrom) || currentHours[0];
-      const sourceHour = selectedHours.length > 0 ? selectedHours[0] : fallbackHour;
-      return hourEntries[hourKey(sourceHour)] || defaultEntry();
+  useEffect(() => {
+    if (rangeEndMin <= rangeStartMin) {
+      const fallback = rangeStartMin + SLOT_MINUTES;
+      setRangeEndMin(fallback);
+      setAutoAdjusted(true);
+      const timer = setTimeout(() => setAutoAdjusted(false), 1800);
+      return () => clearTimeout(timer);
     }
-    return section === "AM" ? entryAM : entryPM;
-  })();
+    return undefined;
+  }, [rangeStartMin, rangeEndMin]);
 
   function handleEntryChange(newEntry) {
-    if (currentMode === "hour") {
-      const fallbackHour = nearestHourSlot(currentHours, rangeFrom) || currentHours[0];
-      const targetHours = selectedHours.length > 0 ? selectedHours : [fallbackHour];
-      setHourEntries((prev) => {
-        const next = { ...prev };
-        for (const h of targetHours) {
-          next[hourKey(h)] = newEntry;
-        }
-        return next;
-      });
-    } else if (section === "AM") {
+    if (fullDay) {
       setEntryAM(newEntry);
-      if (fullDay) setEntryPM(newEntry);
-    } else {
       setEntryPM(newEntry);
-      if (fullDay) setEntryAM(newEntry);
-    }
-  }
-
-  function handleHourButtonClick(minute) {
-    const maxBoundary = currentHourBoundaries[currentHourBoundaries.length - 1];
-    const minBoundary = currentHourBoundaries[0];
-    const clampedMinute = Math.max(minBoundary, Math.min(minute, maxBoundary));
-
-    if (!isPickingRangeEnd) {
-      if (clampedMinute === maxBoundary) {
-        const previousBoundary = currentHourBoundaries[currentHourBoundaries.length - 2];
-        setRangeStartMin(previousBoundary);
-        setRangeEndMin(maxBoundary);
-      } else {
-        setRangeStartMin(clampedMinute);
-        setRangeEndMin(clampedMinute + SLOT_MINUTES);
-      }
-      setIsPickingRangeEnd(true);
       return;
     }
-
-    if (clampedMinute === rangeStartMin) {
-      setRangeEndMin(Math.min(maxBoundary, rangeStartMin + SLOT_MINUTES));
-    } else {
-      setRangeEndMin(clampedMinute);
-    }
-    setIsPickingRangeEnd(false);
-  }
-
-  function buildHours() {
-    const result = {};
-    if (morningMode === "hour") {
-      for (const h of MORNING_SLOTS) {
-        const k = hourKey(h);
-        const e = hourEntries[k];
-        if (hasMeaning(e)) result[k] = normalizeForType(e);
+    setHourEntries((prev) => {
+      const next = { ...prev };
+      const start = Math.min(rangeStartMin, rangeEndMin);
+      const end = Math.max(rangeStartMin, rangeEndMin);
+      for (let m = start; m < end; m += SLOT_MINUTES) {
+        next[hourKey(m)] = newEntry;
       }
-    }
-    if (afternoonMode === "hour") {
-      for (const h of AFTERNOON_SLOTS) {
-        const k = hourKey(h);
-        const e = hourEntries[k];
-        if (hasMeaning(e)) result[k] = normalizeForType(e);
-      }
-    }
-    return result;
+      return next;
+    });
   }
 
   function handleSave() {
-    const hours = buildHours();
-    const cleanAM = morningMode === "half" && hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
-    const cleanPM = afternoonMode === "half" && hasMeaning(entryPM) ? normalizeForType(entryPM) : null;
-    if (fullDay && cleanAM) {
-      onSave({ AM: cleanAM, PM: cleanAM, hours: Object.keys(hours).length > 0 ? hours : undefined });
-    } else {
-      onSave({ AM: cleanAM, PM: cleanPM, hours: Object.keys(hours).length > 0 ? hours : undefined });
+    if (fullDay) {
+      const cleanAM = hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
+      if (!cleanAM) return;
+      onSave({ AM: cleanAM, PM: cleanAM, hours: undefined });
+      return;
     }
+
+    const hours = {};
+    const start = Math.min(rangeStartMin, rangeEndMin);
+    const end = Math.max(rangeStartMin, rangeEndMin);
+    for (let m = start; m < end; m += SLOT_MINUTES) {
+      const entry = hourEntries[hourKey(m)] || activeEntry;
+      if (hasMeaning(entry)) hours[hourKey(m)] = normalizeForType(entry);
+    }
+    onSave({ AM: null, PM: null, hours: Object.keys(hours).length > 0 ? hours : undefined });
   }
 
   const fmt = (d) => {
@@ -424,156 +298,112 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     return `${dd}/${mm}/${yy}`;
   };
 
+  const rangeDuration = formatDurationHours(Math.max(rangeEndMin - rangeStartMin, SLOT_MINUTES));
+
   return (
     <div className="space-y-4">
       <div className="text-sm text-slate-500 dark:text-slate-500 font-medium">{fmt(date)}</div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_150px] gap-8 items-start">
-        <div className="space-y-5">
-
-          {/* Full-day toggle */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="text-sm font-bold text-slate-700 dark:text-slate-200">Giornata intera</div>
-            <button
-              type="button"
-              onClick={handleFullDayToggle}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-bold text-slate-700 dark:text-slate-200">Giornata intera</div>
+          <button
+            type="button"
+            onClick={() => setFullDay((prev) => !prev)}
+            className={
+              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none " +
+              (fullDay ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700")
+            }
+          >
+            <span
               className={
-                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none " +
-                (fullDay ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700")
+                "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform " +
+                (fullDay ? "translate-x-6" : "translate-x-1")
               }
-            >
-              <span
-                className={
-                  "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform " +
-                  (fullDay ? "translate-x-6" : "translate-x-1")
-                }
-              />
-            </button>
-          </div>
-
-          {fullDay ? (
-            <div className="rounded-xl border border-blue-100 bg-blue-50/50 px-3 py-2 text-[13px] text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-300">
-              Salvataggio per l'intera giornata (mattina + pomeriggio).
-            </div>
-          ) : (
-            <>
-              {/* Section selector */}
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="text-sm font-bold text-slate-700 dark:text-slate-200">Sezione</div>
-                <Segmented
-                  value={section}
-                  onChange={handleSectionChange}
-                  options={[
-                    { value: "AM", label: "Mattina" },
-                    { value: "PM", label: "Pomeriggio" },
-                  ]}
-                />
-              </div>
-
-              {/* Mode selector for current section */}
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="text-sm font-bold text-slate-700 dark:text-slate-200">Granularità</div>
-                <Segmented
-                  value={currentMode}
-                  onChange={handleModeChange}
-                  options={[
-                    { value: "half", label: "Mezza giornata" },
-                    { value: "hour", label: "Per ora" },
-                  ]}
-                />
-              </div>
-
-              {/* Hour picker (only in hour mode) */}
-              {currentMode === "hour" && (
-                <div className="space-y-1.5">
-                  <div className="flex items-end justify-between gap-3 flex-wrap">
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Orario</div>
-                    <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      {hourLabel(rangeFrom)} - {hourLabel(rangeTo)} ({rangeDuration}h)
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    {isPickingRangeEnd ? "Ora scegli l'orario di fine." : "Clicca l'orario di inizio, poi quello di fine."}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {currentHourBoundaries.map((h) => {
-                      const k = hourKey(h);
-                      const isHourSlot = currentHours.includes(h);
-                      const hasEntry = isHourSlot && hasMeaning(hourEntries[k]);
-                      const isRangeStart = rangeStartMin === h;
-                      const isRangeEnd = rangeEndMin === h;
-                      const isInRange = h > rangeFrom && h < rangeTo;
-                      return (
-                        <button
-                          key={h}
-                          type="button"
-                          onClick={() => handleHourButtonClick(h)}
-                          className={
-                            "rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition border " +
-                            ((isRangeStart && isRangeEnd)
-                              ? "bg-slate-900 text-white border-slate-900 dark:bg-blue-600 dark:border-blue-600"
-                              : isRangeStart
-                                ? "bg-slate-900 text-white border-slate-900 dark:bg-blue-600 dark:border-blue-600"
-                                : isRangeEnd
-                                  ? "bg-white text-emerald-700 border-emerald-400 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-600"
-                                  : isInRange
-                                    ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700"
-                                    : hasEntry
-                                      ? "bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
-                                      : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700")
-                          }
-                        >
-                          {hourLabel(h)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Entry form */}
-          <div className="pt-1">
-            <EntryForm
-              entry={activeEntry}
-              onChange={handleEntryChange}
-              topClients={topClients}
-              clientColors={clientColors}
             />
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-700/70 dark:bg-slate-900/40">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="min-w-[180px]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ora di inizio</div>
+              <select
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                value={rangeStartMin}
+                onChange={(e) => setRangeStartMin(Number(e.target.value))}
+                disabled={fullDay}
+              >
+                {(startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS).map((slot) => (
+                  <option key={slot} value={slot}>
+                    {hourLabel(slot)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="min-w-[180px]">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ora di fine</div>
+              <select
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                value={rangeEndMin}
+                onChange={(e) => setRangeEndMin(Number(e.target.value))}
+                disabled={fullDay}
+              >
+                {endOptions.map((end) => (
+                  <option key={end} value={end}>
+                    {hourLabel(end)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 ml-auto">
+              {hourLabel(rangeStartMin)} - {hourLabel(rangeEndMin)} ({rangeDuration}h)
+            </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
-            <Button
-              className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
-              onClick={handleSave}
-              type="button"
-            >
-              Salva
-            </Button>
-
-            <Button
-              className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
-              onClick={onDeleteDay}
-              type="button"
-            >
-              <Icon name="trash" className="mr-2" />
-              Rimuovi tutto
-            </Button>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="relative flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
+              <div
+                className="absolute top-0 h-full rounded-full bg-slate-900 dark:bg-blue-500"
+                style={{
+                  left: `${((rangeStartMin - MORNING_SLOTS[0]) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
+                  width: `${((rangeEndMin - rangeStartMin) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
+                }}
+              />
+            </div>
+            {autoAdjusted ? (
+              <div className="text-[11px] font-semibold text-amber-600">Fine aggiornata</div>
+            ) : null}
           </div>
         </div>
 
-        <EditorPreview
-          date={date}
-          fullDay={fullDay}
-          morningMode={morningMode}
-          afternoonMode={afternoonMode}
-          entryAM={entryAM}
-          entryPM={entryPM}
-          hourEntries={hourEntries}
+        <EntryForm
+          entry={activeEntry}
+          onChange={handleEntryChange}
+          topClients={topClients}
           clientColors={clientColors}
         />
+
+        <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+          <Button
+            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
+            onClick={handleSave}
+            type="button"
+          >
+            Salva
+          </Button>
+
+          <Button
+            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            onClick={onDeleteDay}
+            type="button"
+          >
+            <Icon name="trash" className="mr-2" />
+            Elimina
+          </Button>
+        </div>
       </div>
     </div>
   );

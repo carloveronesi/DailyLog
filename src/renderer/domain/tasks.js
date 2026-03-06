@@ -100,6 +100,8 @@ export function defaultEntry() {
     title: "",
     client: "",
     notes: "",
+    wentWrong: "",
+    nextSteps: "",
   };
 }
 
@@ -195,6 +197,8 @@ export function displayLabel(entry) {
   if (!entry) return "";
   if (entry.type === "client") {
     const c = (entry.client || "").trim();
+    const t = (entry.title || "").trim();
+    if (c && t) return `${c} - ${t}`;
     if (c) return c;
   }
   if (entry.type === "vacation") return "Ferie";

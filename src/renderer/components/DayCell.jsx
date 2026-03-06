@@ -78,6 +78,8 @@ function entryKey(entry) {
     normalizeEntryValue(entry.title),
     normalizeEntryValue(entry.client),
     normalizeEntryValue(entry.notes),
+    normalizeEntryValue(entry.wentWrong),
+    normalizeEntryValue(entry.nextSteps),
   ].join("|");
 }
 
