@@ -28,21 +28,44 @@ function hasMissingNotes(entry) {
   return !(entry.notes || "").trim();
 }
 
+function normalizeEntryValue(value) {
+  return (value || "").trim().toLocaleLowerCase("it-IT");
+}
+
+function isSameHourEntry(a, b) {
+  if (!a || !b) return false;
+  return (
+    normalizeEntryValue(a.type) === normalizeEntryValue(b.type) &&
+    normalizeEntryValue(a.title) === normalizeEntryValue(b.title) &&
+    normalizeEntryValue(a.client) === normalizeEntryValue(b.client) &&
+    normalizeEntryValue(a.notes) === normalizeEntryValue(b.notes)
+  );
+}
+
+
 function buildHourBlocks(dayData) {
   if (!dayData?.hours) return [];
   const blocks = [];
   let current = null;
+  const hourKeys = Object.keys(dayData.hours || {});
+  const hasHalfSlots = hourKeys.some((k) => k.endsWith(":30"));
 
-  for (const slot of WORK_SLOTS) {
+  const slotsToScan = hasHalfSlots
+    ? WORK_SLOTS
+    : WORK_SLOTS.filter((slot) => slot % 60 === 0);
+  const stepMinutes = hasHalfSlots ? SLOT_MINUTES : 60;
+  const spanStep = hasHalfSlots ? 1 : 2;
+
+  for (const slot of slotsToScan) {
     const entry = dayData.hours[hourKey(slot)] || null;
     if (!entry) {
       current = null;
       continue;
     }
 
-    if (current && isSameTaskEntry(current.entry, entry) && current.end === slot) {
-      current.end += SLOT_MINUTES;
-      current.span += 1;
+    if (current && isSameHourEntry(current.entry, entry) && current.end === slot) {
+      current.end += stepMinutes;
+      current.span += spanStep;
       continue;
     }
 
@@ -50,22 +73,21 @@ function buildHourBlocks(dayData) {
     current = {
       entry,
       start: slot,
-      end: slot + SLOT_MINUTES,
-      span: 1,
+      end: slot + stepMinutes,
+      span: spanStep,
       label,
     };
     blocks.push(current);
   }
 
   return blocks.map((block) => {
-    if (block.span <= 1) return block;
+    if (block.span <= spanStep) return block;
     return {
       ...block,
       label: `${hourLabel(block.start)} - ${hourLabel(block.end)}`,
     };
   });
 }
-
 function buildBlocks(dayData) {
   if (!dayData) return [];
   const am = dayData.AM || null;
