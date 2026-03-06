@@ -281,16 +281,10 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       return;
     }
 
-    const existingHours = existingEntries?.hours || {};
-    const nextHours = { ...existingHours };
-    const start = Math.min(rangeStartMin, rangeEndMin);
-    const end = Math.max(rangeStartMin, rangeEndMin);
-    const entry = hasMeaning(activeEntry) ? normalizeForType(activeEntry) : null;
-
-    for (let m = start; m < end; m += SLOT_MINUTES) {
-      const key = hourKey(m);
-      if (entry) nextHours[key] = entry;
-      else delete nextHours[key];
+    const nextHours = {};
+    for (const [key, entry] of Object.entries(hourEntries)) {
+      if (!hasMeaning(entry)) continue;
+      nextHours[key] = normalizeForType(entry);
     }
 
     onSave({ AM: null, PM: null, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
