@@ -1,14 +1,69 @@
-import { badgePresentation, displayLabel, hasAfternoonHours, hasMorningHours, hourKey, hourLabel, isSameTaskEntry, MORNING_HOURS, AFTERNOON_HOURS } from "../domain/tasks";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AFTERNOON_SLOTS,
+  MORNING_SLOTS,
+  SLOT_MINUTES,
+  WORK_SLOTS,
+  badgePresentation,
+  displayLabel,
+  hasAfternoonHours,
+  hasMorningHours,
+  hourKey,
+  hourLabel,
+  isSameTaskEntry,
+} from "../domain/tasks";
 import { monthNameIT } from "../utils/date";
 import { Button, Icon } from "./ui";
 
-const DAY_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
 const WEEKDAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 const ROW_HEIGHT = 56;
+
+const BREAK_START = 13 * 60;
+const BREAK_END = 14 * 60;
+
+const DAY_SLOTS = [...MORNING_SLOTS, BREAK_START, BREAK_START + SLOT_MINUTES, ...AFTERNOON_SLOTS];
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
   return !(entry.notes || "").trim();
+}
+
+function buildHourBlocks(dayData) {
+  if (!dayData?.hours) return [];
+  const blocks = [];
+  let current = null;
+
+  for (const slot of WORK_SLOTS) {
+    const entry = dayData.hours[hourKey(slot)] || null;
+    if (!entry) {
+      current = null;
+      continue;
+    }
+
+    if (current && isSameTaskEntry(current.entry, entry) && current.end === slot) {
+      current.end += SLOT_MINUTES;
+      current.span += 1;
+      continue;
+    }
+
+    const label = hourLabel(slot);
+    current = {
+      entry,
+      start: slot,
+      end: slot + SLOT_MINUTES,
+      span: 1,
+      label,
+    };
+    blocks.push(current);
+  }
+
+  return blocks.map((block) => {
+    if (block.span <= 1) return block;
+    return {
+      ...block,
+      label: `${hourLabel(block.start)} - ${hourLabel(block.end)}`,
+    };
+  });
 }
 
 function buildBlocks(dayData) {
@@ -19,57 +74,66 @@ function buildBlocks(dayData) {
   const afternoonHoursActive = hasAfternoonHours(dayData);
   const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
 
-  const blocks = [];
-  const addHourBlock = (hour, entry) => {
-    if (!entry) return;
-    const row = DAY_HOURS.indexOf(hour) + 1;
-    if (row <= 0) return;
-    blocks.push({
-      entry,
-      start: row,
-      span: 1,
-      slot: hour,
-      label: hourLabel(hour),
-    });
-  };
-
   if (isFullDay && am) {
-    blocks.push({
-      entry: am,
-      start: 1,
-      span: DAY_HOURS.length,
-      slot: "AM",
-      label: "Giornata intera",
-    });
-    return blocks;
+    return [
+      {
+        entry: am,
+        start: MORNING_SLOTS[0],
+        end: AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES,
+        span: DAY_SLOTS.length,
+        slot: "AM",
+        label: "Giornata intera",
+      },
+    ];
   }
 
-  if (morningHoursActive) {
-    MORNING_HOURS.forEach((hour) => addHourBlock(hour, dayData?.hours?.[hourKey(hour)] || null));
-  } else if (am) {
+  if (morningHoursActive || afternoonHoursActive) {
+    return buildHourBlocks(dayData).map((b) => ({
+      ...b,
+      slot: b.start,
+    }));
+  }
+
+  const blocks = [];
+  if (am) {
     blocks.push({
       entry: am,
-      start: 1,
-      span: MORNING_HOURS.length,
+      start: MORNING_SLOTS[0],
+      end: MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES,
+      span: MORNING_SLOTS.length,
       slot: "AM",
       label: "Mattina",
     });
   }
 
-  if (afternoonHoursActive) {
-    AFTERNOON_HOURS.forEach((hour) => addHourBlock(hour, dayData?.hours?.[hourKey(hour)] || null));
-  } else if (pm) {
-    const start = DAY_HOURS.indexOf(AFTERNOON_HOURS[0]) + 1;
+  if (pm) {
     blocks.push({
       entry: pm,
-      start,
-      span: AFTERNOON_HOURS.length,
+      start: AFTERNOON_SLOTS[0],
+      end: AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES,
+      span: AFTERNOON_SLOTS.length,
       slot: "PM",
       label: "Pomeriggio",
     });
   }
 
   return blocks;
+}
+
+function slotIndex(slotMin) {
+  return DAY_SLOTS.indexOf(slotMin);
+}
+
+function slotSection(slotMin) {
+  if (slotMin >= BREAK_START && slotMin < BREAK_END) return "break";
+  return slotMin < BREAK_START ? "AM" : "PM";
+}
+
+function clampToSection(section, min) {
+  if (section === "AM") {
+    return Math.min(Math.max(min, MORNING_SLOTS[0]), MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES);
+  }
+  return Math.min(Math.max(min, AFTERNOON_SLOTS[0]), AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
 }
 
 export function DayView({
@@ -87,6 +151,43 @@ export function DayView({
   const year = date.getFullYear();
 
   const blocks = buildBlocks(dayData);
+
+  const [dragStart, setDragStart] = useState(null);
+  const [dragHover, setDragHover] = useState(null);
+  const [dragSection, setDragSection] = useState(null);
+
+  const isDragging = dragStart !== null && dragHover !== null && dragSection;
+
+  useEffect(() => {
+    function handleUp() {
+      if (!isDragging) return;
+      const start = Math.min(dragStart, dragHover);
+      const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
+      const section = dragSection;
+      const clampedStart = clampToSection(section, start);
+      const clampedEnd = clampToSection(section, end);
+      setDragStart(null);
+      setDragHover(null);
+      setDragSection(null);
+      onOpenSlot?.({ start: clampedStart, end: clampedEnd });
+    }
+
+    window.addEventListener("mouseup", handleUp);
+    return () => window.removeEventListener("mouseup", handleUp);
+  }, [dragStart, dragHover, dragSection, isDragging, onOpenSlot]);
+
+  const selection = useMemo(() => {
+    if (!isDragging) return null;
+    const start = Math.min(dragStart, dragHover);
+    const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
+    const startIndex = slotIndex(start);
+    const endIndex = slotIndex(end - SLOT_MINUTES);
+    if (startIndex < 0 || endIndex < 0) return null;
+    return {
+      startIndex,
+      span: endIndex - startIndex + 1,
+    };
+  }, [dragStart, dragHover, isDragging]);
 
   return (
     <section className="flex flex-col lg:h-full rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
@@ -131,50 +232,68 @@ export function DayView({
         <div className="grid grid-cols-[60px_1fr] gap-3">
           <div
             className="grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
-            style={{ gridTemplateRows: `repeat(${DAY_HOURS.length}, minmax(${ROW_HEIGHT}px, 1fr))` }}
+            style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, minmax(${ROW_HEIGHT}px, 1fr))` }}
           >
-            {DAY_HOURS.map((h) => (
-              <div key={h} className="flex items-start justify-end pr-2 pt-2">
-                {hourLabel(h)}
+            {DAY_SLOTS.map((slot) => (
+              <div key={slot} className="flex items-start justify-end pr-2 pt-2">
+                {slot % 60 === 0 ? hourLabel(slot) : ""}
               </div>
             ))}
           </div>
 
           <div
             className="relative grid rounded-2xl border border-slate-200/80 bg-white/70 dark:border-slate-700/70 dark:bg-slate-900/40"
-            style={{ gridTemplateRows: `repeat(${DAY_HOURS.length}, minmax(${ROW_HEIGHT}px, 1fr))` }}
+            style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, minmax(${ROW_HEIGHT}px, 1fr))` }}
           >
-            {DAY_HOURS.map((h, idx) => (
+            {DAY_SLOTS.map((slot, idx) => (
               <div
-                key={`line-${h}`}
-                className="pointer-events-none absolute left-0 right-0 z-20 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
+                key={`line-${slot}`}
+                className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
                 style={{ top: `${idx * ROW_HEIGHT}px` }}
               />
             ))}
 
-            {DAY_HOURS.map((h, idx) => {
-              const isBreak = h === 13;
-              const row = idx + 1;
+            {selection ? (
+              <div
+                className="pointer-events-none absolute left-2 right-2 z-10 rounded-2xl border border-sky-400/70 bg-sky-200/30 dark:border-sky-500/60 dark:bg-sky-500/10"
+                style={{
+                  top: `${selection.startIndex * ROW_HEIGHT + 6}px`,
+                  height: `${selection.span * ROW_HEIGHT - 12}px`,
+                }}
+              />
+            ) : null}
+
+            {DAY_SLOTS.map((slot, idx) => {
+              const section = slotSection(slot);
+              const isBreak = section === "break";
               return (
                 <button
-                  key={h}
+                  key={slot}
                   className={
-                    "relative w-full h-full text-left " +
+                    "relative z-10 w-full h-full text-left " +
                     (isBreak
                       ? "cursor-default bg-slate-50/50 dark:bg-slate-900/30"
                       : "hover:bg-slate-100/60 dark:hover:bg-slate-800/60")
                   }
-                  style={{ gridRow: row }}
-                  onClick={() => {
+                  style={{ gridRow: idx + 1 }}
+                  onMouseDown={(e) => {
                     if (isBreak) return;
-                    onOpenSlot?.(h);
+                    e.preventDefault();
+                    setDragStart(slot);
+                    setDragHover(slot);
+                    setDragSection(section);
+                  }}
+                  onMouseEnter={() => {
+                    if (!isDragging) return;
+                    if (section !== dragSection) return;
+                    setDragHover(slot);
                   }}
                   type="button"
-                  title={isBreak ? "Pausa" : `Aggiungi task ${hourLabel(h)}`}
+                  title={isBreak ? "Pausa" : `Aggiungi task ${hourLabel(slot)}`}
                   aria-disabled={isBreak}
                   tabIndex={isBreak ? -1 : 0}
                 >
-                  {isBreak ? (
+                  {isBreak && slot === BREAK_START ? (
                     <span className="absolute left-3 top-2 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400/80">
                       Pausa
                     </span>
@@ -186,18 +305,26 @@ export function DayView({
             {blocks.map((block, idx) => {
               const badge = badgePresentation(block.entry, clientColors);
               const label = displayLabel(block.entry);
+              const startIdx = slotIndex(block.start);
+              const span = block.span || 1;
               return (
                 <div
                   key={`${block.start}-${idx}`}
                   className={
-                    "relative z-10 mx-auto h-full w-[70%] max-w-[560px] rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
+                    "relative z-20 mx-auto h-full w-[70%] max-w-[560px] rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
                     badge.className
                   }
                   style={{
-                    gridRow: `${block.start} / span ${block.span}`,
+                    gridRow: `${startIdx + 1} / span ${span}`,
                     ...badge.style,
                   }}
-                  onClick={() => onOpenSlot?.(block.slot)}
+                  onClick={() => {
+                    if (block.end && block.end > block.start + SLOT_MINUTES) {
+                      onOpenSlot?.({ start: block.start, end: block.end });
+                    } else {
+                      onOpenSlot?.(block.slot);
+                    }
+                  }}
                   role="button"
                   tabIndex={0}
                 >

@@ -13,18 +13,44 @@ const BACKUP_HANDLE_KEY = "auto-backup-file-handle";
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-function normalizeHexColor(value) {
-  const raw = typeof value === "string" ? value.trim() : "";
-  if (!HEX_COLOR_RE.test(raw)) return "";
-  if (raw.length === 4) {
-    const expanded = raw
-      .slice(1)
-      .split("")
-      .map((c) => c + c)
-      .join("");
-    return `#${expanded.toUpperCase()}`;
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function normalizeHourKey(key) {
+  if (typeof key !== "string") return "";
+  const raw = key.trim();
+  if (!raw) return "";
+  if (raw.includes(":")) {
+    const [h, m] = raw.split(":");
+    const hh = Number.parseInt(h, 10);
+    const mm = Number.parseInt(m || "0", 10);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return "";
+    return `${pad2(hh)}:${pad2(mm)}`;
   }
-  return raw.toUpperCase();
+  if (!/^\d+$/.test(raw)) return "";
+  if (raw.length <= 2) {
+    const hh = Number.parseInt(raw, 10);
+    if (!Number.isFinite(hh)) return "";
+    return `${pad2(hh)}:00`;
+  }
+  const num = Number.parseInt(raw, 10);
+  if (!Number.isFinite(num)) return "";
+  const hh = Math.floor(num / 100);
+  const mm = num % 100;
+  return `${pad2(hh)}:${pad2(mm)}`;
+}
+
+function normalizeDayHours(day) {
+  if (!day || typeof day !== "object") return day;
+  if (!day.hours || typeof day.hours !== "object") return day;
+  const normalized = {};
+  for (const [k, v] of Object.entries(day.hours)) {
+    const nk = normalizeHourKey(k);
+    if (!nk) continue;
+    normalized[nk] = v;
+  }
+  return { ...day, hours: normalized };
 }
 
 function normalizeClientColors(raw) {
@@ -80,7 +106,11 @@ export function loadMonthData(year, monthIndex0) {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return { byDate: {} };
     if (!parsed.byDate || typeof parsed.byDate !== "object") return { byDate: {} };
-    return parsed;
+    const next = { ...parsed, byDate: { ...parsed.byDate } };
+    for (const dateKey of Object.keys(next.byDate)) {
+      next.byDate[dateKey] = normalizeDayHours(next.byDate[dateKey]);
+    }
+    return next;
   } catch {
     return { byDate: {} };
   }

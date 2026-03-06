@@ -1,4 +1,4 @@
-import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_HOURS, AFTERNOON_HOURS } from "../domain/tasks";
+import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, hourKey, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS } from "../domain/tasks";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -117,8 +117,8 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
               {/* Morning section */}
               {morningHoursActive ? (
                 <div className="flex flex-1 flex-col gap-0.5">
-                  {MORNING_HOURS.map((h) => {
-                    const entry = entries?.hours?.[String(h).padStart(2, "0")] || null;
+                  {MORNING_SLOTS.map((h) => {
+                    const entry = entries?.hours?.[hourKey(h)] || null;
                     return (
                       <HourStrip
                         key={h}
@@ -138,8 +138,8 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
               {/* Afternoon section */}
               {afternoonHoursActive ? (
                 <div className="flex flex-1 flex-col gap-0.5">
-                  {AFTERNOON_HOURS.map((h) => {
-                    const entry = entries?.hours?.[String(h).padStart(2, "0")] || null;
+                  {AFTERNOON_SLOTS.map((h) => {
+                    const entry = entries?.hours?.[hourKey(h)] || null;
                     return (
                       <HourStrip
                         key={h}

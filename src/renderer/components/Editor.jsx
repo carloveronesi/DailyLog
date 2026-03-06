@@ -1,20 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AFTERNOON_HOURS,
-  MORNING_HOURS,
+  AFTERNOON_SLOTS,
+  MORNING_SLOTS,
+  SLOT_MINUTES,
   TASK_TYPES,
-  WORK_HOURS,
+  WORK_SLOTS,
   badgePresentation,
   defaultEntry,
   displayLabel,
   hourKey,
   hourLabel,
   isSameTaskEntry,
+  slotMinutes,
 } from "../domain/tasks";
 import { pad2 } from "../utils/date";
 import { Button, Icon, Segmented } from "./ui";
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── helpers ─────────────────────────────────────────────────────────────
 
 function hasMeaning(e) {
   if (!e) return false;
@@ -36,28 +38,28 @@ function normalizeForType(e) {
   return out;
 }
 
-function hourBoundaries(hours) {
-  if (!hours || hours.length === 0) return [];
-  return [...hours, hours[hours.length - 1] + 1];
+function hourBoundaries(slots) {
+  if (!slots || slots.length === 0) return [];
+  return [...slots, slots[slots.length - 1] + SLOT_MINUTES];
 }
 
-function hoursBetween(hours, startHour, endHour) {
-  const from = Math.min(startHour, endHour);
-  const to = Math.max(startHour, endHour);
-  return hours.filter((h) => h >= from && h < to);
+function hoursBetween(slots, startMinute, endMinute) {
+  const from = Math.min(startMinute, endMinute);
+  const to = Math.max(startMinute, endMinute);
+  return slots.filter((h) => h >= from && h < to);
 }
 
-function nearestHourSlot(hours, boundaryHour) {
-  if (!hours || hours.length === 0) return null;
-  if (hours.includes(boundaryHour)) return boundaryHour;
-  if (boundaryHour > hours[hours.length - 1]) return hours[hours.length - 1];
-  return hours[0];
+function nearestHourSlot(slots, boundaryMinute) {
+  if (!slots || slots.length === 0) return null;
+  if (slots.includes(boundaryMinute)) return boundaryMinute;
+  if (boundaryMinute > slots[slots.length - 1]) return slots[slots.length - 1];
+  return slots[0];
 }
 
 function initFromExisting(existingEntries) {
   const hours = existingEntries?.hours || {};
-  const hasMorning = MORNING_HOURS.some((h) => hours[hourKey(h)]);
-  const hasAfternoon = AFTERNOON_HOURS.some((h) => hours[hourKey(h)]);
+  const hasMorning = MORNING_SLOTS.some((h) => hours[hourKey(h)]);
+  const hasAfternoon = AFTERNOON_SLOTS.some((h) => hours[hourKey(h)]);
 
   const morningMode = hasMorning ? "hour" : "half";
   const afternoonMode = hasAfternoon ? "hour" : "half";
@@ -66,7 +68,7 @@ function initFromExisting(existingEntries) {
   const entryPM = existingEntries?.PM || defaultEntry();
 
   const allHourEntries = {};
-  for (const h of WORK_HOURS) {
+  for (const h of WORK_SLOTS) {
     const k = hourKey(h);
     allHourEntries[k] = hours[k] || defaultEntry();
   }
@@ -79,6 +81,11 @@ function initFromExisting(existingEntries) {
     isSameTaskEntry(existingEntries.AM, existingEntries.PM);
 
   return { morningMode, afternoonMode, entryAM, entryPM, hourEntries: allHourEntries, fullDay };
+}
+
+function formatDurationHours(minutes) {
+  const hours = minutes / 60;
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
 }
 
 // ─── Entry form ─────────────────────────────────────────────────────────────
@@ -163,7 +170,7 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
   );
 }
 
-// ─── Preview ─────────────────────────────────────────────────────────────────
+// ─── Preview ──────────────────────────────────────────────────────────────
 
 function PreviewHalfBlock({ entry, clientColors }) {
   const badge = badgePresentation(entry, clientColors);
@@ -179,7 +186,7 @@ function PreviewHalfBlock({ entry, clientColors }) {
   );
 }
 
-function PreviewHourStrip({ hour, entry, clientColors }) {
+function PreviewHourStrip({ entry, clientColors }) {
   const badge = badgePresentation(entry, clientColors);
   if (!entry || !displayLabel(entry)) {
     return <div className="flex-1 rounded border border-dashed border-slate-200 dark:border-slate-700 opacity-30" />;
@@ -212,8 +219,8 @@ function EditorPreview({ date, fullDay, morningMode, afternoonMode, entryAM, ent
               {/* Morning preview */}
               {morningMode === "hour" ? (
                 <div className="flex flex-1 flex-col gap-0.5">
-                  {MORNING_HOURS.map((h) => (
-                    <PreviewHourStrip key={h} hour={h} entry={hourEntries[hourKey(h)]} clientColors={clientColors} />
+                  {MORNING_SLOTS.map((h) => (
+                    <PreviewHourStrip key={h} entry={hourEntries[hourKey(h)]} clientColors={clientColors} />
                   ))}
                 </div>
               ) : (
@@ -223,8 +230,8 @@ function EditorPreview({ date, fullDay, morningMode, afternoonMode, entryAM, ent
               {/* Afternoon preview */}
               {afternoonMode === "hour" ? (
                 <div className="flex flex-1 flex-col gap-0.5">
-                  {AFTERNOON_HOURS.map((h) => (
-                    <PreviewHourStrip key={h} hour={h} entry={hourEntries[hourKey(h)]} clientColors={clientColors} />
+                  {AFTERNOON_SLOTS.map((h) => (
+                    <PreviewHourStrip key={h} entry={hourEntries[hourKey(h)]} clientColors={clientColors} />
                   ))}
                 </div>
               ) : (
@@ -240,14 +247,15 @@ function EditorPreview({ date, fullDay, morningMode, afternoonMode, entryAM, ent
 
 // ─── Main Editor ──────────────────────────────────────────────────────────────
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, clientColors = {} }) {
-  // Which half is being edited ("AM" = mattina, "PM" = pomeriggio)
-  const initialSection = typeof initialSlot === "number"
-    ? (MORNING_HOURS.includes(initialSlot) ? "AM" : "PM")
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {} }) {
+  const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
+  const initialRangeStart = initialRange?.start ?? initialSlotMin;
+  const initialSection = initialRangeStart !== null
+    ? (MORNING_SLOTS.includes(initialRangeStart) ? "AM" : "PM")
     : (initialSlot || "AM");
-  const initialHour = typeof initialSlot === "number"
-    ? initialSlot
-    : (initialSection === "AM" ? MORNING_HOURS[0] : AFTERNOON_HOURS[0]);
+  const defaultStart = initialSection === "AM" ? MORNING_SLOTS[0] : AFTERNOON_SLOTS[0];
+  const defaultStartMin = initialRangeStart ?? defaultStart;
+  const defaultEndMin = initialRange?.end ?? (defaultStartMin + SLOT_MINUTES);
 
   const [section, setSection] = useState(initialSection);
   const [morningMode, setMorningMode] = useState("half");
@@ -256,11 +264,11 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [entryPM, setEntryPM] = useState(defaultEntry());
   const [hourEntries, setHourEntries] = useState(() => {
     const init = {};
-    for (const h of WORK_HOURS) init[hourKey(h)] = defaultEntry();
+    for (const h of WORK_SLOTS) init[hourKey(h)] = defaultEntry();
     return init;
   });
-  const [rangeStartHour, setRangeStartHour] = useState(initialHour);
-  const [rangeEndHour, setRangeEndHour] = useState(initialHour + 1);
+  const [rangeStartMin, setRangeStartMin] = useState(defaultStartMin);
+  const [rangeEndMin, setRangeEndMin] = useState(defaultEndMin);
   const [isPickingRangeEnd, setIsPickingRangeEnd] = useState(false);
   const [fullDay, setFullDay] = useState(false);
 
@@ -274,19 +282,32 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setFullDay(init.fullDay);
   }, [existingEntries]);
 
-  // Current selection state for the active section
+  useEffect(() => {
+    if (initialRangeStart !== null) {
+      const nextSection = MORNING_SLOTS.includes(initialRangeStart) ? "AM" : "PM";
+      setSection(nextSection);
+      if (nextSection === "AM") setMorningMode("hour");
+      else setAfternoonMode("hour");
+      setFullDay(false);
+      setRangeStartMin(initialRangeStart);
+      setRangeEndMin(defaultEndMin);
+      setIsPickingRangeEnd(false);
+    }
+  }, [initialRangeStart, defaultEndMin]);
+
   const currentMode = section === "AM" ? morningMode : afternoonMode;
-  const currentHours = section === "AM" ? MORNING_HOURS : AFTERNOON_HOURS;
+  const currentHours = section === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS;
   const currentHourBoundaries = hourBoundaries(currentHours);
-  const selectedHours = hoursBetween(currentHours, rangeStartHour, rangeEndHour);
-  const rangeFrom = Math.min(rangeStartHour, rangeEndHour);
-  const rangeTo = Math.max(rangeStartHour, rangeEndHour);
+  const selectedHours = hoursBetween(currentHours, rangeStartMin, rangeEndMin);
+  const rangeFrom = Math.min(rangeStartMin, rangeEndMin);
+  const rangeTo = Math.max(rangeStartMin, rangeEndMin);
+  const rangeDuration = formatDurationHours(rangeTo - rangeFrom);
 
   function handleSectionChange(newSection) {
     setSection(newSection);
-    const firstHour = newSection === "AM" ? MORNING_HOURS[0] : AFTERNOON_HOURS[0];
-    setRangeStartHour(firstHour);
-    setRangeEndHour(firstHour + 1);
+    const firstHour = newSection === "AM" ? MORNING_SLOTS[0] : AFTERNOON_SLOTS[0];
+    setRangeStartMin(firstHour);
+    setRangeEndMin(firstHour + SLOT_MINUTES);
     setIsPickingRangeEnd(false);
   }
 
@@ -295,8 +316,8 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     else setAfternoonMode(newMode);
     if (newMode === "hour") {
       const firstHour = currentHours[0];
-      setRangeStartHour(firstHour);
-      setRangeEndHour(firstHour + 1);
+      setRangeStartMin(firstHour);
+      setRangeEndMin(firstHour + SLOT_MINUTES);
       setIsPickingRangeEnd(false);
       setFullDay(false);
     }
@@ -311,7 +332,6 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     }
   }
 
-  // Active entry for the form
   const activeEntry = (() => {
     if (currentMode === "hour") {
       const fallbackHour = nearestHourSlot(currentHours, rangeFrom) || currentHours[0];
@@ -341,28 +361,28 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     }
   }
 
-  function handleHourButtonClick(hour) {
+  function handleHourButtonClick(minute) {
     const maxBoundary = currentHourBoundaries[currentHourBoundaries.length - 1];
     const minBoundary = currentHourBoundaries[0];
-    const clampedHour = Math.max(minBoundary, Math.min(hour, maxBoundary));
+    const clampedMinute = Math.max(minBoundary, Math.min(minute, maxBoundary));
 
     if (!isPickingRangeEnd) {
-      if (clampedHour === maxBoundary) {
+      if (clampedMinute === maxBoundary) {
         const previousBoundary = currentHourBoundaries[currentHourBoundaries.length - 2];
-        setRangeStartHour(previousBoundary);
-        setRangeEndHour(maxBoundary);
+        setRangeStartMin(previousBoundary);
+        setRangeEndMin(maxBoundary);
       } else {
-        setRangeStartHour(clampedHour);
-        setRangeEndHour(clampedHour + 1);
+        setRangeStartMin(clampedMinute);
+        setRangeEndMin(clampedMinute + SLOT_MINUTES);
       }
       setIsPickingRangeEnd(true);
       return;
     }
 
-    if (clampedHour === rangeStartHour) {
-      setRangeEndHour(Math.min(maxBoundary, rangeStartHour + 1));
+    if (clampedMinute === rangeStartMin) {
+      setRangeEndMin(Math.min(maxBoundary, rangeStartMin + SLOT_MINUTES));
     } else {
-      setRangeEndHour(clampedHour);
+      setRangeEndMin(clampedMinute);
     }
     setIsPickingRangeEnd(false);
   }
@@ -370,14 +390,14 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   function buildHours() {
     const result = {};
     if (morningMode === "hour") {
-      for (const h of MORNING_HOURS) {
+      for (const h of MORNING_SLOTS) {
         const k = hourKey(h);
         const e = hourEntries[k];
         if (hasMeaning(e)) result[k] = normalizeForType(e);
       }
     }
     if (afternoonMode === "hour") {
-      for (const h of AFTERNOON_HOURS) {
+      for (const h of AFTERNOON_SLOTS) {
         const k = hourKey(h);
         const e = hourEntries[k];
         if (hasMeaning(e)) result[k] = normalizeForType(e);
@@ -467,9 +487,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
               {currentMode === "hour" && (
                 <div className="space-y-1.5">
                   <div className="flex items-end justify-between gap-3 flex-wrap">
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Ora</div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Orario</div>
                     <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                      {hourLabel(rangeFrom)} - {hourLabel(rangeTo)} ({selectedHours.length}h)
+                      {hourLabel(rangeFrom)} - {hourLabel(rangeTo)} ({rangeDuration}h)
                     </div>
                   </div>
                   <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
@@ -481,8 +501,8 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
                       const k = hourKey(h);
                       const isHourSlot = currentHours.includes(h);
                       const hasEntry = isHourSlot && hasMeaning(hourEntries[k]);
-                      const isRangeStart = rangeStartHour === h;
-                      const isRangeEnd = rangeEndHour === h;
+                      const isRangeStart = rangeStartMin === h;
+                      const isRangeEnd = rangeEndMin === h;
                       const isInRange = h > rangeFrom && h < rangeTo;
                       return (
                         <button
@@ -495,13 +515,13 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
                               ? "bg-slate-900 text-white border-slate-900 dark:bg-blue-600 dark:border-blue-600"
                               : isRangeStart
                                 ? "bg-slate-900 text-white border-slate-900 dark:bg-blue-600 dark:border-blue-600"
-                              : isRangeEnd
-                                ? "bg-white text-emerald-700 border-emerald-400 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-600"
-                              : isInRange
-                                ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700"
-                              : hasEntry
-                                ? "bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
-                                : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700")
+                                : isRangeEnd
+                                  ? "bg-white text-emerald-700 border-emerald-400 dark:bg-slate-800 dark:text-emerald-300 dark:border-emerald-600"
+                                  : isInRange
+                                    ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-700"
+                                    : hasEntry
+                                      ? "bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
+                                      : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700")
                           }
                         >
                           {hourLabel(h)}

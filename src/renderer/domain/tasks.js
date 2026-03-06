@@ -27,27 +27,71 @@ export const SLOT = {
   PM: "PM",
 };
 
-export const MORNING_HOURS = [9, 10, 11, 12];
-export const AFTERNOON_HOURS = [14, 15, 16, 17];
-export const WORK_HOURS = [...MORNING_HOURS, ...AFTERNOON_HOURS];
-export const HOURS_PER_DAY = WORK_HOURS.length; // 8
+export const SLOT_MINUTES = 30;
+
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+export function slotMinutes(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 24 ? value * 60 : value;
+  }
+  if (typeof value !== "string") return 0;
+  const raw = value.trim();
+  if (!raw) return 0;
+  if (raw.includes(":")) {
+    const [h, m] = raw.split(":");
+    const hh = Number.parseInt(h, 10);
+    const mm = Number.parseInt(m || "0", 10);
+    return (Number.isFinite(hh) ? hh : 0) * 60 + (Number.isFinite(mm) ? mm : 0);
+  }
+  const asNum = Number.parseInt(raw, 10);
+  if (!Number.isFinite(asNum)) return 0;
+  if (raw.length <= 2) return asNum * 60;
+  const hh = Math.floor(asNum / 100);
+  const mm = asNum % 100;
+  return hh * 60 + mm;
+}
+
+export function slotKey(value) {
+  const mins = slotMinutes(value);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${pad2(h)}:${pad2(m)}`;
+}
+
+export function slotLabel(value) {
+  return slotKey(value);
+}
+
+function buildSlots(startMin, endMin) {
+  const out = [];
+  for (let m = startMin; m < endMin; m += SLOT_MINUTES) out.push(m);
+  return out;
+}
+
+export const MORNING_SLOTS = buildSlots(9 * 60, 13 * 60); // 09:00 -> 12:30
+export const AFTERNOON_SLOTS = buildSlots(14 * 60, 18 * 60); // 14:00 -> 17:30
+export const WORK_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
+export const HOURS_PER_DAY = WORK_SLOTS.length / 2; // 8
 
 export function hourKey(h) {
-  return String(h).padStart(2, "0");
+  return slotKey(h);
 }
 
 export function hourLabel(h) {
-  return String(h).padStart(2, "0") + ":00";
+  return slotLabel(h);
 }
 
 export function hasMorningHours(dayData) {
   if (!dayData?.hours) return false;
-  return MORNING_HOURS.some((h) => dayData.hours[hourKey(h)]);
+  return MORNING_SLOTS.some((h) => dayData.hours[slotKey(h)]);
 }
 
 export function hasAfternoonHours(dayData) {
   if (!dayData?.hours) return false;
-  return AFTERNOON_HOURS.some((h) => dayData.hours[hourKey(h)]);
+  return AFTERNOON_SLOTS.some((h) => dayData.hours[slotKey(h)]);
 }
 
 export function defaultEntry() {

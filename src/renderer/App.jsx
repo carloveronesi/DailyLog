@@ -48,6 +48,7 @@ export default function App() {
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [selectedRange, setSelectedRange] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [summaryHoverFilter, setSummaryHoverFilter] = useState(null);
@@ -61,9 +62,15 @@ export default function App() {
     setMonthYear(activeDate.getFullYear(), activeDate.getMonth());
   }, [viewMode, activeDate, year, month, setMonthYear]);
 
-  function openEditor(date, slot = null) {
+  function openEditor(date, slotOrRange = null) {
     setSelectedDate(date);
-    setSelectedSlot(slot);
+    setSelectedSlot(null);
+    setSelectedRange(null);
+    if (slotOrRange && typeof slotOrRange === "object" && slotOrRange.start !== undefined) {
+      setSelectedRange(slotOrRange);
+    } else {
+      setSelectedSlot(slotOrRange);
+    }
     setActiveDate(date);
     setEditorOpen(true);
   }
@@ -77,6 +84,7 @@ export default function App() {
     setEditorOpen(false);
     setSelectedDate(null);
     setSelectedSlot(null);
+    setSelectedRange(null);
   }
 
   function handleImportSuccess() {
@@ -248,6 +256,7 @@ export default function App() {
           <Editor
             date={selectedDate}
             initialSlot={selectedSlot}
+            initialRange={selectedRange}
             existingEntries={existingEntries}
             onSave={(entries) => {
               upsertDay(selectedDate, entries);
