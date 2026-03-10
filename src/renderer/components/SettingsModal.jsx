@@ -82,7 +82,8 @@ export function SettingsModal({
               {clientNames.map((clientName) => {
                 const key = normalizeClientKey(clientName);
                 const hasCustom = Boolean(normalizeHexColor(settings.clientColors?.[key]));
-                const color = getClientColor(clientName, settings.clientColors);
+                const rawColor = getClientColor(clientName, settings.clientColors);
+                const color = normalizeHexColor(rawColor) || rawColor || "#94a3b8";
                 return (
                   <div
                     key={clientName}

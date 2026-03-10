@@ -53,6 +53,16 @@ function normalizeDayHours(day) {
   return { ...day, hours: normalized };
 }
 
+function normalizeHexColor(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!HEX_COLOR_RE.test(raw)) return "";
+  if (raw.length === 4) {
+    const expanded = raw.slice(1).split("").map((c) => c + c).join("");
+    return `#${expanded.toUpperCase()}`;
+  }
+  return raw.toUpperCase();
+}
+
 function normalizeClientColors(raw) {
   if (!raw || typeof raw !== "object") return {};
   const out = {};

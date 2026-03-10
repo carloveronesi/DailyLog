@@ -1,8 +1,13 @@
-﻿import { createRoot } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./styles.css";
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
 
 if ("serviceWorker" in navigator) {
   if (import.meta.env.PROD && (window.location.protocol === "https:" || window.location.hostname === "localhost")) {
