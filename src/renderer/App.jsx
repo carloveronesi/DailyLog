@@ -5,6 +5,7 @@ import { SummaryPanel } from "./components/SummaryPanel";
 import { Header } from "./components/Header";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { DayView } from "./components/DayView";
+import { WeekView } from "./components/WeekView";
 import { SearchModal } from "./components/SearchModal";
 import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
@@ -13,17 +14,20 @@ import { ymd } from "./utils/date";
 import { exportAll, listStoredClients } from "./services/storage";
 import { hourKey, WORK_SLOTS, SLOT_MINUTES } from "./domain/tasks";
 
-function SidebarBtn({ icon, label, onClick, disabled, activeClass = "" }) {
+function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
+  const activeBtnClass = isActive ? "bg-slate-100 dark:bg-slate-800" : "";
+  const iconColor = activeClass ? activeClass : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-700 dark:text-slate-300");
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       title={label}
-      className={`relative flex items-center justify-center lg:justify-start w-full p-3 lg:px-5 lg:py-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:rounded-none rounded-2xl group/btn overflow-hidden ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeClass}`}
+      className={`relative flex items-center justify-center lg:justify-start w-full p-3 lg:px-5 lg:py-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:rounded-none rounded-2xl group/btn overflow-hidden ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
     >
-      <Icon name={icon} className="shrink-0 text-slate-700 dark:text-slate-300 transition-transform duration-200 group-hover/btn:scale-110" />
-      <span className="hidden lg:block absolute left-14 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity font-medium text-sm text-slate-700 dark:text-slate-300 pointer-events-none bg-white/90 dark:bg-slate-800/90 px-2 py-1 rounded-md shadow-sm">
+      <Icon name={icon} className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${iconColor}`} />
+      <span className="hidden lg:block absolute left-14 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity font-medium text-sm text-slate-700 dark:text-slate-300 pointer-events-none bg-white/90 dark:bg-slate-800/90 px-2 py-1 rounded-md shadow-sm z-[100]">
         {label}
       </span>
     </button>
@@ -117,10 +121,6 @@ export default function App() {
 
   function toggleTheme() {
     setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
-  }
-
-  function toggleView() {
-    setViewMode((prev) => (prev === "month" ? "day" : "month"));
   }
 
   function goPrevDay() {
@@ -230,8 +230,25 @@ export default function App() {
         </div>
         
         {/* Middle */}
-        <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center w-full lg:mt-auto lg:mb-auto">
-           <SidebarBtn icon={viewMode === "month" ? "day" : "calendar"} label={viewMode === "month" ? "Vista giorno" : "Vista mese"} onClick={toggleView} />
+        <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center w-full lg:mt-auto lg:mb-auto space-x-2 lg:space-x-0 lg:space-y-1 px-4 lg:px-0">
+           <SidebarBtn 
+              icon="day" 
+              label="Vista Giorno" 
+              onClick={() => setViewMode("day")} 
+              isActive={viewMode === "day"}
+           />
+           <SidebarBtn 
+              icon="week" 
+              label="Vista Sett." 
+              onClick={() => setViewMode("week")} 
+              isActive={viewMode === "week"}
+           />
+           <SidebarBtn 
+              icon="calendar" 
+              label="Vista Mese" 
+              onClick={() => setViewMode("month")} 
+              isActive={viewMode === "month"}
+           />
         </div>
 
         {/* Bottom */}
@@ -254,7 +271,7 @@ export default function App() {
       <div className="flex-1 w-full flex flex-col min-h-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-7xl px-4 pt-4 pb-6 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
           <main className={`${mainLayoutClass} lg:flex-1 lg:min-h-0 lg:items-stretch`}>
-          {viewMode === "month" ? (
+          {viewMode === "month" && (
             <CalendarGrid
               year={year}
               month={month}
@@ -264,7 +281,38 @@ export default function App() {
               clientColors={settings.clientColors}
               visibleFilter={summaryHoverFilter || summaryFixedFilter}
             />
-          ) : (
+          )}
+          {viewMode === "week" && (
+            <WeekView
+              activeDate={activeDate}
+              monthDataByDate={monthDataByDate}
+              clientColors={settings.clientColors}
+              onOpenSlot={({ date, start, end, slot }) => {
+                 setActiveDate(date);
+                 if (start !== undefined && end !== undefined) {
+                    openEditor(date, { start, end });
+                 } else {
+                    openEditor(date, slot);
+                 }
+              }}
+              goPrevWeek={() => {
+                 setActiveDate(prev => {
+                    const next = new Date(prev);
+                    next.setDate(next.getDate() - 7);
+                    return next;
+                 });
+              }}
+              goNextWeek={() => {
+                 setActiveDate(prev => {
+                    const next = new Date(prev);
+                    next.setDate(next.getDate() + 7);
+                    return next;
+                 });
+              }}
+              goToday={goTodayDay}
+            />
+          )}
+          {viewMode === "day" && (
             <DayView
               date={activeDate}
               dayData={dayData}
