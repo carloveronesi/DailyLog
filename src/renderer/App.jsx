@@ -11,6 +11,7 @@ import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { ymd } from "./utils/date";
 import { exportAll, listStoredClients } from "./services/storage";
+import { hourKey, WORK_SLOTS, SLOT_MINUTES } from "./domain/tasks";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "" }) {
   return (
@@ -150,6 +151,69 @@ export default function App() {
 
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
+
+  function onMoveTask({ start, end, newStart }) {
+    if (!dayData?.hours) return;
+    const duration = end - start;
+    const newEnd = newStart + duration;
+
+    // We only support moving tasks that stay within hour blocks (not AM/PM full blocks)
+    // and within the valid work slots
+    if (newStart < WORK_SLOTS[0] || newEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
+
+    const entryToMove = dayData.hours[hourKey(start)];
+    if (!entryToMove) return;
+
+    const nextHours = { ...dayData.hours };
+
+    // Clear old slots
+    for (let m = start; m < end; m += SLOT_MINUTES) {
+      delete nextHours[hourKey(m)];
+    }
+
+    // Fill new slots
+    for (let m = newStart; m < newEnd; m += SLOT_MINUTES) {
+      nextHours[hourKey(m)] = entryToMove;
+    }
+
+    upsertDay(activeDate, {
+      AM: dayData.AM || null,
+      PM: dayData.PM || null,
+      hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
+    });
+  }
+
+  function onResizeTask({ start, end, newStart, newEnd }) {
+    if (!dayData?.hours) return;
+    const entryToResize = dayData.hours[hourKey(start)];
+    if (!entryToResize) return;
+
+    // Use existing values if not provided
+    const finalStart = newStart !== undefined ? newStart : start;
+    const finalEnd = newEnd !== undefined ? newEnd : end;
+
+    // Boundary check
+    if (finalEnd <= finalStart || finalStart < WORK_SLOTS[0] || finalEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
+
+    const nextHours = { ...dayData.hours };
+
+    // Clear old slots
+    for (let m = start; m < end; m += SLOT_MINUTES) {
+      delete nextHours[hourKey(m)];
+    }
+
+    // Fill new slots
+    for (let m = finalStart; m < finalEnd; m += SLOT_MINUTES) {
+      nextHours[hourKey(m)] = entryToResize;
+    }
+
+    upsertDay(activeDate, {
+      AM: dayData.AM || null,
+      PM: dayData.PM || null,
+      hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
+    });
+  }
+
   const mainLayoutClass = viewMode === "month"
     ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
     : "grid grid-cols-1 gap-5";
@@ -206,6 +270,8 @@ export default function App() {
               dayData={dayData}
               clientColors={settings.clientColors}
               onOpenSlot={(slot) => openEditor(activeDate, slot)}
+              onMoveTask={onMoveTask}
+              onResizeTask={onResizeTask}
               onDeleteSlot={({ start, end }) => {
                 const key = ymd(activeDate);
                 const existing = monthDataByDate[key];

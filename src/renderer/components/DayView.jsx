@@ -165,6 +165,8 @@ export function DayView({
   dayData,
   clientColors = {},
   onOpenSlot,
+  onMoveTask,
+  onResizeTask,
   onDeleteSlot,
   onPrevDay,
   onNextDay,
@@ -181,28 +183,66 @@ export function DayView({
   const [dragHover, setDragHover] = useState(null);
   const [dragSection, setDragSection] = useState(null);
 
-  const isDragging = dragStart !== null && dragHover !== null && dragSection;
+  // New state for moving an existing task
+  const [moveTaskBlock, setMoveTaskBlock] = useState(null);
+  const [moveTaskDelta, setMoveTaskDelta] = useState(0);
+
+  // New state for resizing an existing task
+  const [resizeTaskBlock, setResizeTaskBlock] = useState(null);
+  const [resizeTaskDelta, setResizeTaskDelta] = useState(0);
+  const [resizeTaskDirection, setResizeTaskDirection] = useState(null);
+
+  const isDraggingEmpty = dragStart !== null && dragHover !== null && dragSection;
+  const isMoving = moveTaskBlock !== null;
+  const isResizing = resizeTaskBlock !== null;
+  const isAnyDragging = dragStart !== null || isMoving || isResizing;
 
   useEffect(() => {
     function handleUp() {
-      if (!isDragging) return;
-      const start = Math.min(dragStart, dragHover);
-      const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
-      const section = dragSection;
-      const clampedStart = clampToSection(section, start);
-      const clampedEnd = clampToSection(section, end);
-      setDragStart(null);
-      setDragHover(null);
-      setDragSection(null);
-      onOpenSlot?.({ start: clampedStart, end: clampedEnd });
+      if (isDraggingEmpty) {
+        const start = Math.min(dragStart, dragHover);
+        const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
+        const section = dragSection;
+        const clampedStart = clampToSection(section, start);
+        const clampedEnd = clampToSection(section, end);
+        setDragStart(null);
+        setDragHover(null);
+        setDragSection(null);
+        onOpenSlot?.({ start: clampedStart, end: clampedEnd });
+      } else if (isMoving) {
+        if (moveTaskDelta !== 0 && onMoveTask) {
+           const newStart = moveTaskBlock.start + moveTaskDelta;
+           onMoveTask({ start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
+        }
+        setMoveTaskBlock(null);
+        setMoveTaskDelta(0);
+      } else if (isResizing) {
+        if (resizeTaskDelta !== 0 && onResizeTask) {
+           let newStart = resizeTaskBlock.start;
+           let newEnd = resizeTaskBlock.end;
+           
+           if (resizeTaskDirection === 'top') {
+              newStart = resizeTaskBlock.start + resizeTaskDelta;
+           } else {
+              newEnd = resizeTaskBlock.end + resizeTaskDelta;
+           }
+
+           if (newEnd > newStart) {
+              onResizeTask({ start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
+           }
+        }
+        setResizeTaskBlock(null);
+        setResizeTaskDelta(0);
+        setResizeTaskDirection(null);
+      }
     }
 
     window.addEventListener("mouseup", handleUp);
     return () => window.removeEventListener("mouseup", handleUp);
-  }, [dragStart, dragHover, dragSection, isDragging, onOpenSlot]);
+  }, [dragStart, dragHover, dragSection, isDraggingEmpty, isMoving, isResizing, moveTaskBlock, moveTaskDelta, resizeTaskBlock, resizeTaskDelta, resizeTaskDirection, onOpenSlot, onMoveTask, onResizeTask]);
 
   const selection = useMemo(() => {
-    if (!isDragging) return null;
+    if (!isDraggingEmpty) return null;
     const start = Math.min(dragStart, dragHover);
     const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
     const startIndex = slotIndex(start);
@@ -212,7 +252,7 @@ export function DayView({
       startIndex,
       span: endIndex - startIndex + 1,
     };
-  }, [dragStart, dragHover, isDragging]);
+  }, [dragStart, dragHover, isDraggingEmpty]);
 
   return (
     <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
@@ -319,9 +359,21 @@ export function DayView({
                     setDragSection(section);
                   }}
                   onMouseEnter={() => {
-                    if (!isDragging) return;
-                    if (section !== dragSection) return;
-                    setDragHover(slot);
+                    if (isDraggingEmpty) {
+                      if (section !== dragSection) return;
+                      setDragHover(slot);
+                    } else if (isMoving && moveTaskBlock) {
+                       const delta = slot - moveTaskBlock.start;
+                       setMoveTaskDelta(delta);
+                    } else if (isResizing && resizeTaskBlock) {
+                       if (resizeTaskDirection === 'top') {
+                          const delta = slot - resizeTaskBlock.start;
+                          setResizeTaskDelta(delta);
+                       } else {
+                          const delta = (slot + SLOT_MINUTES) - resizeTaskBlock.end;
+                          setResizeTaskDelta(delta);
+                       }
+                    }
                   }}
                   type="button"
                   title={isBreak ? "Pausa" : `Aggiungi task ${hourLabel(slot)}`}
@@ -342,22 +394,71 @@ export function DayView({
               const label = displayLabel(block.entry);
               const startIdx = slotIndex(block.start);
               const span = block.span || 1;
+              
+              const isBeingMoved = isMoving && moveTaskBlock?.start === block.start;
+              const isBeingResized = isResizing && resizeTaskBlock?.start === block.start;
+              
+              let currentTopIdx = startIdx;
+              let currentSpan = span;
+              let isGhost = false;
+
+              if (isBeingMoved) {
+                 const newStart = block.start + moveTaskDelta;
+                 const newStartIdx = slotIndex(newStart);
+                 if (newStartIdx >= 0) {
+                   currentTopIdx = newStartIdx;
+                 }
+                 isGhost = true;
+              } else if (isBeingResized) {
+                 if (resizeTaskDirection === 'top') {
+                     const newStart = block.start + resizeTaskDelta;
+                     const newStartIdx = slotIndex(newStart);
+                     const endIdx = slotIndex(block.end - SLOT_MINUTES);
+                     if (newStartIdx <= endIdx && newStartIdx >= 0) {
+                         currentTopIdx = newStartIdx;
+                         currentSpan = endIdx - newStartIdx + 1;
+                     }
+                 } else {
+                     const newEnd = block.end + resizeTaskDelta;
+                     const newEndIdx = slotIndex(newEnd - SLOT_MINUTES);
+                     if (newEndIdx >= startIdx) {
+                       currentSpan = newEndIdx - startIdx + 1;
+                     }
+                 }
+              }
+
               return (
                 <div
                   key={`${block.start}-${idx}`}
                   className={
-                    "group absolute z-20 rounded-2xl px-3 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
-                    (block.span === 1 ? "py-0.5 " : "py-2 ") +
-                    badge.className
+                    "group absolute z-20 rounded-2xl px-3 shadow-sm flex flex-col justify-center select-none overflow-hidden " +
+                    (currentSpan === 1 ? "py-0.5 " : "py-2 ") +
+                    badge.className + " " +
+                    (isGhost ? "opacity-70 scale-[0.98] ring-2 ring-sky-400 cursor-grabbing " : "transition hover:brightness-95 dark:hover:brightness-110 cursor-grab ") +
+                    (isAnyDragging ? "pointer-events-none " : "")
                   }
                   style={{
-                    top: `${startIdx * ROW_HEIGHT + 1}px`,
-                    height: `${span * ROW_HEIGHT - 2}px`,
+                    top: `${currentTopIdx * ROW_HEIGHT + 1}px`,
+                    height: `${currentSpan * ROW_HEIGHT - 2}px`,
                     left: '15%',
                     right: '15%',
                     ...badge.style,
                   }}
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                     // Only allow moving blocks that are mapped to hours (not full AM/PM blocks)
+                     if (typeof block.start === 'number' && block.end && !e.target.closest('.resize-handle') && !e.target.closest('.delete-btn')) {
+                       e.stopPropagation();
+                       setMoveTaskBlock({ ...block });
+                       setMoveTaskDelta(0);
+                     }
+                  }}
+                  onClick={(e) => {
+                    // Prevent click if we were dragging
+                    if ((isBeingMoved && moveTaskDelta !== 0) || (isBeingResized && resizeTaskDelta !== 0)) {
+                       return;
+                    }
+                    if (e.target.closest('.resize-handle') || e.target.closest('.delete-btn')) return;
+                    
                     if (block.end && block.end > block.start + SLOT_MINUTES) {
                       onOpenSlot?.({ start: block.start, end: block.end });
                     } else {
@@ -383,11 +484,12 @@ export function DayView({
                   )}
 
                   {/* Trash button visible on hover */}
-                  {onDeleteSlot ? (
+                  {onDeleteSlot && !isBeingMoved && !isBeingResized ? (
                     <button
                       type="button"
-                      className="absolute right-2 bottom-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-7 w-7 rounded-lg bg-red-500/90 hover:bg-red-600 text-white shadow-sm"
+                      className="delete-btn absolute right-2 bottom-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-7 w-7 rounded-lg bg-red-500/90 hover:bg-red-600 text-white shadow-sm"
                       title="Elimina task"
+                      onMouseDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
                         e.stopPropagation();
                         const start = block.start;
@@ -397,6 +499,34 @@ export function DayView({
                     >
                       <Icon name="trash" className="w-3.5 h-3.5" />
                     </button>
+                  ) : null}
+
+                  {/* Top Resize handle */}
+                  {block.end && typeof block.start === 'number' && !isBeingMoved ? (
+                     <div 
+                        className="resize-handle absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-t-2xl shadow-sm"
+                        onMouseDown={(e) => {
+                           e.stopPropagation();
+                           e.preventDefault();
+                           setResizeTaskBlock({ ...block });
+                           setResizeTaskDirection('top');
+                           setResizeTaskDelta(0);
+                        }}
+                     />
+                  ) : null}
+
+                  {/* Bottom Resize handle */}
+                  {block.end && typeof block.start === 'number' && !isBeingMoved ? (
+                     <div 
+                        className="resize-handle absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-b-2xl shadow-sm"
+                        onMouseDown={(e) => {
+                           e.stopPropagation();
+                           e.preventDefault();
+                           setResizeTaskBlock({ ...block });
+                           setResizeTaskDirection('bottom');
+                           setResizeTaskDelta(0);
+                        }}
+                     />
                   ) : null}
                 </div>
               );
