@@ -335,11 +335,14 @@ export function DayView({
                 <div
                   key={`${block.start}-${idx}`}
                   className={
-                    "relative z-20 mx-auto h-full w-[70%] max-w-[560px] rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
+                    "absolute z-20 rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
                     badge.className
                   }
                   style={{
-                    gridRow: `${startIdx + 1} / span ${span}`,
+                    top: `${startIdx * ROW_HEIGHT + 4}px`,
+                    height: `${span * ROW_HEIGHT - 8}px`,
+                    left: '15%',
+                    right: '15%',
                     ...badge.style,
                   }}
                   onClick={() => {
