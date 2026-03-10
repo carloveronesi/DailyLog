@@ -306,6 +306,20 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       return next;
     });
   }
+  function handleDeleteSlot() {
+    // Clear only the currently selected range, preserve all other hour entries
+    const nextHours = {};
+    const start = Math.min(rangeStartMin, rangeEndMin);
+    const end = Math.max(rangeStartMin, rangeEndMin);
+    for (const [key, entry] of Object.entries(hourEntries)) {
+      const slotMin = WORK_SLOTS.find((s) => hourKey(s) === key);
+      if (slotMin !== undefined && slotMin >= start && slotMin < end) continue; // skip cleared slots
+      if (!hasMeaning(entry)) continue;
+      nextHours[key] = normalizeForType(entry);
+    }
+    onSave({ AM: null, PM: null, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
+  }
+
   function handleSave() {
     if (fullDay) {
       const cleanAM = hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
@@ -428,14 +442,25 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
             Salva
           </Button>
 
-          <Button
-            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
-            onClick={onDeleteDay}
-            type="button"
-          >
-            <Icon name="trash" className="mr-2" />
-            Elimina
-          </Button>
+          {fullDay ? (
+            <Button
+              className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+              onClick={onDeleteDay}
+              type="button"
+            >
+              <Icon name="trash" className="mr-2" />
+              Elimina giornata
+            </Button>
+          ) : (
+            <Button
+              className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+              onClick={handleDeleteSlot}
+              type="button"
+            >
+              <Icon name="trash" className="mr-2" />
+              Elimina task
+            </Button>
+          )}
         </div>
       </div>
     </div>
