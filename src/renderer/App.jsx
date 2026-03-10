@@ -5,11 +5,29 @@ import { SummaryPanel } from "./components/SummaryPanel";
 import { Header } from "./components/Header";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { DayView } from "./components/DayView";
+import { SearchModal } from "./components/SearchModal";
 import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { ymd } from "./utils/date";
 import { exportAll, listStoredClients } from "./services/storage";
+
+function SidebarBtn({ icon, label, onClick, disabled, activeClass = "" }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      className={`relative flex items-center justify-center lg:justify-start w-full p-3 lg:px-5 lg:py-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:rounded-none rounded-2xl group/btn overflow-hidden ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeClass}`}
+    >
+      <Icon name={icon} className="shrink-0 text-slate-700 dark:text-slate-300 transition-transform duration-200 group-hover/btn:scale-110" />
+      <span className="hidden lg:block absolute left-14 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity font-medium text-sm text-slate-700 dark:text-slate-300 pointer-events-none bg-white/90 dark:bg-slate-800/90 px-2 py-1 rounded-md shadow-sm">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export default function App() {
   const today = new Date();
@@ -51,6 +69,7 @@ export default function App() {
   const [selectedRange, setSelectedRange] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [summaryHoverFilter, setSummaryHoverFilter] = useState(null);
   const [summaryFixedFilter, setSummaryFixedFilter] = useState(null);
   const [viewMode, setViewMode] = useState("day");
@@ -136,9 +155,41 @@ export default function App() {
     : "grid grid-cols-1 gap-5";
 
   return (
-    <div className="min-h-screen lg:h-screen lg:flex lg:flex-col lg:overflow-hidden">
-      <div className="mx-auto w-full max-w-7xl px-4 pt-3 pb-20 lg:pb-3 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
-        <main className={`${mainLayoutClass} lg:flex-1 lg:min-h-0 lg:items-stretch`}>
+    <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white dark:bg-slate-950 transition-colors">
+      
+      {/* Sidebar: bottom on mobile, left on desktop */}
+      <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 lg:hover:w-48 transition-all duration-300 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible lg:overflow-hidden relative shadow-soft dark:shadow-none">
+        
+        {/* Top */}
+        <div className="flex lg:flex-col items-center w-full lg:pt-4">
+           <SidebarBtn icon="search" label="Cerca nello storico" onClick={() => setSearchOpen(true)} />
+        </div>
+        
+        {/* Middle */}
+        <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center w-full lg:mt-auto lg:mb-auto">
+           <SidebarBtn icon={viewMode === "month" ? "day" : "calendar"} label={viewMode === "month" ? "Vista giorno" : "Vista mese"} onClick={toggleView} />
+        </div>
+
+        {/* Bottom */}
+        <div className="flex lg:flex-col items-center w-full lg:pb-4">
+           <SidebarBtn icon={settings.theme === "dark" ? "sun" : "moon"} label="Cambia Tema" onClick={toggleTheme} />
+           <SidebarBtn icon="settings" label="Impostazioni" onClick={() => setSettingsOpen(true)} />
+           
+           {!hasDesktopBridge ? (
+              <SidebarBtn 
+                icon={backupFileHandle ? "check" : "upload"} 
+                label={backupFileHandle ? "Backup attivo" : "Backup auto"} 
+                onClick={backupFileHandle ? disableAutoBackup : enableAutoBackup}
+                disabled={!supportsAutoBackup && !backupFileHandle}
+                activeClass={backupFileHandle ? "text-emerald-600 dark:text-emerald-500" : ""}
+              />
+           ) : null}
+        </div>
+      </nav>
+
+      <div className="flex-1 w-full flex flex-col min-h-0 overflow-y-auto">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 pb-6 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
+          <main className={`${mainLayoutClass} lg:flex-1 lg:min-h-0 lg:items-stretch`}>
           {viewMode === "month" ? (
             <CalendarGrid
               year={year}
@@ -205,53 +256,7 @@ export default function App() {
             </aside>
           ) : null}
         </main>
-      </div>
-
-      <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-white/90 p-2 shadow-soft backdrop-blur dark:border-slate-700/80 dark:bg-slate-800/90">
-        <Button
-          className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-          onClick={toggleView}
-          type="button"
-          title="Cambia vista"
-        >
-          <Icon name={viewMode === "month" ? "day" : "calendar"} className="mr-2" />
-          {viewMode === "month" ? "Vista giorno" : "Vista mese"}
-        </Button>
-
-        <Button
-          className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-          onClick={() => setSettingsOpen(true)}
-          type="button"
-          title="Impostazioni"
-        >
-          <Icon name="settings" className="mr-2" />
-          Settings
-        </Button>
-
-        <Button
-          className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-          onClick={toggleTheme}
-          type="button"
-          title="Cambia Tema"
-        >
-          <Icon name={settings.theme === "dark" ? "sun" : "moon"} />
-        </Button>
-
-        {!hasDesktopBridge ? (
-          <Button
-            className={
-              backupFileHandle
-                ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                : "bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            }
-            onClick={backupFileHandle ? disableAutoBackup : enableAutoBackup}
-            type="button"
-            title={backupFileHandle ? "Disattiva backup automatico su file" : "Collega file per backup automatico"}
-            disabled={!supportsAutoBackup && !backupFileHandle}
-          >
-            {backupFileHandle ? "Backup attivo" : "Backup auto"}
-          </Button>
-        ) : null}
+        </div>
       </div>
 
       <SettingsModal
@@ -289,6 +294,17 @@ export default function App() {
           />
         ) : null}
       </Modal>
+
+      <SearchModal
+         open={searchOpen}
+         onClose={() => setSearchOpen(false)}
+         onSelectDate={(date) => {
+             // Go to the month containing this date
+             setMonthYear(date.getFullYear(), date.getMonth());
+             // And open the day directly
+             openDayFromMonth(date);
+         }}
+      />
     </div>
   );
 }

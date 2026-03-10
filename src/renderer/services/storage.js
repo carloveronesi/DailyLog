@@ -178,6 +178,74 @@ export function listStoredClients() {
   return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b, "it"));
 }
 
+export function searchAllLogs(query) {
+  if (!query || typeof query !== "string") return [];
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+
+  const results = [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const storageKey = localStorage.key(i);
+    if (!storageKey || !storageKey.startsWith(STORAGE_PREFIX)) continue;
+    if (storageKey === SETTINGS_KEY) continue;
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const byDate = parsed?.byDate;
+      if (!byDate || typeof byDate !== "object") continue;
+
+      for (const dateKey of Object.keys(byDate)) {
+        const day = byDate[dateKey];
+        if (!day) continue;
+        
+        // Parse date from dateKey (YYYY-MM-DD)
+        const [y, m, d] = dateKey.split("-").map(Number);
+        if (!y || !m || !d) continue;
+        const dateObj = new Date(y, m - 1, d);
+
+        const checkEntry = (entry, slotLabel) => {
+          if (!entry || typeof entry !== "object") return;
+          const matchTitle = (entry.title || "").toLowerCase().includes(q);
+          const matchNotes = (entry.notes || "").toLowerCase().includes(q);
+          const matchClient = (entry.client || "").toLowerCase().includes(q);
+          const matchRetrospective = (entry.retrospective || "").toLowerCase().includes(q);
+          const matchNextSteps = (entry.nextSteps || "").toLowerCase().includes(q);
+
+          if (matchTitle || matchNotes || matchClient || matchRetrospective || matchNextSteps) {
+            results.push({
+              date: dateObj,
+              dateKey,
+              slot: slotLabel,
+              entry
+            });
+          }
+        };
+
+        checkEntry(day.AM, "AM (09:00 - 13:00)");
+        checkEntry(day.PM, "PM (14:00 - 18:00)");
+        
+        if (day.hours && typeof day.hours === "object") {
+          for (const [hourKey, entry] of Object.entries(day.hours)) {
+            checkEntry(entry, hourKey);
+          }
+        }
+      }
+    } catch {
+      // Ignore malformed payloads
+    }
+  }
+
+  // Sort by date descending, then by slot
+  return results.sort((a, b) => {
+    const dateDiff = b.date.getTime() - a.date.getTime();
+    if (dateDiff !== 0) return dateDiff;
+    return (a.slot || "").localeCompare(b.slot || "");
+  });
+}
+
 function openBackupDb() {
   return new Promise((resolve, reject) => {
     if (!window.indexedDB) {
