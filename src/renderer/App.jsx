@@ -23,11 +23,12 @@ function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={label}
-      className={`relative flex items-center justify-center lg:justify-start w-full p-3 lg:px-5 lg:py-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:rounded-none rounded-2xl group/btn overflow-hidden ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
+      className={`relative flex items-center justify-center w-full p-3 lg:p-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
     >
       <Icon name={icon} className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${iconColor}`} />
-      <span className="hidden lg:block absolute left-14 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity font-medium text-sm text-slate-700 dark:text-slate-300 pointer-events-none bg-white/90 dark:bg-slate-800/90 px-2 py-1 rounded-md shadow-sm z-[100]">
+      
+      {/* Floating Tooltip */}
+      <span className="hidden lg:block absolute left-full ml-3 whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-all transform translate-x-1 group-hover/btn:translate-x-0 font-bold text-[11px] uppercase tracking-widest text-white bg-slate-900/90 dark:bg-slate-700/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl z-[100] pointer-events-none before:content-[''] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2 before:border-4 before:border-transparent before:border-r-slate-900/90 dark:before:border-r-slate-700/95">
         {label}
       </span>
     </button>
@@ -243,7 +244,7 @@ export default function App() {
     <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white dark:bg-slate-950 transition-colors">
       
       {/* Sidebar: bottom on mobile, left on desktop */}
-      <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 lg:hover:w-48 transition-all duration-300 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible lg:overflow-hidden relative shadow-soft dark:shadow-none">
+      <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
         
         {/* Top */}
         <div className="flex lg:flex-col items-center w-full lg:pt-4">
