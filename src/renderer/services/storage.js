@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS = {
   desktopBackupDir: "",
   minimizeToTrayOnMinimize: false,
   clientColors: {},
+  theme: "light",
 };
 const BACKUP_DB_NAME = "dailylog-backup-v1";
 const BACKUP_STORE_NAME = "settings";
@@ -81,6 +82,7 @@ export function normalizeSettings(raw) {
     ...DEFAULT_SETTINGS,
     desktopBackupDir: typeof raw.desktopBackupDir === "string" ? raw.desktopBackupDir : "",
     minimizeToTrayOnMinimize: Boolean(raw.minimizeToTrayOnMinimize),
+    theme: typeof raw.theme === "string" ? raw.theme : "light",
     clientColors: normalizeClientColors(raw.clientColors),
   };
 }
