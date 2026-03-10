@@ -346,12 +346,13 @@ export function DayView({
                 <div
                   key={`${block.start}-${idx}`}
                   className={
-                    "group absolute z-20 rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
+                    "group absolute z-20 rounded-2xl px-3 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
+                    (block.span === 1 ? "py-0.5 " : "py-2 ") +
                     badge.className
                   }
                   style={{
-                    top: `${startIdx * ROW_HEIGHT + 4}px`,
-                    height: `${span * ROW_HEIGHT - 8}px`,
+                    top: `${startIdx * ROW_HEIGHT + 1}px`,
+                    height: `${span * ROW_HEIGHT - 2}px`,
                     left: '15%',
                     right: '15%',
                     ...badge.style,
@@ -369,8 +370,17 @@ export function DayView({
                   {hasMissingNotes(block.entry) ? (
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85" />
                   ) : null}
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
-                  <div className="mt-1 text-sm font-bold leading-tight">{label}</div>
+                  {block.span === 1 ? (
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 shrink-0">{block.label}</div>
+                      <div className="text-sm font-bold truncate">{label}</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
+                      <div className="mt-1 text-sm font-bold leading-tight">{label}</div>
+                    </>
+                  )}
 
                   {/* Trash button visible on hover */}
                   {onDeleteSlot ? (
