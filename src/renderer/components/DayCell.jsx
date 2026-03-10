@@ -34,11 +34,11 @@ function HourStrip({ entry, clientColors }) {
   }
   return (
     <div
-      className={"relative flex-1 rounded flex items-center justify-center px-1 min-h-0 shadow-sm transition-all " + badge.className}
+      className={"relative flex-1 rounded flex items-center justify-center px-1 min-h-0 shadow-sm transition-all overflow-hidden " + badge.className}
       style={badge.style}
     >
       {hasMissingNotes(entry) ? <MissingNotesLed /> : null}
-      <div className="w-full text-center text-ellipsis overflow-hidden text-[9px] font-bold leading-tight">
+      <div className="w-full text-center truncate text-[9px] font-bold leading-tight">
         {displayLabel(entry)}
       </div>
     </div>
@@ -56,11 +56,11 @@ function HalfBlock({ entry, clientColors, emptyClass }) {
   }
   return (
     <div
-      className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm transition-all " + badge.className}
+      className={"relative flex-1 rounded flex items-center justify-center px-1.5 py-1 min-h-[36px] shadow-sm transition-all overflow-hidden " + badge.className}
       style={badge.style}
     >
       {hasMissingNotes(entry) ? <MissingNotesLed /> : null}
-      <div className="w-full text-center text-ellipsis overflow-hidden text-[11.5px] font-bold leading-tight">
+      <div className="w-full text-center truncate text-[11.5px] font-bold leading-tight">
         {displayLabel(entry)}
       </div>
     </div>
@@ -111,7 +111,7 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
   const isClickable = isCurrentMonth && !isWeekend && typeof onDayClick === "function";
 
   const base =
-    "rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[100px] lg:min-h-0 lg:h-full flex flex-col gap-2";
+    "relative overflow-hidden rounded-[22px] border p-3 transition-all duration-200 select-none min-h-[100px] lg:min-h-0 lg:h-full flex flex-col gap-2";
   const cursor = isClickable ? "cursor-pointer" : "cursor-default";
   const bg = !isCurrentMonth
     ? "bg-slate-300/70 border-slate-400 text-slate-600 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-500"
@@ -153,7 +153,7 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
                 return (
                   <div
                     key={idx}
-                    className={"rounded-full px-2 py-1 text-[11px] font-bold shadow-sm " + badge.className}
+                    className={"truncate rounded-full px-2 py-1 text-[11px] font-bold shadow-sm " + badge.className}
                     style={badge.style}
                   >
                     {displayLabel(item.entry)}
