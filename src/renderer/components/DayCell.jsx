@@ -1,4 +1,4 @@
-import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS, hourKey } from "../domain/tasks";
+import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS, hourKey, TASK_TYPES } from "../domain/tasks";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -71,23 +71,19 @@ function normalizeEntryValue(value) {
   return (value || "").trim().toLocaleLowerCase("it-IT");
 }
 
-function entryKey(entry) {
+function groupKey(entry) {
   if (!entry) return "";
-  return [
-    normalizeEntryValue(entry.type),
-    normalizeEntryValue(entry.title),
-    normalizeEntryValue(entry.client),
-    normalizeEntryValue(entry.notes),
-    normalizeEntryValue(entry.wentWrong),
-    normalizeEntryValue(entry.nextSteps),
-  ].join("|");
+  if (entry.type === "client") {
+    return "client|" + normalizeEntryValue(entry.client || "");
+  }
+  return entry.type || "";
 }
 
 function buildHourSummary(hours) {
   const groups = new Map();
   for (const entry of Object.values(hours || {})) {
     if (!entry) continue;
-    const key = entryKey(entry);
+    const key = groupKey(entry);
     if (!key) continue;
     const current = groups.get(key);
     if (current) current.count += 1;
@@ -150,13 +146,24 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
             <div className="flex flex-col gap-1">
               {summaryVisible.map((item, idx) => {
                 const badge = badgePresentation(item.entry, clientColors);
+                let label = displayLabel(item.entry);
+
+                // If grouped (or even if single, for month view pills), 
+                // simplify the label to client name or type label
+                if (item.entry.type === "client") {
+                  label = (item.entry.client || "").trim() || "Cliente";
+                } else {
+                  const typeObj = TASK_TYPES.find(t => t.id === item.entry.type);
+                  if (typeObj) label = typeObj.label;
+                }
+
                 return (
                   <div
                     key={idx}
                     className={"truncate rounded-full px-2 py-1 text-[11px] font-bold shadow-sm " + badge.className}
                     style={badge.style}
                   >
-                    {displayLabel(item.entry)}
+                    {label}
                   </div>
                 );
               })}
