@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { importAll } from "../services/storage";
 import { Button, Icon, Modal } from "./ui";
-import { getClientColor, normalizeClientKey, normalizeHexColor } from "../domain/tasks";
+import { getClientColor, normalizeClientKey, normalizeHexColor, TASK_TYPES } from "../domain/tasks";
 
 export function SettingsModal({
   open,
@@ -61,6 +61,41 @@ export function SettingsModal({
     });
   }
 
+  const [newSubtype, setNewSubtype] = useState("");
+  const [selectedSubtypeType, setSelectedSubtypeType] = useState("internal");
+
+  function addSubtype() {
+    const val = newSubtype.trim();
+    if (!val) return;
+    setSettings((prev) => {
+      const st = prev.taskSubtypes || {};
+      const list = st[selectedSubtypeType] || [];
+      if (list.includes(val)) return prev;
+      return {
+        ...prev,
+        taskSubtypes: {
+          ...st,
+          [selectedSubtypeType]: [...list, val],
+        },
+      };
+    });
+    setNewSubtype("");
+  }
+
+  function removeSubtype(typeId, val) {
+    setSettings((prev) => {
+      const st = prev.taskSubtypes || {};
+      const list = st[typeId] || [];
+      return {
+        ...prev,
+        taskSubtypes: {
+          ...st,
+          [typeId]: list.filter((x) => x !== val),
+        },
+      };
+    });
+  }
+
   return (
     <Modal open={open} title="Settings" onClose={onClose}>
       <div className="space-y-4">
@@ -115,6 +150,54 @@ export function SettingsModal({
               })}
             </div>
           )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Sottotipi di task</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Definisci dei titoli prestabiliti (sottotipi) per compilare velocemente i tuoi task.
+          </div>
+          <div className="flex gap-2">
+            <select
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white"
+              value={selectedSubtypeType}
+              onChange={(e) => setSelectedSubtypeType(e.target.value)}
+            >
+              {TASK_TYPES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <input
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none"
+              placeholder="Es. Colloquio, Proposta..."
+              value={newSubtype}
+              onChange={(e) => setNewSubtype(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addSubtype();
+              }}
+            />
+            <Button
+              className="bg-sky-600 text-white hover:bg-sky-500 dark:bg-sky-500 dark:hover:bg-sky-400"
+              onClick={addSubtype}
+              type="button"
+            >
+              Aggiungi
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {(settings.taskSubtypes?.[selectedSubtypeType] || []).length === 0 ? (
+              <span className="text-xs text-slate-400 italic">Nessun sottotipo per questa categoria.</span>
+            ) : (
+              (settings.taskSubtypes?.[selectedSubtypeType] || []).map((val) => (
+                <div key={val} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  {val}
+                  <button onClick={() => removeSubtype(selectedSubtypeType, val)} className="ml-1 text-slate-400 hover:text-red-500">×</button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 dark:border-slate-700 dark:bg-slate-800/50">
@@ -187,11 +270,7 @@ export function SettingsModal({
             {settingsStatus ? <div className="text-xs text-slate-500 dark:text-slate-400">{settingsStatus}</div> : null}
             {desktopBackupPath ? <div className="text-xs text-slate-500 break-all dark:text-slate-400">File backup: {desktopBackupPath}</div> : null}
           </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-            Le impostazioni backup cartella sono disponibili solo nella versione desktop Electron.
-          </div>
-        )}
+        ) : null}
 
         <div className="pt-2">
           <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200" onClick={onClose} type="button">

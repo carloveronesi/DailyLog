@@ -152,8 +152,9 @@ export default function App() {
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
 
-  function onMoveTask({ start, end, newStart }) {
-    if (!dayData?.hours) return;
+  function onMoveTask(date, { start, end, newStart }) {
+    const specificDayData = monthDataByDate[ymd(date)] || null;
+    if (!specificDayData?.hours) return;
     const duration = end - start;
     const newEnd = newStart + duration;
 
@@ -161,10 +162,10 @@ export default function App() {
     // and within the valid work slots
     if (newStart < WORK_SLOTS[0] || newEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
 
-    const entryToMove = dayData.hours[hourKey(start)];
+    const entryToMove = specificDayData.hours[hourKey(start)];
     if (!entryToMove) return;
 
-    const nextHours = { ...dayData.hours };
+    const nextHours = { ...specificDayData.hours };
 
     // Clear old slots
     for (let m = start; m < end; m += SLOT_MINUTES) {
@@ -176,16 +177,17 @@ export default function App() {
       nextHours[hourKey(m)] = entryToMove;
     }
 
-    upsertDay(activeDate, {
-      AM: dayData.AM || null,
-      PM: dayData.PM || null,
+    upsertDay(date, {
+      AM: specificDayData.AM || null,
+      PM: specificDayData.PM || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }
 
-  function onResizeTask({ start, end, newStart, newEnd }) {
-    if (!dayData?.hours) return;
-    const entryToResize = dayData.hours[hourKey(start)];
+  function onResizeTask(date, { start, end, newStart, newEnd }) {
+    const specificDayData = monthDataByDate[ymd(date)] || null;
+    if (!specificDayData?.hours) return;
+    const entryToResize = specificDayData.hours[hourKey(start)];
     if (!entryToResize) return;
 
     // Use existing values if not provided
@@ -195,7 +197,7 @@ export default function App() {
     // Boundary check
     if (finalEnd <= finalStart || finalStart < WORK_SLOTS[0] || finalEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
 
-    const nextHours = { ...dayData.hours };
+    const nextHours = { ...specificDayData.hours };
 
     // Clear old slots
     for (let m = start; m < end; m += SLOT_MINUTES) {
@@ -207,9 +209,28 @@ export default function App() {
       nextHours[hourKey(m)] = entryToResize;
     }
 
-    upsertDay(activeDate, {
-      AM: dayData.AM || null,
-      PM: dayData.PM || null,
+    upsertDay(date, {
+      AM: specificDayData.AM || null,
+      PM: specificDayData.PM || null,
+      hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
+    });
+  }
+
+  function handleSlotDeletion(date, { start, end }) {
+    const key = ymd(date);
+    const existing = monthDataByDate[key];
+    if (!existing?.hours) return;
+    const nextHours = {};
+    for (const [k, e] of Object.entries(existing.hours)) {
+      // keep slot if it's outside the deleted range
+      const [h, m] = k.split(":").map(Number);
+      const slotMin = h * 60 + m;
+      if (slotMin >= start && slotMin < end) continue;
+      nextHours[k] = e;
+    }
+    upsertDay(date, {
+      AM: null,
+      PM: null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }
@@ -295,6 +316,9 @@ export default function App() {
                     openEditor(date, slot);
                  }
               }}
+              onMoveTask={onMoveTask}
+              onResizeTask={onResizeTask}
+              onDeleteSlot={handleSlotDeletion}
               goPrevWeek={() => {
                  setActiveDate(prev => {
                     const next = new Date(prev);
@@ -318,26 +342,9 @@ export default function App() {
               dayData={dayData}
               clientColors={settings.clientColors}
               onOpenSlot={(slot) => openEditor(activeDate, slot)}
-              onMoveTask={onMoveTask}
-              onResizeTask={onResizeTask}
-              onDeleteSlot={({ start, end }) => {
-                const key = ymd(activeDate);
-                const existing = monthDataByDate[key];
-                if (!existing?.hours) return;
-                const nextHours = {};
-                for (const [k, e] of Object.entries(existing.hours)) {
-                  // keep slot if it's outside the deleted range
-                  const [h, m] = k.split(":").map(Number);
-                  const slotMin = h * 60 + m;
-                  if (slotMin >= start && slotMin < end) continue;
-                  nextHours[k] = e;
-                }
-                upsertDay(activeDate, {
-                  AM: null,
-                  PM: null,
-                  hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-                });
-              }}
+              onMoveTask={(args) => onMoveTask(activeDate, args)}
+              onResizeTask={(args) => onResizeTask(activeDate, args)}
+              onDeleteSlot={(args) => handleSlotDeletion(activeDate, args)}
               onPrevDay={goPrevDay}
               onNextDay={goNextDay}
               onToday={goTodayDay}
@@ -405,6 +412,7 @@ export default function App() {
             }}
             topClients={topMonthClients}
             clientColors={settings.clientColors}
+            taskSubtypes={settings.taskSubtypes}
           />
         ) : null}
       </Modal>

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   AFTERNOON_SLOTS,
   MORNING_SLOTS,
@@ -173,7 +173,10 @@ export function WeekView({
   onOpenSlot,
   goPrevWeek,
   goNextWeek,
-  goToday
+  goToday,
+  onMoveTask,
+  onResizeTask,
+  onDeleteSlot
 }) {
   const weekDays = useMemo(() => getWorkweekDays(activeDate), [activeDate]);
   
@@ -203,6 +206,82 @@ export function WeekView({
       return `${monday.getDate()} ${startMonth} ${startYear} - ${friday.getDate()} ${endMonth} ${endYear}`;
     }
   }, [weekDays]);
+
+  const [activeDragCol, setActiveDragCol] = useState(null);
+  
+  const [dragStart, setDragStart] = useState(null);
+  const [dragHover, setDragHover] = useState(null);
+
+  const [moveTaskBlock, setMoveTaskBlock] = useState(null);
+  const [moveTaskDelta, setMoveTaskDelta] = useState(0);
+
+  const [resizeTaskBlock, setResizeTaskBlock] = useState(null);
+  const [resizeTaskDelta, setResizeTaskDelta] = useState(0);
+  const [resizeTaskDirection, setResizeTaskDirection] = useState(null);
+
+  const isDraggingEmpty = dragStart !== null && dragHover !== null && activeDragCol !== null;
+  const isMoving = moveTaskBlock !== null && activeDragCol !== null;
+  const isResizing = resizeTaskBlock !== null && activeDragCol !== null;
+  const isAnyDragging = dragStart !== null || isMoving || isResizing;
+
+  const selection = useMemo(() => {
+    if (!isDraggingEmpty) return null;
+    const start = Math.min(dragStart, dragHover);
+    const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
+    const startIndex = slotIndex(start);
+    const endIndex = slotIndex(end - SLOT_MINUTES);
+    if (startIndex < 0 || endIndex < 0) return null;
+    return {
+      startIndex,
+      span: endIndex - startIndex + 1,
+    };
+  }, [dragStart, dragHover, isDraggingEmpty]);
+
+  useEffect(() => {
+    function handleUp() {
+      if (isDraggingEmpty) {
+        const start = Math.min(dragStart, dragHover);
+        const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
+        const colDate = weekDays[activeDragCol];
+        setDragStart(null);
+        setDragHover(null);
+        setActiveDragCol(null);
+        onOpenSlot?.({ date: colDate, start, end });
+      } else if (isMoving) {
+        if (moveTaskDelta !== 0 && onMoveTask) {
+           const newStart = moveTaskBlock.start + moveTaskDelta;
+           const colDate = weekDays[activeDragCol];
+           onMoveTask(colDate, { start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
+        }
+        setMoveTaskBlock(null);
+        setMoveTaskDelta(0);
+        setActiveDragCol(null);
+      } else if (isResizing) {
+        if (resizeTaskDelta !== 0 && onResizeTask) {
+           let newStart = resizeTaskBlock.start;
+           let newEnd = resizeTaskBlock.end;
+           
+           if (resizeTaskDirection === 'top') {
+              newStart = resizeTaskBlock.start + resizeTaskDelta;
+           } else {
+              newEnd = resizeTaskBlock.end + resizeTaskDelta;
+           }
+
+           if (newEnd > newStart) {
+              const colDate = weekDays[activeDragCol];
+              onResizeTask(colDate, { start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
+           }
+        }
+        setResizeTaskBlock(null);
+        setResizeTaskDelta(0);
+        setResizeTaskDirection(null);
+        setActiveDragCol(null);
+      }
+    }
+
+    window.addEventListener("mouseup", handleUp);
+    return () => window.removeEventListener("mouseup", handleUp);
+  }, [dragStart, dragHover, activeDragCol, isDraggingEmpty, isMoving, isResizing, moveTaskBlock, moveTaskDelta, resizeTaskBlock, resizeTaskDelta, resizeTaskDirection, weekDays, onOpenSlot, onMoveTask, onResizeTask]);
 
   return (
     <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
@@ -295,45 +374,122 @@ export function WeekView({
                           style={{ top: `${DAY_SLOTS.length * ROW_HEIGHT}px` }}
                         />
 
+                        {selection && activeDragCol === colIdx ? (
+                          <div
+                            className="pointer-events-none absolute left-1 right-1 z-10 rounded-xl border border-sky-400/70 bg-sky-200/30 dark:border-sky-500/60 dark:bg-sky-500/10"
+                            style={{
+                              top: `${selection.startIndex * ROW_HEIGHT + 6}px`,
+                              height: `${selection.span * ROW_HEIGHT - 12}px`,
+                            }}
+                          />
+                        ) : null}
+
                         {/* Interactive Clickable Background Slots */}
                         {DAY_SLOTS.map((slot, idx) => {
                             const isBreak = slot >= BREAK_START && slot < BREAK_END;
                             return (
                                 <div
                                     key={`slot-${slot}`}
-                                    className={`relative z-10 w-full h-full cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 ${isBreak ? 'bg-slate-50/50 dark:bg-slate-900/30' : ''}`}
+                                    className={`relative z-10 w-full h-full cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 ${isBreak ? 'bg-slate-50/50 dark:bg-slate-900/30 cursor-default' : ''}`}
                                     style={{ gridRow: idx + 1 }}
-                                    onClick={() => {
+                                    onMouseDown={(e) => {
                                         if (isBreak) return;
-                                        onOpenSlot?.({ date, slot });
+                                        e.preventDefault();
+                                        setDragStart(slot);
+                                        setDragHover(slot);
+                                        setActiveDragCol(colIdx);
+                                    }}
+                                    onMouseEnter={() => {
+                                        if (isDraggingEmpty && activeDragCol === colIdx) {
+                                            setDragHover(slot);
+                                        } else if (isMoving && moveTaskBlock && activeDragCol === colIdx) {
+                                            const delta = slot - moveTaskBlock.start;
+                                            setMoveTaskDelta(delta);
+                                        } else if (isResizing && resizeTaskBlock && activeDragCol === colIdx) {
+                                            if (resizeTaskDirection === 'top') {
+                                                const delta = slot - resizeTaskBlock.start;
+                                                setResizeTaskDelta(delta);
+                                            } else {
+                                                const delta = (slot + SLOT_MINUTES) - resizeTaskBlock.end;
+                                                setResizeTaskDelta(delta);
+                                            }
+                                        }
                                     }}
                                 />
                             );
                         })}
 
-                        {/* Task Blocks */}
                         {blocks.map((block, idx) => {
                           const badge = badgePresentation(block.entry, clientColors);
                           const label = displayLabel(block.entry);
                           const startIdx = slotIndex(block.start);
                           const span = block.span || 1;
                           
+                          const isActiveCol = activeDragCol === colIdx;
+                          const isBeingMoved = isMoving && isActiveCol && moveTaskBlock?.start === block.start;
+                          const isBeingResized = isResizing && isActiveCol && resizeTaskBlock?.start === block.start;
+
+                          let currentTopIdx = startIdx;
+                          let currentSpan = span;
+                          let isGhost = false;
+
+                          if (isBeingMoved) {
+                            const newStart = block.start + moveTaskDelta;
+                            const newStartIdx = slotIndex(newStart);
+                            if (newStartIdx >= 0) {
+                              currentTopIdx = newStartIdx;
+                            }
+                            isGhost = true;
+                          } else if (isBeingResized) {
+                            if (resizeTaskDirection === 'top') {
+                                const newStart = block.start + resizeTaskDelta;
+                                const newStartIdx = slotIndex(newStart);
+                                const endIdx = slotIndex(block.end - SLOT_MINUTES);
+                                if (newStartIdx <= endIdx && newStartIdx >= 0) {
+                                    currentTopIdx = newStartIdx;
+                                    currentSpan = endIdx - newStartIdx + 1;
+                                }
+                            } else {
+                                const newEnd = block.end + resizeTaskDelta;
+                                const newEndIdx = slotIndex(newEnd - SLOT_MINUTES);
+                                if (newEndIdx >= startIdx) {
+                                  currentSpan = newEndIdx - startIdx + 1;
+                                }
+                            }
+                          }
+                          
                           return (
                             <div
                               key={`${block.start}-${idx}`}
                               className={
                                 "group absolute z-20 rounded-xl px-1.5 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center select-none overflow-hidden " +
-                                (span === 1 ? "py-0 " : "py-1 ") +
-                                badge.className
+                                (currentSpan === 1 ? "py-0 " : "py-1 ") +
+                                badge.className + " " +
+                                (isGhost ? "opacity-70 scale-[0.98] ring-2 ring-sky-400 cursor-grabbing " : "transition hover:brightness-95 dark:hover:brightness-110 cursor-grab ") +
+                                (isAnyDragging ? "pointer-events-none " : "")
                               }
                               style={{
-                                top: `${startIdx * ROW_HEIGHT + 1}px`,
-                                height: `${span * ROW_HEIGHT - 2}px`,
+                                top: `${currentTopIdx * ROW_HEIGHT + 1}px`,
+                                height: `${currentSpan * ROW_HEIGHT - 2}px`,
                                 left: '4%',
                                 right: '4%',
                                 ...badge.style,
                               }}
+                              onMouseDown={(e) => {
+                                 // Only allow moving blocks that are mapped to hours
+                                 if (typeof block.start === 'number' && block.end && !e.target.closest('.resize-handle') && !e.target.closest('.delete-btn')) {
+                                   e.stopPropagation();
+                                   setActiveDragCol(colIdx);
+                                   setMoveTaskBlock({ ...block });
+                                   setMoveTaskDelta(0);
+                                 }
+                              }}
                               onClick={(e) => {
+                                if ((isBeingMoved && moveTaskDelta !== 0) || (isBeingResized && resizeTaskDelta !== 0)) {
+                                  return;
+                                }
+                                if (e.target.closest('.resize-handle') || e.target.closest('.delete-btn')) return;
+
                                 e.stopPropagation();
                                 if (block.end && block.end > block.start + SLOT_MINUTES) {
                                   onOpenSlot?.({ date, start: block.start, end: block.end });
@@ -347,7 +503,7 @@ export function WeekView({
                               {hasMissingNotes(block.entry) ? (
                                 <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85" />
                               ) : null}
-                              {span === 1 ? (
+                              {currentSpan === 1 ? (
                                 <div className="text-[10px] lg:text-[11px] font-bold leading-[1.1] line-clamp-2 truncate">{label}</div>
                               ) : (
                                 <>
@@ -355,6 +511,54 @@ export function WeekView({
                                   <div className="mt-0.5 text-[10px] lg:text-xs font-bold leading-tight line-clamp-2">{label}</div>
                                 </>
                               )}
+
+                              {/* Trash button visible on hover */}
+                              {onDeleteSlot && !isBeingMoved && !isBeingResized ? (
+                                <button
+                                  type="button"
+                                  className="delete-btn absolute right-1 bottom-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-5 w-5 rounded bg-red-500/90 hover:bg-red-600 text-white shadow-sm"
+                                  title="Elimina task"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const start = block.start;
+                                    const end = block.end ?? (block.start + SLOT_MINUTES);
+                                    onDeleteSlot(date, { start, end });
+                                  }}
+                                >
+                                  <Icon name="trash" className="w-2.5 h-2.5" />
+                                </button>
+                              ) : null}
+
+                              {/* Top Resize handle */}
+                              {block.end && typeof block.start === 'number' && !isBeingMoved ? (
+                                 <div 
+                                    className="resize-handle absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-t-xl shadow-sm"
+                                    onMouseDown={(e) => {
+                                       e.stopPropagation();
+                                       e.preventDefault();
+                                       setActiveDragCol(colIdx);
+                                       setResizeTaskBlock({ ...block });
+                                       setResizeTaskDirection('top');
+                                       setResizeTaskDelta(0);
+                                    }}
+                                 />
+                              ) : null}
+
+                              {/* Bottom Resize handle */}
+                              {block.end && typeof block.start === 'number' && !isBeingMoved ? (
+                                 <div 
+                                    className="resize-handle absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-b-xl shadow-sm"
+                                    onMouseDown={(e) => {
+                                       e.stopPropagation();
+                                       e.preventDefault();
+                                       setActiveDragCol(colIdx);
+                                       setResizeTaskBlock({ ...block });
+                                       setResizeTaskDirection('bottom');
+                                       setResizeTaskDelta(0);
+                                    }}
+                                 />
+                              ) : null}
                             </div>
                           );
                         })}

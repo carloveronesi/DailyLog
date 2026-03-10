@@ -62,9 +62,10 @@ function formatDurationHours(minutes) {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
 }
 
-function EntryForm({ entry, onChange, topClients, clientColors }) {
+function EntryForm({ entry, onChange, topClients, clientColors, taskSubtypes = {} }) {
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const badge = badgePresentation(entry, clientColors);
+  const currentSubtypes = taskSubtypes[entry.type] || [];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -123,6 +124,28 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
               onChange={(e) => setField("title", e.target.value)}
               placeholder="Es. Refactor codice"
             />
+            {currentSubtypes.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {currentSubtypes.map((st) => {
+                  const isSelected = (entry.title || "").trim().toLowerCase() === st.toLowerCase();
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setField("title", st)}
+                      className={
+                        "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+                        (isSelected
+                          ? "bg-slate-700 text-white shadow-md dark:bg-slate-200 dark:text-slate-900"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
+                      }
+                    >
+                      {st}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -133,6 +156,28 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
               onChange={(e) => setField("title", e.target.value)}
               placeholder={entry.type === "event" ? "Es. Meetup" : "Es. Support"}
             />
+            {currentSubtypes.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {currentSubtypes.map((st) => {
+                  const isSelected = (entry.title || "").trim().toLowerCase() === st.toLowerCase();
+                  return (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setField("title", st)}
+                      className={
+                        "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+                        (isSelected
+                          ? "bg-slate-700 text-white shadow-md dark:bg-slate-200 dark:text-slate-900"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
+                      }
+                    >
+                      {st}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
         )}
       </div>
@@ -183,7 +228,7 @@ function buildEndOptions(startMinute, sectionBoundaries) {
   return options;
 }
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {} }) {
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {}, taskSubtypes = {} }) {
   const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
   const initialRangeStart = initialRange?.start ?? initialSlotMin;
 
@@ -431,6 +476,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           onChange={handleEntryChange}
           topClients={topClients}
           clientColors={clientColors}
+          taskSubtypes={taskSubtypes}
         />
 
         <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
