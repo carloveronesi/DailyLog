@@ -80,6 +80,8 @@ export default function App() {
   const [summaryFixedFilter, setSummaryFixedFilter] = useState(null);
   const [viewMode, setViewMode] = useState("day");
   const [activeDate, setActiveDate] = useState(today);
+  const [showBackupConfirm, setShowBackupConfirm] = useState(false);
+
 
   useEffect(() => {
     if (viewMode !== "day") return;
@@ -278,15 +280,16 @@ export default function App() {
            <SidebarBtn icon={settings.theme === "dark" ? "sun" : "moon"} label="Cambia Tema" onClick={toggleTheme} />
            <SidebarBtn icon="settings" label="Impostazioni" onClick={() => setSettingsOpen(true)} />
            
-           {!hasDesktopBridge ? (
+            {!hasDesktopBridge ? (
               <SidebarBtn 
                 icon={backupFileHandle ? "check" : "upload"} 
                 label={backupFileHandle ? "Backup attivo" : "Backup auto"} 
-                onClick={backupFileHandle ? disableAutoBackup : enableAutoBackup}
+                onClick={backupFileHandle ? () => setShowBackupConfirm(true) : enableAutoBackup}
                 disabled={!supportsAutoBackup && !backupFileHandle}
                 activeClass={backupFileHandle ? "text-emerald-600 dark:text-emerald-500" : ""}
               />
            ) : null}
+
         </div>
       </nav>
 
@@ -449,6 +452,36 @@ export default function App() {
              }
          }}
       />
+
+      <Modal 
+        open={showBackupConfirm} 
+        title="Disattivare Backup Automatico?" 
+        onClose={() => setShowBackupConfirm(false)}
+      >
+        <div className="space-y-4">
+          <p className="text-slate-600 dark:text-slate-400">
+            Sei sicuro di voler disattivare il salvataggio automatico? I tuoi dati non verranno più sincronizzati periodicamente sul file selezionato.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button 
+              className="bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700" 
+              onClick={() => setShowBackupConfirm(false)}
+            >
+              Annulla
+            </Button>
+            <Button 
+              className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600" 
+              onClick={() => {
+                disableAutoBackup();
+                setShowBackupConfirm(false);
+              }}
+            >
+              Disattiva
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+
