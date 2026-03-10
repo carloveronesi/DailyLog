@@ -132,13 +132,13 @@ export default function App() {
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
   const mainLayoutClass = viewMode === "month"
-    ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 lg:flex-1 lg:min-h-0"
-    : "grid grid-cols-1 gap-5 lg:flex-1 lg:min-h-0";
+    ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
+    : "grid grid-cols-1 gap-5";
 
   return (
-    <div className="min-h-screen lg:h-screen lg:flex lg:flex-col lg:overflow-y-auto">
-      <div className="mx-auto w-full max-w-7xl px-4 pt-3 pb-3 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
-        <main className={mainLayoutClass}>
+    <div className="min-h-screen lg:h-screen lg:flex lg:flex-col lg:overflow-hidden">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-3 pb-20 lg:pb-3 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
+        <main className={`${mainLayoutClass} lg:flex-1 lg:min-h-0 lg:items-stretch`}>
           {viewMode === "month" ? (
             <CalendarGrid
               year={year}

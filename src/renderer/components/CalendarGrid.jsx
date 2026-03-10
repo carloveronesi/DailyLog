@@ -24,7 +24,7 @@ export function CalendarGrid({
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (
-        <section className="flex flex-col lg:h-full rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-3 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
+        <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-3 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
             <div className="grid grid-cols-7 gap-2 shrink-0">
                 {weekDays.map((w) => (
                     <div key={w} className="px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">

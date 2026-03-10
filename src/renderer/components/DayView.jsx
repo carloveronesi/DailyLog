@@ -16,7 +16,7 @@ import { monthNameIT } from "../utils/date";
 import { Button, Icon } from "./ui";
 
 const WEEKDAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
-const ROW_HEIGHT = 56;
+const ROW_HEIGHT = 35;
 
 const BREAK_START = 13 * 60;
 const BREAK_END = 14 * 60;
@@ -214,7 +214,7 @@ export function DayView({
   }, [dragStart, dragHover, isDragging]);
 
   return (
-    <section className="flex flex-col lg:h-full rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
+    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Vista giornaliera</div>
@@ -253,21 +253,27 @@ export function DayView({
       </div>
 
       <div className="mt-5 flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-[60px_1fr] gap-3">
+        <div className="grid grid-cols-[60px_1fr] gap-3 pb-8">
           <div
-            className="grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
-            style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, minmax(${ROW_HEIGHT}px, 1fr))` }}
+            className="relative grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+            style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${ROW_HEIGHT}px)` }}
           >
             {DAY_SLOTS.map((slot) => (
-              <div key={slot} className="flex items-start justify-end pr-2 pt-2">
+              <div key={slot} className="flex items-center justify-end pr-2 pt-0 h-[35px] -mt-[18px]">
                 {slot % 60 === 0 ? hourLabel(slot) : ""}
               </div>
             ))}
+            <div 
+              className="absolute left-0 right-0 flex items-center justify-end pr-2 pt-0 h-[35px] -mt-[18px]"
+              style={{ top: `${DAY_SLOTS.length * ROW_HEIGHT}px` }}
+            >
+              {hourLabel(DAY_SLOTS[DAY_SLOTS.length - 1] + SLOT_MINUTES)}
+            </div>
           </div>
 
           <div
             className="relative grid rounded-2xl border border-slate-200/80 bg-white/70 dark:border-slate-700/70 dark:bg-slate-900/40"
-            style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, minmax(${ROW_HEIGHT}px, 1fr))` }}
+            style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${ROW_HEIGHT}px)` }}
           >
             {DAY_SLOTS.map((slot, idx) => (
               <div
@@ -276,6 +282,10 @@ export function DayView({
                 style={{ top: `${idx * ROW_HEIGHT}px` }}
               />
             ))}
+            <div
+              className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
+              style={{ top: `${DAY_SLOTS.length * ROW_HEIGHT}px` }}
+            />
 
             {selection ? (
               <div
