@@ -294,7 +294,7 @@ export function DayView({
       </div>
 
       <div className="mt-5 flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-[60px_1fr] gap-3 pb-8">
+        <div className="grid grid-cols-[60px_1fr] gap-3 pt-6 pb-8">
           <div
             className="relative grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
             style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${ROW_HEIGHT}px)` }}

@@ -110,6 +110,30 @@ export function Icon({ name, className = "" }) {
         <path d="M9 5v14M15 5v14" />
       </svg>
     );
+  if (name === "x")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    );
+  if (name === "rotate-ccw")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 4v6h6" />
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+      </svg>
+    );
+  if (name === "reset-rainbow")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 4v6h6" stroke="#F43F5E" />
+        <path d="M3.51 15a9 9 0 0 0 5.49 4.88" stroke="#3B82F6" />
+        <path d="M9 19.88a9 9 0 0 0 6 0" stroke="#10B981" />
+        <path d="M15 19.88A9 9 0 0 0 21.36 10" stroke="#F59E0B" />
+        <path d="M21.36 10l-3.36-4" stroke="#F43F5E" />
+      </svg>
+    );
   return null;
 }
 
