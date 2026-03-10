@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { importAll } from "../services/storage";
-import { Button, Icon, Modal } from "./ui";
+import { Button, Icon, Modal, Segmented } from "./ui";
 import { getClientColor, normalizeClientKey, normalizeHexColor, TASK_TYPES } from "../domain/tasks";
 
 export function SettingsModal({
@@ -18,7 +18,7 @@ export function SettingsModal({
   onImportSuccess,
 }) {
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState("clienti");
+  const [activeTab, setActiveTab] = useState("personalizzazione");
 
   async function handleImport(e) {
     const f = e.target.files?.[0];
@@ -100,19 +100,27 @@ export function SettingsModal({
   return (
     <Modal open={open} title="Impostazioni" onClose={onClose}>
       <div className="flex flex-col h-[600px] max-h-[70vh]">
-        <div className="text-sm text-slate-600 dark:text-slate-400 mb-4 shrink-0">
-          Qui puoi configurare preferenze dell&apos;app, inclusi colori cliente e backup desktop.
-        </div>
-
         <div className="flex items-center justify-around border-b border-slate-200 dark:border-slate-700/50 mb-6 shrink-0">
           <button
             type="button"
-            onClick={() => setActiveTab("clienti")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${
-              activeTab === "clienti"
+            onClick={() => setActiveTab("personalizzazione")}
+            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "personalizzazione"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            }`}
+              }`}
+          >
+            Personalizzazione
+            {activeTab === "personalizzazione" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("clienti")}
+            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "clienti"
+                ? "text-slate-900 dark:text-white"
+                : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+              }`}
           >
             Clienti
             {activeTab === "clienti" && (
@@ -122,11 +130,10 @@ export function SettingsModal({
           <button
             type="button"
             onClick={() => setActiveTab("task")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${
-              activeTab === "task"
+            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "task"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            }`}
+              }`}
           >
             Attività
             {activeTab === "task" && (
@@ -136,17 +143,17 @@ export function SettingsModal({
           <button
             type="button"
             onClick={() => setActiveTab("salvataggio")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${
-              activeTab === "salvataggio"
+            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "salvataggio"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            }`}
+              }`}
           >
             Salvataggio
             {activeTab === "salvataggio" && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
             )}
           </button>
+
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
@@ -214,6 +221,28 @@ export function SettingsModal({
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === "personalizzazione" && (
+            <div className="space-y-4">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Vista predefinita all&apos;avvio</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Scegli quale visualizzazione mostrare quando apri l&apos;applicazione.</div>
+                </div>
+                <div className="pt-2">
+                  <Segmented
+                    value={settings.defaultView || "day"}
+                    onChange={(val) => setSettings(prev => ({ ...prev, defaultView: val }))}
+                    options={[
+                      { label: "Giorno", value: "day" },
+                      { label: "Settimana", value: "week" },
+                      { label: "Mese", value: "month" }
+                    ]}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

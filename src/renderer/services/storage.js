@@ -7,6 +7,8 @@ export const DEFAULT_SETTINGS = {
   minimizeToTrayOnMinimize: false,
   clientColors: {},
   theme: "light",
+  defaultView: "day",
+  taskSubtypes: {},
 };
 const BACKUP_DB_NAME = "dailylog-backup-v1";
 const BACKUP_STORE_NAME = "settings";
@@ -84,6 +86,8 @@ export function normalizeSettings(raw) {
     minimizeToTrayOnMinimize: Boolean(raw.minimizeToTrayOnMinimize),
     theme: typeof raw.theme === "string" ? raw.theme : "light",
     clientColors: normalizeClientColors(raw.clientColors),
+    defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
+    taskSubtypes: (raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {},
   };
 }
 

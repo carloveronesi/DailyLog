@@ -81,6 +81,15 @@ export default function App() {
   const [viewMode, setViewMode] = useState("day");
   const [activeDate, setActiveDate] = useState(today);
   const [showBackupConfirm, setShowBackupConfirm] = useState(false);
+  const [hasInitializedView, setHasInitializedView] = useState(false);
+
+  // Initialize view mode from settings once
+  useEffect(() => {
+    if (!hasInitializedView && settings?.defaultView) {
+      setViewMode(settings.defaultView);
+      setHasInitializedView(true);
+    }
+  }, [settings?.defaultView, hasInitializedView]);
 
 
   useEffect(() => {
