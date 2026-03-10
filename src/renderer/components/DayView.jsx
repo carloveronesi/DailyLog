@@ -165,6 +165,7 @@ export function DayView({
   dayData,
   clientColors = {},
   onOpenSlot,
+  onDeleteSlot,
   onPrevDay,
   onNextDay,
   onToday,
@@ -345,7 +346,7 @@ export function DayView({
                 <div
                   key={`${block.start}-${idx}`}
                   className={
-                    "absolute z-20 rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
+                    "group absolute z-20 rounded-2xl px-3 py-2 shadow-sm transition hover:brightness-95 dark:hover:brightness-110 flex flex-col justify-center " +
                     badge.className
                   }
                   style={{
@@ -370,6 +371,23 @@ export function DayView({
                   ) : null}
                   <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
                   <div className="mt-1 text-sm font-bold leading-tight">{label}</div>
+
+                  {/* Trash button visible on hover */}
+                  {onDeleteSlot ? (
+                    <button
+                      type="button"
+                      className="absolute right-2 bottom-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-7 w-7 rounded-lg bg-red-500/90 hover:bg-red-600 text-white shadow-sm"
+                      title="Elimina task"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const start = block.start;
+                        const end = block.end ?? (block.start + SLOT_MINUTES);
+                        onDeleteSlot({ start, end });
+                      }}
+                    >
+                      <Icon name="trash" className="w-3.5 h-3.5" />
+                    </button>
+                  ) : null}
                 </div>
               );
             })}

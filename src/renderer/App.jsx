@@ -155,6 +155,24 @@ export default function App() {
               dayData={dayData}
               clientColors={settings.clientColors}
               onOpenSlot={(slot) => openEditor(activeDate, slot)}
+              onDeleteSlot={({ start, end }) => {
+                const key = ymd(activeDate);
+                const existing = monthDataByDate[key];
+                if (!existing?.hours) return;
+                const nextHours = {};
+                for (const [k, e] of Object.entries(existing.hours)) {
+                  // keep slot if it's outside the deleted range
+                  const [h, m] = k.split(":").map(Number);
+                  const slotMin = h * 60 + m;
+                  if (slotMin >= start && slotMin < end) continue;
+                  nextHours[k] = e;
+                }
+                upsertDay(activeDate, {
+                  AM: null,
+                  PM: null,
+                  hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
+                });
+              }}
               onPrevDay={goPrevDay}
               onNextDay={goNextDay}
               onToday={goTodayDay}
