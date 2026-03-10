@@ -244,7 +244,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const startSection = rangeStartMin < 13 * 60 ? "AM" : "PM";
   const sectionStartOptions = startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS;
   const sectionEndBoundary = startSection === "AM" ? 13 * 60 : 18 * 60;
-  const endOptions = buildEndOptions(rangeStartMin, [...sectionStartOptions.map((v) => v + SLOT_MINUTES), sectionEndBoundary]);
+  const endOptions = buildEndOptions(rangeStartMin, [...new Set([...sectionStartOptions.map((v) => v + SLOT_MINUTES), sectionEndBoundary])]);
 
   useEffect(() => {
     if (rangeEndMin <= rangeStartMin) {
