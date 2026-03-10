@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AFTERNOON_SLOTS,
   MORNING_SLOTS,
@@ -193,6 +193,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     for (const h of WORK_SLOTS) init[hourKey(h)] = defaultEntry();
     return init;
   });
+  const [draftEntry, setDraftEntry] = useState(defaultEntry());
+  const lastRangeRef = useRef({ start: MORNING_SLOTS[0], end: MORNING_SLOTS[0] + SLOT_MINUTES });
+  const isInitializingRef = useRef(false);
   const [rangeStartMin, setRangeStartMin] = useState(MORNING_SLOTS[0]);
   const [rangeEndMin, setRangeEndMin] = useState(MORNING_SLOTS[0] + SLOT_MINUTES);
   const [fullDay, setFullDay] = useState(false);
@@ -206,39 +209,37 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setFullDay(init.fullDay);
 
     const hourKeys = Object.keys(existingEntries?.hours || {}).map(slotMinutes).filter((v) => Number.isFinite(v));
-    if (hourKeys.length > 0) {
-      const sorted = hourKeys.sort((a, b) => a - b);
-      const start = sorted[0];
-      const end = sorted[sorted.length - 1] + SLOT_MINUTES;
-      setRangeStartMin(start);
-      setRangeEndMin(end);
-    } else if (init.fullDay) {
-      setRangeStartMin(MORNING_SLOTS[0]);
-      setRangeEndMin(AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
-    } else if (existingEntries?.AM && !existingEntries?.PM) {
-      setRangeStartMin(MORNING_SLOTS[0]);
-      setRangeEndMin(MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES);
-    } else if (existingEntries?.PM && !existingEntries?.AM) {
-      setRangeStartMin(AFTERNOON_SLOTS[0]);
-      setRangeEndMin(AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
-    }
-  }, [existingEntries]);
+    let start = MORNING_SLOTS[0];
+    let end = MORNING_SLOTS[0] + SLOT_MINUTES;
 
-  useEffect(() => {
     if (initialRangeStart !== null) {
-      setFullDay(false);
-      setRangeStartMin(initialRangeStart);
-      setRangeEndMin((initialRange?.end ?? (initialRangeStart + SLOT_MINUTES)));
+      start = initialRangeStart;
+      end = initialRange?.end ?? (initialRangeStart + SLOT_MINUTES);
+    } else if (hourKeys.length > 0) {
+      const sorted = hourKeys.sort((a, b) => a - b);
+      start = sorted[0];
+      end = sorted[sorted.length - 1] + SLOT_MINUTES;
+    } else if (init.fullDay) {
+      start = MORNING_SLOTS[0];
+      end = AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES;
+    } else if (existingEntries?.AM && !existingEntries?.PM) {
+      start = MORNING_SLOTS[0];
+      end = MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES;
+    } else if (existingEntries?.PM && !existingEntries?.AM) {
+      start = AFTERNOON_SLOTS[0];
+      end = AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES;
     }
-  }, [initialRangeStart, initialRange]);
 
-  const activeEntry = useMemo(() => {
-    if (!fullDay) {
-      const k = hourKey(rangeStartMin);
-      return hourEntries[k] || defaultEntry();
-    }
-    return entryAM;
-  }, [fullDay, entryAM, hourEntries, rangeStartMin]);
+    isInitializingRef.current = true;
+    setRangeStartMin(start);
+    setRangeEndMin(end);
+    lastRangeRef.current = { start, end };
+
+    const seedEntry = init.fullDay ? init.entryAM : (init.hourEntries[hourKey(start)] || defaultEntry());
+    setDraftEntry(seedEntry);
+  }, [existingEntries, initialRangeStart, initialRange]);
+
+  const activeEntry = fullDay ? entryAM : draftEntry;
 
   const startSection = rangeStartMin < 13 * 60 ? "AM" : "PM";
   const sectionStartOptions = startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS;
@@ -256,7 +257,39 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     return undefined;
   }, [rangeStartMin, rangeEndMin]);
 
+  useEffect(() => {
+    if (isInitializingRef.current) {
+      isInitializingRef.current = false;
+      return;
+    }
+    if (fullDay) {
+      lastRangeRef.current = { start: rangeStartMin, end: rangeEndMin };
+      return;
+    }
+    const prev = lastRangeRef.current;
+    if (prev.start === rangeStartMin && prev.end === rangeEndMin) return;
+    setHourEntries((prevEntries) => {
+      const next = { ...prevEntries };
+      const blank = defaultEntry();
+      const prevStart = Math.min(prev.start, prev.end);
+      const prevEnd = Math.max(prev.start, prev.end);
+      for (let m = prevStart; m < prevEnd; m += SLOT_MINUTES) {
+        next[hourKey(m)] = blank;
+      }
+      if (hasMeaning(draftEntry)) {
+        const start = Math.min(rangeStartMin, rangeEndMin);
+        const end = Math.max(rangeStartMin, rangeEndMin);
+        for (let m = start; m < end; m += SLOT_MINUTES) {
+          next[hourKey(m)] = draftEntry;
+        }
+      }
+      return next;
+    });
+    lastRangeRef.current = { start: rangeStartMin, end: rangeEndMin };
+  }, [rangeStartMin, rangeEndMin, draftEntry, fullDay]);
+
   function handleEntryChange(newEntry) {
+    setDraftEntry(newEntry);
     if (fullDay) {
       setEntryAM(newEntry);
       setEntryPM(newEntry);
@@ -272,7 +305,6 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       return next;
     });
   }
-
   function handleSave() {
     if (fullDay) {
       const cleanAM = hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
@@ -406,3 +438,4 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     </div>
   );
 }
+
