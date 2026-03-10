@@ -93,13 +93,7 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
               onChange={(e) => setField("client", e.target.value)}
               placeholder="Es. Generali"
             />
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titolo task</label>
-            <input
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
-              value={entry.title}
-              onChange={(e) => setField("title", e.target.value)}
-              placeholder="Es. Refactor codice"
-            />
+
             {topClients.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {topClients.map((clientName) => {
@@ -122,6 +116,13 @@ function EntryForm({ entry, onChange, topClients, clientColors }) {
                 })}
               </div>
             ) : null}
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titolo task</label>
+            <input
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+              value={entry.title}
+              onChange={(e) => setField("title", e.target.value)}
+              placeholder="Es. Refactor codice"
+            />
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -354,60 +355,62 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           </button>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-700/70 dark:bg-slate-900/40">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="min-w-[180px]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ora di inizio</div>
-              <select
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                value={rangeStartMin}
-                onChange={(e) => setRangeStartMin(Number(e.target.value))}
-                disabled={fullDay}
-              >
-                {(startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS).map((slot) => (
-                  <option key={slot} value={slot}>
-                    {hourLabel(slot)}
-                  </option>
-                ))}
-              </select>
+        {!fullDay && (
+          <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-700/70 dark:bg-slate-900/40">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="min-w-[180px]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ora di inizio</div>
+                <select
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                  value={rangeStartMin}
+                  onChange={(e) => setRangeStartMin(Number(e.target.value))}
+                  disabled={fullDay}
+                >
+                  {(startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS).map((slot) => (
+                    <option key={slot} value={slot}>
+                      {hourLabel(slot)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="min-w-[180px]">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ora di fine</div>
+                <select
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                  value={rangeEndMin}
+                  onChange={(e) => setRangeEndMin(Number(e.target.value))}
+                  disabled={fullDay}
+                >
+                  {endOptions.map((end) => (
+                    <option key={end} value={end}>
+                      {hourLabel(end)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 ml-auto">
+                {hourLabel(rangeStartMin)} - {hourLabel(rangeEndMin)} ({rangeDuration}h)
+              </div>
             </div>
 
-            <div className="min-w-[180px]">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ora di fine</div>
-              <select
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
-                value={rangeEndMin}
-                onChange={(e) => setRangeEndMin(Number(e.target.value))}
-                disabled={fullDay}
-              >
-                {endOptions.map((end) => (
-                  <option key={end} value={end}>
-                    {hourLabel(end)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 ml-auto">
-              {hourLabel(rangeStartMin)} - {hourLabel(rangeEndMin)} ({rangeDuration}h)
+            <div className="mt-3 flex items-center gap-2">
+              <div className="relative flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
+                <div
+                  className="absolute top-0 h-full rounded-full bg-slate-900 dark:bg-blue-500"
+                  style={{
+                    left: `${((rangeStartMin - MORNING_SLOTS[0]) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
+                    width: `${((rangeEndMin - rangeStartMin) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
+                  }}
+                />
+              </div>
+              {autoAdjusted ? (
+                <div className="text-[11px] font-semibold text-amber-600">Fine aggiornata</div>
+              ) : null}
             </div>
           </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            <div className="relative flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
-              <div
-                className="absolute top-0 h-full rounded-full bg-slate-900 dark:bg-blue-500"
-                style={{
-                  left: `${((rangeStartMin - MORNING_SLOTS[0]) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
-                  width: `${((rangeEndMin - rangeStartMin) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
-                }}
-              />
-            </div>
-            {autoAdjusted ? (
-              <div className="text-[11px] font-semibold text-amber-600">Fine aggiornata</div>
-            ) : null}
-          </div>
-        </div>
+        )}
 
         <EntryForm
           entry={activeEntry}
