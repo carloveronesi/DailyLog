@@ -298,11 +298,32 @@ export default function App() {
       <SearchModal
          open={searchOpen}
          onClose={() => setSearchOpen(false)}
-         onSelectDate={(date) => {
+         onSelectDate={(date, rawSlots) => {
              // Go to the month containing this date
              setMonthYear(date.getFullYear(), date.getMonth());
              // And open the day directly
              openDayFromMonth(date);
+
+             if (rawSlots && rawSlots.length > 0) {
+               // Filter out AM/PM from exact hour ranges if present, for more granular opening
+               const hourSlots = rawSlots.filter(s => s.includes(":"));
+               if (hourSlots.length > 0) {
+                 const mins = hourSlots.map(s => {
+                   const [h, m] = s.split(":").map(Number);
+                   return h * 60 + m;
+                 }).sort((a,b) => a-b);
+                 
+                 const start = mins[0];
+                 const end = mins[mins.length - 1] + 30; // Add 30 minutes for the last slot
+                 setTimeout(() => openEditor(date, { start, end }), 10);
+               } else {
+                 // only AM or PM
+                 // we can leave editor's fallback logic by passing null, but we forcefully open it
+                 setTimeout(() => openEditor(date), 10);
+               }
+             } else {
+               setTimeout(() => openEditor(date), 10);
+             }
          }}
       />
     </div>

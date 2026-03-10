@@ -205,6 +205,7 @@ export function searchAllLogs(query) {
         const [y, m, d] = dateKey.split("-").map(Number);
         if (!y || !m || !d) continue;
         const dateObj = new Date(y, m - 1, d);
+        const dayMatches = new Map();
 
         const checkEntry = (entry, slotLabel) => {
           if (!entry || typeof entry !== "object") return;
@@ -215,22 +216,59 @@ export function searchAllLogs(query) {
           const matchNextSteps = (entry.nextSteps || "").toLowerCase().includes(q);
 
           if (matchTitle || matchNotes || matchClient || matchRetrospective || matchNextSteps) {
-            results.push({
-              date: dateObj,
-              dateKey,
-              slot: slotLabel,
-              entry
+            const uniqueKey = JSON.stringify({
+              t: entry.title || "",
+              n: entry.notes || "",
+              c: entry.client || "",
+              r: entry.retrospective || "",
+              s: entry.nextSteps || ""
             });
+
+            if (!dayMatches.has(uniqueKey)) {
+              dayMatches.set(uniqueKey, {
+                date: dateObj,
+                dateKey,
+                slots: [slotLabel],
+                entry
+              });
+            } else {
+              dayMatches.get(uniqueKey).slots.push(slotLabel);
+            }
           }
         };
 
-        checkEntry(day.AM, "AM (09:00 - 13:00)");
-        checkEntry(day.PM, "PM (14:00 - 18:00)");
+        checkEntry(day.AM, "AM");
+        checkEntry(day.PM, "PM");
         
         if (day.hours && typeof day.hours === "object") {
           for (const [hourKey, entry] of Object.entries(day.hours)) {
             checkEntry(entry, hourKey);
           }
+        }
+
+        for (const match of dayMatches.values()) {
+          const times = match.slots.filter(s => s !== "AM" && s !== "PM").sort();
+          const ampm = match.slots.filter(s => s === "AM" || s === "PM");
+          
+          let slotText = "";
+          if (times.length > 0) {
+            if (times.length === 1) {
+               slotText = times[0];
+            } else {
+               slotText = `${times[0]} - ${times[times.length - 1]}`;
+            }
+          }
+          if (ampm.length > 0) {
+             slotText = slotText ? `${slotText} (${ampm.join(", ")})` : ampm.join(", ");
+          }
+
+          results.push({
+            date: match.date,
+            dateKey: match.dateKey,
+            slot: slotText,
+            rawSlots: match.slots,
+            entry: match.entry
+          });
         }
       }
     } catch {

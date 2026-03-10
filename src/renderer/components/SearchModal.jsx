@@ -52,7 +52,7 @@ export function SearchModal({ open, onClose, onSelectDate }) {
                             key={`${res.dateKey}-${res.slot}-${i}`}
                             className="p-3 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
                             onClick={() => {
-                                onSelectDate(res.date);
+                                onSelectDate(res.date, res.rawSlots);
                                 onClose();
                             }}
                         >
