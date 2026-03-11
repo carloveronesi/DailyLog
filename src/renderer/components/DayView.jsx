@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AFTERNOON_SLOTS,
   MORNING_SLOTS,
@@ -186,6 +186,7 @@ export function DayView({
   // New state for moving an existing task
   const [moveTaskBlock, setMoveTaskBlock] = useState(null);
   const [moveTaskDelta, setMoveTaskDelta] = useState(0);
+  const pendingMoveRef = useRef(null);
 
   // New state for resizing an existing task
   const [resizeTaskBlock, setResizeTaskBlock] = useState(null);
@@ -216,6 +217,7 @@ export function DayView({
         }
         setMoveTaskBlock(null);
         setMoveTaskDelta(0);
+        pendingMoveRef.current = null;
       } else if (isResizing) {
         if (resizeTaskDelta !== 0 && onResizeTask) {
            let newStart = resizeTaskBlock.start;
@@ -234,12 +236,28 @@ export function DayView({
         setResizeTaskBlock(null);
         setResizeTaskDelta(0);
         setResizeTaskDirection(null);
+      } else if (pendingMoveRef.current) {
+        pendingMoveRef.current = null;
       }
     }
 
     window.addEventListener("mouseup", handleUp);
     return () => window.removeEventListener("mouseup", handleUp);
   }, [dragStart, dragHover, dragSection, isDraggingEmpty, isMoving, isResizing, moveTaskBlock, moveTaskDelta, resizeTaskBlock, resizeTaskDelta, resizeTaskDirection, onOpenSlot, onMoveTask, onResizeTask]);
+
+  useEffect(() => {
+    function handleMove(e) {
+      if (!pendingMoveRef.current || isMoving || isResizing || isDraggingEmpty) return;
+      const { startY, block } = pendingMoveRef.current;
+      if (Math.abs(e.clientY - startY) < 5) return;
+      setMoveTaskBlock({ ...block });
+      setMoveTaskDelta(0);
+      pendingMoveRef.current = null;
+    }
+
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, [isMoving, isResizing, isDraggingEmpty]);
 
   const selection = useMemo(() => {
     if (!isDraggingEmpty) return null;
@@ -448,8 +466,7 @@ export function DayView({
                      // Only allow moving blocks that are mapped to hours (not full AM/PM blocks)
                      if (typeof block.start === 'number' && block.end && !e.target.closest('.resize-handle') && !e.target.closest('.delete-btn')) {
                        e.stopPropagation();
-                       setMoveTaskBlock({ ...block });
-                       setMoveTaskDelta(0);
+                       pendingMoveRef.current = { startY: e.clientY, block: { ...block } };
                      }
                   }}
                   onClick={(e) => {
