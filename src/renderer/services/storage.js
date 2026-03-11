@@ -1,4 +1,5 @@
 import { ymKey } from "../utils/date";
+import { ensureSubtypesFormat } from "../domain/tasks";
 
 export const STORAGE_PREFIX = "dailylog:v1:";
 export const SETTINGS_KEY = STORAGE_PREFIX + "__settings";
@@ -87,7 +88,7 @@ export function normalizeSettings(raw) {
     theme: typeof raw.theme === "string" ? raw.theme : "light",
     clientColors: normalizeClientColors(raw.clientColors),
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
-    taskSubtypes: (raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {},
+    taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
   };
 }
 

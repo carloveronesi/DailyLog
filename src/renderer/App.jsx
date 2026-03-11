@@ -427,6 +427,7 @@ export default function App() {
                   activeFilter={summaryHoverFilter || summaryFixedFilter}
                   fixedFilter={summaryFixedFilter}
                   onFixedFilterChange={setSummaryFixedFilter}
+                  taskSubtypes={settings.taskSubtypes}
                 />
               </div>
             </aside>

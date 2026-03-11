@@ -71,19 +71,20 @@ export function SettingsModal({
     setSettings((prev) => {
       const st = prev.taskSubtypes || {};
       const list = st[selectedSubtypeType] || [];
-      if (list.includes(val)) return prev;
+      const newId = val.toLowerCase().trim().replace(/[\s\W-]+/g, "-");
+      if (list.some((x) => (x.id || x) === newId || x === val)) return prev;
       return {
         ...prev,
         taskSubtypes: {
           ...st,
-          [selectedSubtypeType]: [...list, val],
+          [selectedSubtypeType]: [...list, { id: newId, label: val }],
         },
       };
     });
     setNewSubtype("");
   }
 
-  function removeSubtype(typeId, val) {
+  function removeSubtype(typeId, idToRemove) {
     setSettings((prev) => {
       const st = prev.taskSubtypes || {};
       const list = st[typeId] || [];
@@ -91,7 +92,7 @@ export function SettingsModal({
         ...prev,
         taskSubtypes: {
           ...st,
-          [typeId]: list.filter((x) => x !== val),
+          [typeId]: list.filter((x) => (x.id || x) !== idToRemove && x !== idToRemove),
         },
       };
     });
@@ -287,14 +288,18 @@ export function SettingsModal({
                 {(settings.taskSubtypes?.[selectedSubtypeType] || []).length === 0 ? (
                   <span className="text-sm text-slate-400 italic">Nessun sottotipo per questa categoria.</span>
                 ) : (
-                  (settings.taskSubtypes?.[selectedSubtypeType] || []).map((val) => (
-                    <div key={val} className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-1.5 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                      {val}
-                      <button onClick={() => removeSubtype(selectedSubtypeType, val)} className="ml-1 text-slate-400 hover:text-red-500 transition-colors">
-                        <Icon name="x" className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))
+                  (settings.taskSubtypes?.[selectedSubtypeType] || []).map((val) => {
+                    const id = val.id || val;
+                    const label = val.label || val;
+                    return (
+                      <div key={id} className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-1.5 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        {label}
+                        <button onClick={() => removeSubtype(selectedSubtypeType, id)} className="ml-1 text-slate-400 hover:text-red-500 transition-colors">
+                          <Icon name="x" className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

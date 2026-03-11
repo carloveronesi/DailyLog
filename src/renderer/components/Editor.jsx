@@ -92,7 +92,7 @@ function EntryForm({ entry, onChange, topClients, clientColors, taskSubtypes = {
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
               value={entry.client}
               onChange={(e) => setField("client", e.target.value)}
-              placeholder="Es. Generali"
+              placeholder="Nome del cliente"
             />
 
             {topClients.length > 0 ? (
@@ -126,13 +126,27 @@ function EntryForm({ entry, onChange, topClients, clientColors, taskSubtypes = {
             />
             {currentSubtypes.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setField("subtypeId", null)}
+                  className={
+                    "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+                    (!entry.subtypeId
+                      ? "bg-slate-700 text-white shadow-md dark:bg-slate-200 dark:text-slate-900"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
+                  }
+                >
+                  Generico
+                </button>
                 {currentSubtypes.map((st) => {
-                  const isSelected = (entry.title || "").trim().toLowerCase() === st.toLowerCase();
+                  const id = st.id || st;
+                  const label = st.label || st;
+                  const isSelected = entry.subtypeId === id;
                   return (
                     <button
-                      key={st}
+                      key={id}
                       type="button"
-                      onClick={() => setField("title", st)}
+                      onClick={() => setField("subtypeId", id)}
                       className={
                         "rounded-full px-3 py-1 text-[11px] font-bold transition " +
                         (isSelected
@@ -140,7 +154,7 @@ function EntryForm({ entry, onChange, topClients, clientColors, taskSubtypes = {
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
                       }
                     >
-                      {st}
+                      {label}
                     </button>
                   );
                 })}
@@ -158,13 +172,27 @@ function EntryForm({ entry, onChange, topClients, clientColors, taskSubtypes = {
             />
             {currentSubtypes.length > 0 ? (
               <div className="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setField("subtypeId", null)}
+                  className={
+                    "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+                    (!entry.subtypeId
+                      ? "bg-slate-700 text-white shadow-md dark:bg-slate-200 dark:text-slate-900"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
+                  }
+                >
+                  Generico
+                </button>
                 {currentSubtypes.map((st) => {
-                  const isSelected = (entry.title || "").trim().toLowerCase() === st.toLowerCase();
+                  const id = st.id || st;
+                  const label = st.label || st;
+                  const isSelected = entry.subtypeId === id;
                   return (
                     <button
-                      key={st}
+                      key={id}
                       type="button"
-                      onClick={() => setField("title", st)}
+                      onClick={() => setField("subtypeId", id)}
                       className={
                         "rounded-full px-3 py-1 text-[11px] font-bold transition " +
                         (isSelected
@@ -172,7 +200,7 @@ function EntryForm({ entry, onChange, topClients, clientColors, taskSubtypes = {
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
                       }
                     >
-                      {st}
+                      {label}
                     </button>
                   );
                 })}

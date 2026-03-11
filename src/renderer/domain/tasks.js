@@ -1,6 +1,6 @@
 export const TASK_TYPES = [
-  { id: "internal", label: "Task interni" },
   { id: "client", label: "Task per cliente" },
+  { id: "internal", label: "Task interni" },
   { id: "vacation", label: "Ferie" },
   { id: "event", label: "Evento" },
 ];
@@ -97,6 +97,7 @@ export function hasAfternoonHours(dayData) {
 export function defaultEntry() {
   return {
     type: "internal",
+    subtypeId: null,
     title: "",
     client: "",
     notes: "",
@@ -193,25 +194,61 @@ export function badgePresentation(entry, clientColors = {}) {
   };
 }
 
-export function displayLabel(entry) {
-  if (!entry) return "";
-  if (entry.type === "client") {
-    const c = (entry.client || "").trim();
-    const t = (entry.title || "").trim();
-    if (c && t) return `${c} - ${t}`;
-    if (c) return c;
+export function ensureSubtypesFormat(settingsSubtypes) {
+  if (!settingsSubtypes) return {};
+  const migrated = {};
+  for (const [typeId, list] of Object.entries(settingsSubtypes)) {
+    migrated[typeId] = list.map((item) => {
+      if (typeof item === "string") {
+        return {
+          id: item.toLowerCase().trim().replace(/[\s\W-]+/g, "-"),
+          label: item,
+        };
+      }
+      return item;
+    });
   }
-  if (entry.type === "vacation") return "Ferie";
-  if (entry.type === "event") return entry.title?.trim() ? entry.title.trim() : "Evento";
-  return entry.title?.trim() ? entry.title.trim() : "Internal";
+  return migrated;
 }
 
-export function isSameTaskEntry(a, b) {
+export function getSubtypeLabel(type, subtypeId, taskSubtypes) {
+  if (!subtypeId) return "Generico";
+  const list = taskSubtypes?.[type] || [];
+  const found = list.find((st) => st.id === subtypeId);
+  return found ? found.label : "Generico";
+}
+
+export function displayLabel(entry, taskSubtypes = {}) {
+  if (!entry) return "";
+  const subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes) : "";
+  const t = (entry.title || "").trim();
+  
+  const formatLabel = (defaultLabel) => {
+    let base = t || defaultLabel;
+    if (subtypeLabel && subtypeLabel !== "Generico") {
+      return `${subtypeLabel}${t ? ` - ${t}` : ""}`;
+    }
+    return base;
+  };
+
+  if (entry.type === "client") {
+    const c = (entry.client || "").trim();
+    const tLabel = formatLabel("");
+    if (c && tLabel) return `${c} - ${tLabel}`;
+    if (c) return c;
+  }
+  if (entry.type === "vacation") return formatLabel("Ferie");
+  if (entry.type === "event") return formatLabel("Evento");
+  return formatLabel("Internal");
+}
+
+export function isSameTaskEntry(a, b, taskSubtypes = {}) {
   if (!a || !b) return false;
   const typeA = a.type || "internal";
   const typeB = b.type || "internal";
   if (typeA !== typeB) return false;
-  const labelA = displayLabel(a).trim().toLocaleLowerCase("it-IT");
-  const labelB = displayLabel(b).trim().toLocaleLowerCase("it-IT");
+  if (a.subtypeId !== b.subtypeId) return false;
+  const labelA = displayLabel(a, taskSubtypes).trim().toLocaleLowerCase("it-IT");
+  const labelB = displayLabel(b, taskSubtypes).trim().toLocaleLowerCase("it-IT");
   return labelA !== "" && labelA === labelB;
 }
