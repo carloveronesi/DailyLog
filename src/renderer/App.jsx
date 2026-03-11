@@ -363,6 +363,7 @@ export default function App() {
               activeDate={activeDate}
               monthDataByDate={monthDataByDate}
               clientColors={settings.clientColors}
+              taskSubtypes={settings.taskSubtypes}
               onOpenSlot={({ date, start, end, slot }) => {
                  setActiveDate(date);
                  if (start !== undefined && end !== undefined) {
@@ -396,6 +397,7 @@ export default function App() {
               date={activeDate}
               dayData={dayData}
               clientColors={settings.clientColors}
+              taskSubtypes={settings.taskSubtypes}
               onOpenSlot={(slot) => openEditor(activeDate, slot)}
               onMoveTask={(args) => onMoveTask(activeDate, args)}
               onResizeTask={(args) => onResizeTask(activeDate, args)}

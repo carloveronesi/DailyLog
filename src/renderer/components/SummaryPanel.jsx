@@ -66,7 +66,12 @@ export function SummaryPanel({
         const weight = 0.5;
         if (e.type === "client") {
           const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          byClient.set(c, (byClient.get(c) || 0) + weight);
+          let clientData = byClient.get(c);
+          if (!clientData) {
+            clientData = { total: 0, bySubtype: {} };
+            byClient.set(c, clientData);
+          }
+          addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
           addTime(internal, weight, e.subtypeId);
         } else if (e.type === "vacation") {
@@ -80,7 +85,12 @@ export function SummaryPanel({
         const weight = 1 / WORK_SLOTS.length;
         if (e.type === "client") {
           const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          byClient.set(c, (byClient.get(c) || 0) + weight);
+          let clientData = byClient.get(c);
+          if (!clientData) {
+            clientData = { total: 0, bySubtype: {} };
+            byClient.set(c, clientData);
+          }
+          addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
           addTime(internal, weight, e.subtypeId);
         } else if (e.type === "vacation") {
@@ -92,10 +102,10 @@ export function SummaryPanel({
     }
 
     const clients = Array.from(byClient.entries())
-      .map(([client, days]) => ({ client, days }))
-      .sort((a, b) => b.days - a.days);
+      .map(([client, data]) => ({ client, data }))
+      .sort((a, b) => b.data.total - a.data.total);
 
-    const clientDays = clients.reduce((sum, c) => sum + c.days, 0);
+    const clientDays = clients.reduce((sum, c) => sum + c.data.total, 0);
     const worked = clientDays + internal.total + event.total;
     const otherActivities = [
       { key: "internal", label: "Internal", data: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
@@ -135,30 +145,44 @@ export function SummaryPanel({
         ) : (
           <div className="mt-2 space-y-2">
             {totals.clients.map((c) => (
-              <div
-                key={c.client}
-                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
-                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
-                onClick={() => {
-                  if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
-                    onFixedFilterChange?.(null);
-                  } else {
-                    onFixedFilterChange?.({ kind: "client", client: c.client });
+              <div key={c.client}>
+                <div
+                  onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
+                  onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                  onClick={() => {
+                    if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
+                      onFixedFilterChange?.(null);
+                    } else {
+                      onFixedFilterChange?.({ kind: "client", client: c.client });
+                    }
+                  }}
+                  className={
+                    "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
+                    (isClientFilterActive(activeFilter, c.client)
+                      ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                      : "hover:border-sky-200 dark:hover:border-sky-700") +
+                    (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
                   }
-                }}
-                className={
-                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
-                  (isClientFilterActive(activeFilter, c.client)
-                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                    : "hover:border-sky-200 dark:hover:border-sky-700") +
-                  (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
-                }
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
-                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
+                    <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.data.total.toFixed(1)} gg</div>
                 </div>
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.days.toFixed(1)} gg</div>
+                {Object.keys(c.data.bySubtype).length > 1 || (Object.keys(c.data.bySubtype)[0] && Object.keys(c.data.bySubtype)[0] !== "generico") ? (
+                  <div className="ml-[22px] mt-2 mb-1 space-y-1.5 border-l-2 border-slate-100 dark:border-slate-700/50 pl-2">
+                    {Object.entries(c.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
+                      const stLabel = st === "generico" ? "Generico" : getSubtypeLabel("client", st, taskSubtypes);
+                      return (
+                        <div key={st} className="flex items-center justify-between">
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{stLabel}</div>
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{days.toFixed(1)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

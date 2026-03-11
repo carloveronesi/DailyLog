@@ -4,6 +4,7 @@ import {
   badgePresentation,
   displayLabel,
   hourLabel,
+  getSubtypeLabel,
 } from "../domain/tasks";
 import {
   DAY_SLOTS,
@@ -41,6 +42,7 @@ export function WeekView({
   activeDate,
   monthDataByDate,
   clientColors = {},
+  taskSubtypes = {},
   onOpenSlot,
   goPrevWeek,
   goNextWeek,
@@ -321,11 +323,25 @@ export function WeekView({
                                 <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85" />
                               ) : null}
                               {currentSpan === 1 ? (
-                                <div className="text-[10px] lg:text-[11px] font-bold leading-[1.1] line-clamp-2 truncate">{label}</div>
+                                <div className="flex flex-col h-full justify-center overflow-hidden">
+                                  {block.entry.subtypeId && (
+                                    <div className="w-fit h-4 px-1.5 mb-0.5 rounded bg-black/5 dark:bg-white/10 text-[9px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 truncate">
+                                      {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+                                    </div>
+                                  )}
+                                  <div className="text-[10px] lg:text-[11px] font-bold leading-[1.1] line-clamp-1 truncate">{block.entry.title || label}</div>
+                                </div>
                               ) : (
                                 <>
-                                  <div className="text-[9px] lg:text-[10px] font-semibold uppercase tracking-wider opacity-70 whitespace-nowrap overflow-hidden text-ellipsis">{block.label}</div>
-                                  <div className="mt-0.5 text-[10px] lg:text-xs font-bold leading-tight line-clamp-2">{label}</div>
+                                  <div className="flex items-center justify-between gap-1 overflow-hidden">
+                                    <div className="text-[9px] lg:text-[10px] font-semibold uppercase tracking-wider opacity-70 whitespace-nowrap overflow-hidden text-ellipsis">{block.label}</div>
+                                    {block.entry.subtypeId && (
+                                      <div className="h-4 px-1.5 rounded bg-black/5 dark:bg-white/10 text-[9px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 shrink-0">
+                                        {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mt-0.5 text-[10px] lg:text-xs font-bold leading-tight line-clamp-2">{block.entry.title || label}</div>
                                 </>
                               )}
 

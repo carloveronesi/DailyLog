@@ -6,6 +6,7 @@ import {
   badgePresentation,
   displayLabel,
   hourLabel,
+  getSubtypeLabel,
 } from "../domain/tasks";
 import {
   BREAK_START,
@@ -38,6 +39,7 @@ export function DayView({
   date,
   dayData,
   clientColors = {},
+  taskSubtypes = {},
   onOpenSlot,
   onMoveTask,
   onResizeTask,
@@ -289,14 +291,26 @@ export function DayView({
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85" />
                   ) : null}
                   {block.span === 1 ? (
-                    <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="flex items-center gap-2 overflow-hidden py-1">
                       <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 shrink-0">{block.label}</div>
-                      <div className="text-sm font-bold truncate">{label}</div>
+                      {block.entry.subtypeId && (
+                        <div className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 shrink-0">
+                          {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+                        </div>
+                      )}
+                      <div className="text-sm font-bold truncate">{block.entry.title || label}</div>
                     </div>
                   ) : (
                     <>
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
-                      <div className="mt-1 text-sm font-bold leading-tight">{label}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
+                        {block.entry.subtypeId && (
+                           <div className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300">
+                             {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+                           </div>
+                        )}
+                      </div>
+                      <div className="mt-1 text-sm font-bold leading-tight line-clamp-2">{block.entry.title || label}</div>
                     </>
                   )}
 
