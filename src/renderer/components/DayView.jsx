@@ -1,152 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import {
   AFTERNOON_SLOTS,
   MORNING_SLOTS,
   SLOT_MINUTES,
-  WORK_SLOTS,
   badgePresentation,
   displayLabel,
-  hasAfternoonHours,
-  hasMorningHours,
-  hourKey,
   hourLabel,
-  isSameTaskEntry,
 } from "../domain/tasks";
+import {
+  BREAK_START,
+  BREAK_END,
+  DAY_SLOTS,
+  hasMissingNotes,
+  buildBlocks,
+  slotIndex
+} from "../domain/calendar";
+import { useCalendarDrag } from "../hooks/useCalendarDrag";
 import { monthNameIT } from "../utils/date";
 import { Button, Icon } from "./ui";
 
 const WEEKDAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 const ROW_HEIGHT = 35;
-
-const BREAK_START = 13 * 60;
-const BREAK_END = 14 * 60;
-
-const DAY_SLOTS = [...MORNING_SLOTS, BREAK_START, BREAK_START + SLOT_MINUTES, ...AFTERNOON_SLOTS];
-
-function hasMissingNotes(entry) {
-  if (!entry || entry.type === "vacation" || entry.type === "event") return false;
-  return !(entry.notes || "").trim();
-}
-
-function normalizeEntryValue(value) {
-  return (value || "").trim().toLocaleLowerCase("it-IT");
-}
-
-function isSameHourEntry(a, b) {
-  if (!a || !b) return false;
-  return (
-    normalizeEntryValue(a.type) === normalizeEntryValue(b.type) &&
-    normalizeEntryValue(a.title) === normalizeEntryValue(b.title) &&
-    normalizeEntryValue(a.client) === normalizeEntryValue(b.client) &&
-    normalizeEntryValue(a.notes) === normalizeEntryValue(b.notes) &&
-    normalizeEntryValue(a.wentWrong) === normalizeEntryValue(b.wentWrong) &&
-    normalizeEntryValue(a.nextSteps) === normalizeEntryValue(b.nextSteps)
-  );
-}
-
-
-function buildHourBlocks(dayData) {
-  if (!dayData?.hours) return [];
-  const blocks = [];
-  let current = null;
-  const hourKeys = Object.keys(dayData.hours || {});
-  const hasHalfSlots = hourKeys.some((k) => k.endsWith(":30"));
-
-  const slotsToScan = hasHalfSlots
-    ? WORK_SLOTS
-    : WORK_SLOTS.filter((slot) => slot % 60 === 0);
-  const stepMinutes = hasHalfSlots ? SLOT_MINUTES : 60;
-  const spanStep = hasHalfSlots ? 1 : 2;
-
-  for (const slot of slotsToScan) {
-    const entry = dayData.hours[hourKey(slot)] || null;
-    if (!entry) {
-      current = null;
-      continue;
-    }
-
-    if (current && isSameHourEntry(current.entry, entry) && current.end === slot) {
-      current.end += stepMinutes;
-      current.span += spanStep;
-      continue;
-    }
-
-    const label = hourLabel(slot);
-    current = {
-      entry,
-      start: slot,
-      end: slot + stepMinutes,
-      span: spanStep,
-      label,
-    };
-    blocks.push(current);
-  }
-
-  return blocks.map((block) => {
-    if (block.span <= spanStep) return block;
-    return {
-      ...block,
-      label: `${hourLabel(block.start)} - ${hourLabel(block.end)}`,
-    };
-  });
-}
-function buildBlocks(dayData) {
-  if (!dayData) return [];
-  const am = dayData.AM || null;
-  const pm = dayData.PM || null;
-  const morningHoursActive = hasMorningHours(dayData);
-  const afternoonHoursActive = hasAfternoonHours(dayData);
-  const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
-
-  if (isFullDay && am) {
-    return [
-      {
-        entry: am,
-        start: MORNING_SLOTS[0],
-        end: AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES,
-        span: DAY_SLOTS.length,
-        slot: "AM",
-        label: "Giornata intera",
-      },
-    ];
-  }
-
-  if (morningHoursActive || afternoonHoursActive) {
-    return buildHourBlocks(dayData).map((b) => ({
-      ...b,
-      slot: b.start,
-    }));
-  }
-
-  const blocks = [];
-  if (am) {
-    blocks.push({
-      entry: am,
-      start: MORNING_SLOTS[0],
-      end: MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES,
-      span: MORNING_SLOTS.length,
-      slot: "AM",
-      label: "Mattina",
-    });
-  }
-
-  if (pm) {
-    blocks.push({
-      entry: pm,
-      start: AFTERNOON_SLOTS[0],
-      end: AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES,
-      span: AFTERNOON_SLOTS.length,
-      slot: "PM",
-      label: "Pomeriggio",
-    });
-  }
-
-  return blocks;
-}
-
-function slotIndex(slotMin) {
-  return DAY_SLOTS.indexOf(slotMin);
-}
 
 function slotSection(slotMin) {
   if (slotMin >= BREAK_START && slotMin < BREAK_END) return "break";
@@ -179,98 +53,24 @@ export function DayView({
 
   const blocks = buildBlocks(dayData);
 
-  const [dragStart, setDragStart] = useState(null);
-  const [dragHover, setDragHover] = useState(null);
-  const [dragSection, setDragSection] = useState(null);
-
-  // New state for moving an existing task
-  const [moveTaskBlock, setMoveTaskBlock] = useState(null);
-  const [moveTaskDelta, setMoveTaskDelta] = useState(0);
-  const pendingMoveRef = useRef(null);
-
-  // New state for resizing an existing task
-  const [resizeTaskBlock, setResizeTaskBlock] = useState(null);
-  const [resizeTaskDelta, setResizeTaskDelta] = useState(0);
-  const [resizeTaskDirection, setResizeTaskDirection] = useState(null);
-
-  const isDraggingEmpty = dragStart !== null && dragHover !== null && dragSection;
-  const isMoving = moveTaskBlock !== null;
-  const isResizing = resizeTaskBlock !== null;
-  const isAnyDragging = dragStart !== null || isMoving || isResizing;
-
-  useEffect(() => {
-    function handleUp() {
-      if (isDraggingEmpty) {
-        const start = Math.min(dragStart, dragHover);
-        const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
-        const section = dragSection;
-        const clampedStart = clampToSection(section, start);
-        const clampedEnd = clampToSection(section, end);
-        setDragStart(null);
-        setDragHover(null);
-        setDragSection(null);
-        onOpenSlot?.({ start: clampedStart, end: clampedEnd });
-      } else if (isMoving) {
-        if (moveTaskDelta !== 0 && onMoveTask) {
-           const newStart = moveTaskBlock.start + moveTaskDelta;
-           onMoveTask({ start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
-        }
-        setMoveTaskBlock(null);
-        setMoveTaskDelta(0);
-        pendingMoveRef.current = null;
-      } else if (isResizing) {
-        if (resizeTaskDelta !== 0 && onResizeTask) {
-           let newStart = resizeTaskBlock.start;
-           let newEnd = resizeTaskBlock.end;
-           
-           if (resizeTaskDirection === 'top') {
-              newStart = resizeTaskBlock.start + resizeTaskDelta;
-           } else {
-              newEnd = resizeTaskBlock.end + resizeTaskDelta;
-           }
-
-           if (newEnd > newStart) {
-              onResizeTask({ start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
-           }
-        }
-        setResizeTaskBlock(null);
-        setResizeTaskDelta(0);
-        setResizeTaskDirection(null);
-      } else if (pendingMoveRef.current) {
-        pendingMoveRef.current = null;
-      }
-    }
-
-    window.addEventListener("mouseup", handleUp);
-    return () => window.removeEventListener("mouseup", handleUp);
-  }, [dragStart, dragHover, dragSection, isDraggingEmpty, isMoving, isResizing, moveTaskBlock, moveTaskDelta, resizeTaskBlock, resizeTaskDelta, resizeTaskDirection, onOpenSlot, onMoveTask, onResizeTask]);
-
-  useEffect(() => {
-    function handleMove(e) {
-      if (!pendingMoveRef.current || isMoving || isResizing || isDraggingEmpty) return;
-      const { startY, block } = pendingMoveRef.current;
-      if (Math.abs(e.clientY - startY) < 5) return;
-      setMoveTaskBlock({ ...block });
-      setMoveTaskDelta(0);
-      pendingMoveRef.current = null;
-    }
-
-    window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
-  }, [isMoving, isResizing, isDraggingEmpty]);
-
-  const selection = useMemo(() => {
-    if (!isDraggingEmpty) return null;
-    const start = Math.min(dragStart, dragHover);
-    const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
-    const startIndex = slotIndex(start);
-    const endIndex = slotIndex(end - SLOT_MINUTES);
-    if (startIndex < 0 || endIndex < 0) return null;
-    return {
-      startIndex,
-      span: endIndex - startIndex + 1,
-    };
-  }, [dragStart, dragHover, isDraggingEmpty]);
+  const {
+    activeDragCol: dragSection,
+    setActiveDragCol: setDragSection,
+    dragStart, setDragStart,
+    dragHover, setDragHover,
+    moveTaskBlock, setMoveTaskBlock,
+    moveTaskDelta, setMoveTaskDelta,
+    resizeTaskBlock, setResizeTaskBlock,
+    resizeTaskDelta, setResizeTaskDelta,
+    resizeTaskDirection, setResizeTaskDirection,
+    pendingMoveRef,
+    isDraggingEmpty, isMoving, isResizing, isAnyDragging, selection
+  } = useCalendarDrag({
+    onOpenSlot,
+    onMoveTask,
+    onResizeTask,
+    clampToSection
+  });
 
   return (
     <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
@@ -466,7 +266,7 @@ export function DayView({
                      // Only allow moving blocks that are mapped to hours (not full AM/PM blocks)
                      if (typeof block.start === 'number' && block.end && !e.target.closest('.resize-handle') && !e.target.closest('.delete-btn')) {
                        e.stopPropagation();
-                       pendingMoveRef.current = { startY: e.clientY, block: { ...block } };
+                       pendingMoveRef.current = { startY: e.clientY, block: { ...block }, colIdx: null };
                      }
                   }}
                   onClick={(e) => {
