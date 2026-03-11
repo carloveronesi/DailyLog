@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   AFTERNOON_SLOTS,
   MORNING_SLOTS,
@@ -218,6 +218,7 @@ export function WeekView({
   const [resizeTaskBlock, setResizeTaskBlock] = useState(null);
   const [resizeTaskDelta, setResizeTaskDelta] = useState(0);
   const [resizeTaskDirection, setResizeTaskDirection] = useState(null);
+  const pendingMoveRef = useRef(null);
 
   const isDraggingEmpty = dragStart !== null && dragHover !== null && activeDragCol !== null;
   const isMoving = moveTaskBlock !== null && activeDragCol !== null;
@@ -255,6 +256,7 @@ export function WeekView({
         }
         setMoveTaskBlock(null);
         setMoveTaskDelta(0);
+        pendingMoveRef.current = null;
         setActiveDragCol(null);
       } else if (isResizing) {
         if (resizeTaskDelta !== 0 && onResizeTask) {
@@ -276,12 +278,29 @@ export function WeekView({
         setResizeTaskDelta(0);
         setResizeTaskDirection(null);
         setActiveDragCol(null);
+      } else if (pendingMoveRef.current) {
+        pendingMoveRef.current = null;
       }
     }
 
     window.addEventListener("mouseup", handleUp);
     return () => window.removeEventListener("mouseup", handleUp);
   }, [dragStart, dragHover, activeDragCol, isDraggingEmpty, isMoving, isResizing, moveTaskBlock, moveTaskDelta, resizeTaskBlock, resizeTaskDelta, resizeTaskDirection, weekDays, onOpenSlot, onMoveTask, onResizeTask]);
+
+  useEffect(() => {
+    function handleMove(e) {
+      if (!pendingMoveRef.current || isMoving || isResizing || isDraggingEmpty) return;
+      const { startY, block, colIdx } = pendingMoveRef.current;
+      if (Math.abs(e.clientY - startY) < 5) return;
+      setActiveDragCol(colIdx);
+      setMoveTaskBlock({ ...block });
+      setMoveTaskDelta(0);
+      pendingMoveRef.current = null;
+    }
+
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, [isMoving, isResizing, isDraggingEmpty]);
 
   return (
     <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
@@ -479,9 +498,11 @@ export function WeekView({
                                  // Only allow moving blocks that are mapped to hours
                                  if (typeof block.start === 'number' && block.end && !e.target.closest('.resize-handle') && !e.target.closest('.delete-btn')) {
                                    e.stopPropagation();
-                                   setActiveDragCol(colIdx);
-                                   setMoveTaskBlock({ ...block });
-                                   setMoveTaskDelta(0);
+                                   pendingMoveRef.current = {
+                                     startY: e.clientY,
+                                     block: { ...block },
+                                     colIdx
+                                   };
                                  }
                               }}
                               onClick={(e) => {
@@ -572,3 +593,8 @@ export function WeekView({
     </section>
   );
 }
+
+
+
+
+
