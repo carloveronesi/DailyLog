@@ -94,6 +94,7 @@ function buildHourSummary(hours) {
 
 export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {} }) {
   const d = date.getDate();
+  const isToday = isCurrentMonth && date.toDateString() === new Date().toDateString();
   const am = entries?.AM;
   const pm = entries?.PM;
   const morningHoursActive = hasMorningHours(entries);
@@ -114,19 +115,25 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
     : isWeekendDay
       ? "bg-rose-100/70 border-rose-200/90 text-slate-700 dark:bg-rose-900/20 dark:border-rose-800/50 dark:text-slate-300"
       : "bg-white/88 border-slate-200/90 hover:shadow-soft hover:-translate-y-[1px] dark:bg-slate-800/90 dark:border-slate-600 dark:hover:shadow-lg dark:hover:shadow-black/20";
+  const todayRing = isToday
+    ? "ring-2 ring-sky-300/60 ring-offset-2 ring-offset-white dark:ring-sky-500/40 dark:ring-offset-slate-900"
+    : "";
 
   const dayNumCls = !isCurrentMonth
     ? "text-sm font-semibold text-slate-600 dark:text-slate-500"
     : "text-sm font-semibold " + (isWeekend ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-300");
+  const dayNumTodayCls = isToday
+    ? "text-sm font-semibold text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/30 rounded-full w-6 h-6 flex items-center justify-center"
+    : dayNumCls;
 
   const hourSummary = hasHourly ? buildHourSummary(entries.hours) : [];
   const summaryVisible = hourSummary.slice(0, 3);
   const remaining = hourSummary.length - summaryVisible.length;
 
   return (
-    <div className={base + " " + cursor + " " + bg} onClick={isClickable ? () => onDayClick(date) : undefined}>
+    <div className={base + " " + cursor + " " + bg + " " + todayRing} onClick={isClickable ? () => onDayClick(date) : undefined}>
       <div className="flex items-center justify-between px-0.5">
-        <div className={dayNumCls}>{d}</div>
+        <div className={dayNumTodayCls}>{d}</div>
       </div>
 
       {isCurrentMonth && !isWeekend ? (
@@ -223,3 +230,8 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
     </div>
   );
 }
+
+
+
+
+
