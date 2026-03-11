@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "./components/Editor";
 import { SettingsModal } from "./components/SettingsModal";
 import { SummaryPanel } from "./components/SummaryPanel";
@@ -83,6 +83,15 @@ export default function App() {
   const [showBackupConfirm, setShowBackupConfirm] = useState(false);
   const [hasInitializedView, setHasInitializedView] = useState(false);
 
+  const [blockedToast, setBlockedToast] = useState(null);
+  const blockedToastTimerRef = useRef(null);
+  // Cleanup toast timer on unmount
+  useEffect(() => {
+    return () => {
+      if (blockedToastTimerRef.current) clearTimeout(blockedToastTimerRef.current);
+    };
+  }, []);
+
   // Initialize view mode from settings once
   useEffect(() => {
     if (!hasInitializedView && settings?.defaultView) {
@@ -90,7 +99,6 @@ export default function App() {
       setHasInitializedView(true);
     }
   }, [settings?.defaultView, hasInitializedView]);
-
 
   useEffect(() => {
     if (viewMode !== "day") return;
@@ -157,6 +165,17 @@ export default function App() {
     setMonthYear(now.getFullYear(), now.getMonth());
   }
 
+  function showBlockedToast(message) {
+    if (!message) return;
+    setBlockedToast(message);
+    if (blockedToastTimerRef.current) {
+      clearTimeout(blockedToastTimerRef.current);
+    }
+    blockedToastTimerRef.current = setTimeout(() => {
+      setBlockedToast(null);
+      blockedToastTimerRef.current = null;
+    }, 1800);
+  }
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
@@ -164,11 +183,26 @@ export default function App() {
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
 
+  function hasOverlap(hours, rangeStart, rangeEnd, ignoreStart, ignoreEnd) {
+    for (let m = rangeStart; m < rangeEnd; m += SLOT_MINUTES) {
+      if (ignoreStart !== undefined && ignoreEnd !== undefined && m >= ignoreStart && m < ignoreEnd) {
+        continue;
+      }
+      if (hours[hourKey(m)]) return true;
+    }
+    return false;
+  }
+
   function onMoveTask(date, { start, end, newStart }) {
     const specificDayData = monthDataByDate[ymd(date)] || null;
     if (!specificDayData?.hours) return;
     const duration = end - start;
     const newEnd = newStart + duration;
+
+    if (hasOverlap(specificDayData.hours, newStart, newEnd, start, end)) {
+      showBlockedToast("Impossibile spostare: sovrappone un altro task.");
+      return;
+    }
 
     // We only support moving tasks that stay within hour blocks (not AM/PM full blocks)
     // and within the valid work slots
@@ -209,6 +243,11 @@ export default function App() {
     // Boundary check
     if (finalEnd <= finalStart || finalStart < WORK_SLOTS[0] || finalEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
 
+    if (hasOverlap(specificDayData.hours, finalStart, finalEnd, start, end)) {
+      showBlockedToast("Impossibile ridimensionare: sovrappone un altro task.");
+      return;
+    }
+
     const nextHours = { ...specificDayData.hours };
 
     // Clear old slots
@@ -246,14 +285,17 @@ export default function App() {
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }
-
   const mainLayoutClass = viewMode === "month"
     ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
     : "grid grid-cols-1 gap-5";
 
   return (
     <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white dark:bg-slate-950 transition-colors">
-      
+      {blockedToast ? (
+        <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-rose-200/80 bg-rose-50/95 px-4 py-2 text-sm font-semibold text-rose-700 shadow-soft backdrop-blur dark:border-rose-900/60 dark:bg-rose-950/70 dark:text-rose-200">
+          {blockedToast}
+        </div>
+      ) : null}      
       {/* Sidebar: bottom on mobile, left on desktop */}
       <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
         
@@ -493,4 +535,16 @@ export default function App() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
