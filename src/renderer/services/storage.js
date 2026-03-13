@@ -1,7 +1,9 @@
 import { ymKey } from "../utils/date";
+import { ensureSubtypesFormat } from "../domain/tasks";
 
 export const STORAGE_PREFIX = "dailylog:v1:";
 export const SETTINGS_KEY = STORAGE_PREFIX + "__settings";
+export const PEOPLE_KEY = STORAGE_PREFIX + "__people";
 export const DEFAULT_SETTINGS = {
   desktopBackupDir: "",
   minimizeToTrayOnMinimize: false,
@@ -87,7 +89,7 @@ export function normalizeSettings(raw) {
     theme: typeof raw.theme === "string" ? raw.theme : "light",
     clientColors: normalizeClientColors(raw.clientColors),
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
-    taskSubtypes: (raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {},
+    taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
   };
 }
 
@@ -410,4 +412,19 @@ export async function importAll(file) {
     }
   }
   return count;
+}
+
+export function listStoredPeople() {
+  try {
+    const raw = localStorage.getItem(PEOPLE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) || [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePeople(people) {
+  if (!Array.isArray(people)) return;
+  localStorage.setItem(PEOPLE_KEY, JSON.stringify(people));
 }

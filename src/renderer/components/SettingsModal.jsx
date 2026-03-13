@@ -62,28 +62,28 @@ export function SettingsModal({
     });
   }
 
-  const [newSubtype, setNewSubtype] = useState("");
-  const [selectedSubtypeType, setSelectedSubtypeType] = useState("internal");
+  const [newSubtypes, setNewSubtypes] = useState({});
 
-  function addSubtype() {
-    const val = newSubtype.trim();
+  function addSubtype(typeId) {
+    const val = (newSubtypes[typeId] || "").trim();
     if (!val) return;
     setSettings((prev) => {
       const st = prev.taskSubtypes || {};
-      const list = st[selectedSubtypeType] || [];
-      if (list.includes(val)) return prev;
+      const list = st[typeId] || [];
+      const newId = val.toLowerCase().trim().replace(/[\s\W-]+/g, "-");
+      if (list.some((x) => (x.id || x) === newId || x === val)) return prev;
       return {
         ...prev,
         taskSubtypes: {
           ...st,
-          [selectedSubtypeType]: [...list, val],
+          [typeId]: [...list, { id: newId, label: val }],
         },
       };
     });
-    setNewSubtype("");
+    setNewSubtypes((prev) => ({ ...prev, [typeId]: "" }));
   }
 
-  function removeSubtype(typeId, val) {
+  function removeSubtype(typeId, idToRemove) {
     setSettings((prev) => {
       const st = prev.taskSubtypes || {};
       const list = st[typeId] || [];
@@ -91,7 +91,7 @@ export function SettingsModal({
         ...prev,
         taskSubtypes: {
           ...st,
-          [typeId]: list.filter((x) => x !== val),
+          [typeId]: list.filter((x) => (x.id || x) !== idToRemove && x !== idToRemove),
         },
       };
     });
@@ -254,48 +254,48 @@ export function SettingsModal({
                   Definisci dei titoli prestabiliti per compilare velocemente i tuoi task.
                 </div>
               </div>
-              <div className="flex gap-2">
-                <select
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
-                  value={selectedSubtypeType}
-                  onChange={(e) => setSelectedSubtypeType(e.target.value)}
-                >
-                  {TASK_TYPES.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
-                  placeholder="Es. Colloquio, Proposta..."
-                  value={newSubtype}
-                  onChange={(e) => setNewSubtype(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") addSubtype();
-                  }}
-                />
-                <Button
-                  className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-5"
-                  onClick={addSubtype}
-                  type="button"
-                >
-                  Aggiungi
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-2">
-                {(settings.taskSubtypes?.[selectedSubtypeType] || []).length === 0 ? (
-                  <span className="text-sm text-slate-400 italic">Nessun sottotipo per questa categoria.</span>
-                ) : (
-                  (settings.taskSubtypes?.[selectedSubtypeType] || []).map((val) => (
-                    <div key={val} className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-1.5 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                      {val}
-                      <button onClick={() => removeSubtype(selectedSubtypeType, val)} className="ml-1 text-slate-400 hover:text-red-500 transition-colors">
-                        <Icon name="x" className="w-3.5 h-3.5" />
-                      </button>
+              <div className="space-y-6 pt-2">
+                {TASK_TYPES.map((t) => (
+                  <div key={t.id} className="pt-4 first:pt-0 border-t first:border-0 border-slate-100 dark:border-slate-700/50">
+                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">{t.label}</div>
+                    <div className="flex gap-2 w-full max-w-lg mb-3">
+                      <input
+                        className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
+                        placeholder={`Es. categoria per ${t.label.toLowerCase()}...`}
+                        value={newSubtypes[t.id] || ""}
+                        onChange={(e) => setNewSubtypes((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") addSubtype(t.id);
+                        }}
+                      />
+                      <Button
+                        className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 py-2 shrink-0"
+                        onClick={() => addSubtype(t.id)}
+                        type="button"
+                      >
+                        Aggiungi
+                      </Button>
                     </div>
-                  ))
-                )}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(settings.taskSubtypes?.[t.id] || []).length === 0 ? (
+                        <span className="text-xs text-slate-400 italic">Nessuno configurato.</span>
+                      ) : (
+                        (settings.taskSubtypes?.[t.id] || []).map((val) => {
+                          const id = val.id || val;
+                          const label = val.label || val;
+                          return (
+                            <div key={id} className="flex items-center gap-1.5 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {label}
+                              <button onClick={() => removeSubtype(t.id, id)} className="p-1 rounded-full text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Rimuovi">
+                                <Icon name="x" className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

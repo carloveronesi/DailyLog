@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getClientColor, HOURS_PER_DAY, SLOT, WORK_SLOTS } from "../domain/tasks";
+import { getClientColor, HOURS_PER_DAY, SLOT, WORK_SLOTS, getSubtypeLabel } from "../domain/tasks";
 
 function isClientFilterActive(activeFilter, clientName) {
   return activeFilter?.kind === "client" && activeFilter.client === clientName;
@@ -36,12 +36,19 @@ export function SummaryPanel({
   activeFilter = null,
   fixedFilter = null,
   onFixedFilterChange,
+  taskSubtypes = {},
 }) {
   const totals = useMemo(() => {
     const byClient = new Map();
-    let internal = 0;
-    let vacation = 0;
-    let event = 0;
+    let internal = { total: 0, bySubtype: {} };
+    let vacation = { total: 0, bySubtype: {} };
+    let event = { total: 0, bySubtype: {} };
+
+    function addTime(typeObj, weight, subtypeId) {
+      typeObj.total += weight;
+      const st = subtypeId || "generico";
+      typeObj.bySubtype[st] = (typeObj.bySubtype[st] || 0) + weight;
+    }
 
     const lastDayOfMonth = new Date(year, monthIndex0 + 1, 0).getDate();
     let workingDaysInMonth = 0;
@@ -59,13 +66,18 @@ export function SummaryPanel({
         const weight = 0.5;
         if (e.type === "client") {
           const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          byClient.set(c, (byClient.get(c) || 0) + weight);
+          let clientData = byClient.get(c);
+          if (!clientData) {
+            clientData = { total: 0, bySubtype: {} };
+            byClient.set(c, clientData);
+          }
+          addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
-          internal += weight;
+          addTime(internal, weight, e.subtypeId);
         } else if (e.type === "vacation") {
-          vacation += weight;
+          addTime(vacation, weight, e.subtypeId);
         } else if (e.type === "event") {
-          event += weight;
+          addTime(event, weight, e.subtypeId);
         }
       }
       for (const e of Object.values(day?.hours || {})) {
@@ -73,30 +85,35 @@ export function SummaryPanel({
         const weight = 1 / WORK_SLOTS.length;
         if (e.type === "client") {
           const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          byClient.set(c, (byClient.get(c) || 0) + weight);
+          let clientData = byClient.get(c);
+          if (!clientData) {
+            clientData = { total: 0, bySubtype: {} };
+            byClient.set(c, clientData);
+          }
+          addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
-          internal += weight;
+          addTime(internal, weight, e.subtypeId);
         } else if (e.type === "vacation") {
-          vacation += weight;
+          addTime(vacation, weight, e.subtypeId);
         } else if (e.type === "event") {
-          event += weight;
+          addTime(event, weight, e.subtypeId);
         }
       }
     }
 
     const clients = Array.from(byClient.entries())
-      .map(([client, days]) => ({ client, days }))
-      .sort((a, b) => b.days - a.days);
+      .map(([client, data]) => ({ client, data }))
+      .sort((a, b) => b.data.total - a.data.total);
 
-    const clientDays = clients.reduce((sum, c) => sum + c.days, 0);
-    const worked = clientDays + internal + event;
+    const clientDays = clients.reduce((sum, c) => sum + c.data.total, 0);
+    const worked = clientDays + internal.total + event.total;
     const otherActivities = [
-      { key: "internal", label: "Internal", days: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
-      { key: "vacation", label: "Ferie", days: vacation, dotClassName: "bg-emerald-400 dark:bg-emerald-500" },
-      { key: "event", label: "Eventi", days: event, dotClassName: "bg-purple-400 dark:bg-purple-500" },
-    ].filter((activity) => activity.days > 0);
+      { key: "internal", label: "Internal", data: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
+      { key: "vacation", label: "Ferie", data: vacation, dotClassName: "bg-emerald-400 dark:bg-emerald-500" },
+      { key: "event", label: "Eventi", data: event, dotClassName: "bg-purple-400 dark:bg-purple-500" },
+    ].filter((activity) => activity.data.total > 0);
 
-    return { clients, internal, vacation, event, worked, workingDaysInMonth, otherActivities };
+    return { clients, internal: internal.total, vacation: vacation.total, event: event.total, worked, workingDaysInMonth, otherActivities };
   }, [data, year, monthIndex0]);
 
   return (
@@ -128,30 +145,44 @@ export function SummaryPanel({
         ) : (
           <div className="mt-2 space-y-2">
             {totals.clients.map((c) => (
-              <div
-                key={c.client}
-                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
-                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
-                onClick={() => {
-                  if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
-                    onFixedFilterChange?.(null);
-                  } else {
-                    onFixedFilterChange?.({ kind: "client", client: c.client });
+              <div key={c.client}>
+                <div
+                  onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
+                  onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                  onClick={() => {
+                    if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
+                      onFixedFilterChange?.(null);
+                    } else {
+                      onFixedFilterChange?.({ kind: "client", client: c.client });
+                    }
+                  }}
+                  className={
+                    "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
+                    (isClientFilterActive(activeFilter, c.client)
+                      ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                      : "hover:border-sky-200 dark:hover:border-sky-700") +
+                    (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
                   }
-                }}
-                className={
-                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
-                  (isClientFilterActive(activeFilter, c.client)
-                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                    : "hover:border-sky-200 dark:hover:border-sky-700") +
-                  (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
-                }
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
-                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
+                    <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.data.total.toFixed(1)} gg</div>
                 </div>
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.days.toFixed(1)} gg</div>
+                {Object.keys(c.data.bySubtype).length > 1 || (Object.keys(c.data.bySubtype)[0] && Object.keys(c.data.bySubtype)[0] !== "generico") ? (
+                  <div className="ml-[22px] mt-2 mb-1 space-y-1.5 border-l-2 border-slate-100 dark:border-slate-700/50 pl-2">
+                    {Object.entries(c.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
+                      const stLabel = st === "generico" ? "Generico" : getSubtypeLabel("client", st, taskSubtypes);
+                      return (
+                        <div key={st} className="flex items-center justify-between">
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{stLabel}</div>
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{days.toFixed(1)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -165,32 +196,46 @@ export function SummaryPanel({
         ) : (
           <div className="mt-2 space-y-2">
             {totals.otherActivities.map((activity) => (
-              <div
-                key={activity.key}
-                onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "type", type: activity.key })}
-                onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
-                onClick={() => {
-                  if (fixedFilter?.kind === "type" && fixedFilter.type === activity.key) {
-                    onFixedFilterChange?.(null);
-                  } else {
-                    onFixedFilterChange?.({ kind: "type", type: activity.key });
+              <div key={activity.key}>
+                <div
+                  onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "type", type: activity.key })}
+                  onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                  onClick={() => {
+                    if (fixedFilter?.kind === "type" && fixedFilter.type === activity.key) {
+                      onFixedFilterChange?.(null);
+                    } else {
+                      onFixedFilterChange?.({ kind: "type", type: activity.key });
+                    }
+                  }}
+                  className={
+                    "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
+                    (isTypeFilterActive(activeFilter, activity.key)
+                      ? "ring-2 ring-sky-300 dark:ring-sky-500"
+                      : "hover:border-sky-200 dark:hover:border-sky-700") +
+                    (isTypeFilterFaded(fixedFilter, activity.key) ? " opacity-40 dark:opacity-40" : "")
                   }
-                }}
-                className={
-                  "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
-                  (isTypeFilterActive(activeFilter, activity.key)
-                    ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                    : "hover:border-sky-200 dark:hover:border-sky-700") +
-                  (isTypeFilterFaded(fixedFilter, activity.key) ? " opacity-40 dark:opacity-40" : "")
-                }
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={"h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20 " + activity.dotClassName}
-                  />
-                  <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={"h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20 " + activity.dotClassName}
+                    />
+                    <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+                  </div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{activity.data.total.toFixed(1)} gg</div>
                 </div>
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{activity.days.toFixed(1)} gg</div>
+                {Object.keys(activity.data.bySubtype).length > 1 || (Object.keys(activity.data.bySubtype)[0] && Object.keys(activity.data.bySubtype)[0] !== "generico") ? (
+                  <div className="ml-[22px] mt-2 mb-1 space-y-1.5 border-l-2 border-slate-100 dark:border-slate-700/50 pl-2">
+                    {Object.entries(activity.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
+                      const stLabel = st === "generico" ? "Generico" : getSubtypeLabel(activity.key, st, taskSubtypes);
+                      return (
+                        <div key={st} className="flex items-center justify-between">
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{stLabel}</div>
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{days.toFixed(1)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
