@@ -100,6 +100,7 @@ export function defaultEntry() {
     subtypeId: null,
     title: "",
     client: "",
+    collaborators: [],
     notes: "",
     wentWrong: "",
     nextSteps: "",

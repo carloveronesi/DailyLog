@@ -11,7 +11,7 @@ import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { ymd } from "./utils/date";
-import { exportAll, listStoredClients } from "./services/storage";
+import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
 import { hourKey, WORK_SLOTS, SLOT_MINUTES } from "./domain/tasks";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
@@ -82,6 +82,7 @@ export default function App() {
   const [activeDate, setActiveDate] = useState(today);
   const [showBackupConfirm, setShowBackupConfirm] = useState(false);
   const [hasInitializedView, setHasInitializedView] = useState(false);
+  const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
   const [blockedToast, setBlockedToast] = useState(null);
   const blockedToastTimerRef = useRef(null);
@@ -138,6 +139,13 @@ export default function App() {
       window.location.reload();
     }, 100);
   }
+
+  const fmtDate = (d) => {
+    if (!d) return "";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  };
 
   function toggleTheme() {
     setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
@@ -453,7 +461,7 @@ export default function App() {
         onImportSuccess={handleImportSuccess}
       />
 
-      <Modal open={editorOpen} title={selectedDate ? "Task" : "Task"} onClose={closeEditor}>
+      <Modal open={editorOpen} title={selectedDate ? `Task - ${fmtDate(selectedDate)}` : "Task"} onClose={closeEditor}>
         {selectedDate ? (
           <Editor
             date={selectedDate}
@@ -471,6 +479,11 @@ export default function App() {
             topClients={topMonthClients}
             clientColors={settings.clientColors}
             taskSubtypes={settings.taskSubtypes}
+            allPeople={allPeople}
+            onSavePeople={(updatedPeople) => {
+              savePeople(updatedPeople);
+              setAllPeople(updatedPeople);
+            }}
           />
         ) : null}
       </Modal>
