@@ -37,13 +37,14 @@ function normalizeForType(e) {
 
 function initFromExisting(existingEntries) {
   const hours = existingEntries?.hours || {};
-  const entryAM = existingEntries?.AM || defaultEntry();
-  const entryPM = existingEntries?.PM || defaultEntry();
+  const entryAM = existingEntries?.AM ? { ...defaultEntry(), ...existingEntries.AM } : defaultEntry();
+  const entryPM = existingEntries?.PM ? { ...defaultEntry(), ...existingEntries.PM } : defaultEntry();
 
   const allHourEntries = {};
   for (const h of WORK_SLOTS) {
     const k = hourKey(h);
-    allHourEntries[k] = hours[k] || defaultEntry();
+    const existing = hours[k];
+    allHourEntries[k] = existing ? { ...defaultEntry(), ...existing } : defaultEntry();
   }
 
   const fullDay =
@@ -86,9 +87,10 @@ function EntryForm({
   const addCollaborator = (name) => {
     const cleanName = name.trim();
     if (!cleanName) return;
-    if (entry.collaborators.includes(cleanName)) return;
+    const cols = entry.collaborators || [];
+    if (cols.includes(cleanName)) return;
 
-    const nextCollaborators = [...entry.collaborators, cleanName];
+    const nextCollaborators = [...cols, cleanName];
     setField("collaborators", nextCollaborators);
     setPersonInput("");
 
@@ -107,12 +109,13 @@ function EntryForm({
   };
 
   const removeCollaborator = (name) => {
-    setField("collaborators", entry.collaborators.filter(c => c !== name));
+    const cols = entry.collaborators || [];
+    setField("collaborators", cols.filter(c => c !== name));
   };
 
   const currentSubtypes = taskSubtypes[entry.type] || [];
   const suggestedPeople = allPeople.filter(p => 
-    p.taskTypes.includes(entry.type) && !entry.collaborators.includes(p.name)
+    p.taskTypes.includes(entry.type) && !(entry.collaborators || []).includes(p.name)
   );
 
   return (
@@ -289,7 +292,7 @@ function EntryForm({
       <div className="space-y-2">
         <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Collaboratori 👥</label>
         <div className="flex flex-wrap gap-2 items-center p-3 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-700">
-          {entry.collaborators.map((c) => (
+          {(entry.collaborators || []).map((c) => (
             <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
               {c}
               <button onClick={() => removeCollaborator(c)} className="text-slate-400 hover:text-rose-500 transition-colors">
