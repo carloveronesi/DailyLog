@@ -94,7 +94,7 @@ export function hasAfternoonHours(dayData) {
 
 export function defaultEntry() {
   return {
-    type: "internal",
+    type: "client",
     subtypeId: null,
     title: "",
     client: "",

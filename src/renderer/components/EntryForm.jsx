@@ -2,13 +2,14 @@ import { useState } from "react";
 import { AFTERNOON_SLOTS, MORNING_SLOTS, SLOT_MINUTES, TASK_TYPES } from "../domain/tasks";
 import { Icon } from "./ui";
 
-export function EntryForm({ 
-  entry, 
-  onChange, 
-  topClients, 
-  clientColors, 
-  taskSubtypes = {}, 
-  allPeople = [], 
+export function EntryForm({
+  entry,
+  onChange,
+  topClients,
+  allClients = [],
+  clientColors,
+  taskSubtypes = {},
+  allPeople = [],
   onSavePeople,
   fullDay,
   setFullDay,
@@ -40,9 +41,9 @@ export function EntryForm({
       const newPerson = { name: cleanName, taskTypes: [entry.type] };
       onSavePeople([...allPeople, newPerson]);
     } else if (!exists.taskTypes.includes(entry.type)) {
-      const updatedPeople = allPeople.map(p => 
-        p.name.toLowerCase() === cleanName.toLowerCase() 
-          ? { ...p, taskTypes: [...p.taskTypes, entry.type] } 
+      const updatedPeople = allPeople.map(p =>
+        p.name.toLowerCase() === cleanName.toLowerCase()
+          ? { ...p, taskTypes: [...p.taskTypes, entry.type] }
           : p
       );
       onSavePeople(updatedPeople);
@@ -55,24 +56,25 @@ export function EntryForm({
   };
 
   const currentSubtypes = taskSubtypes[entry.type] || [];
-  const suggestedPeople = allPeople.filter(p => 
+  const suggestedPeople = allPeople.filter(p =>
     p.taskTypes.includes(entry.type) && !(entry.collaborators || []).includes(p.name)
   );
+
+  const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]));
 
   return (
     <div className="space-y-6">
       {/* Prima riga: Titolo */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titolo task</label>
+      <div className="mb-2 pr-8">
         <input
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+          className="w-full bg-transparent text-xl font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
           value={entry.title}
           onChange={(e) => setField("title", e.target.value)}
-          placeholder={entry.type === "vacation" ? "Ferie" : entry.type === "event" ? "Es. Meetup" : "Es. Refactor codice"}
+          placeholder={entry.type === "vacation" ? "Titolo (es. Ferie)" : entry.type === "event" ? "Titolo (es. Meetup)" : "Titolo (es. Refactor codice)"}
         />
       </div>
 
-      {/* Seconda riga: Tipo, Subtask e Cliente */}
+      {/* Seconda riga: Tipo, Cliente e Subtask */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
         <div className="md:col-span-3 space-y-1.5">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tipo</label>
@@ -88,6 +90,44 @@ export function EntryForm({
             ))}
           </select>
         </div>
+
+        {entry.type === "client" && (
+          <div className="md:col-span-5 space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cliente</label>
+            <input
+              list="client-suggestions"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+              value={entry.client}
+              onChange={(e) => setField("client", e.target.value)}
+              placeholder="Nome cliente"
+            />
+            <datalist id="client-suggestions">
+              {allSuggestedClients.map(c => <option key={c} value={c} />)}
+            </datalist>
+            {allSuggestedClients.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {allSuggestedClients.slice(0, 4).map((clientName) => {
+                  const isSelected = (entry.client || "").trim().toLowerCase() === clientName.toLowerCase();
+                  return (
+                    <button
+                      key={clientName}
+                      type="button"
+                      onClick={() => setField("client", clientName)}
+                      className={
+                        "rounded-full px-3 py-1 text-[11px] font-bold transition " +
+                        (isSelected
+                          ? "bg-slate-700 text-white shadow-md dark:bg-slate-200 dark:text-slate-900"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700")
+                      }
+                    >
+                      {clientName}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={`space-y-1.5 ${entry.type === "client" ? "md:col-span-4" : "md:col-span-9"}`}>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Subtask</label>
@@ -126,32 +166,6 @@ export function EntryForm({
             })}
           </div>
         </div>
-
-        {entry.type === "client" && (
-          <div className="md:col-span-5 space-y-1.5">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cliente</label>
-            <input
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
-              value={entry.client}
-              onChange={(e) => setField("client", e.target.value)}
-              placeholder="Nome cliente"
-            />
-            {topClients.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {topClients.slice(0, 3).map((clientName) => (
-                  <button
-                    key={clientName}
-                    type="button"
-                    onClick={() => setField("client", clientName)}
-                    className="text-[10px] text-sky-600 dark:text-sky-400 hover:underline font-medium"
-                  >
-                    {clientName}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Terza riga: Orari (Spostata qui come da richiesta) */}

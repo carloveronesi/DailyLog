@@ -69,7 +69,7 @@ function buildEndOptions(startMinute, sectionBoundaries) {
   return options;
 }
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {}, taskSubtypes = {}, allPeople = [], onSavePeople }) {
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {}, taskSubtypes = {}, allPeople = [], onSavePeople, allClients = [] }) {
   const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
   const initialRangeStart = initialRange?.start ?? initialSlotMin;
   const initialRangeEnd = initialRange?.end ?? null;
@@ -232,6 +232,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           entry={activeEntry}
           onChange={handleEntryChange}
           topClients={topClients}
+          allClients={allClients}
           clientColors={clientColors}
           taskSubtypes={taskSubtypes}
           allPeople={allPeople}

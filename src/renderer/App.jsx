@@ -461,7 +461,7 @@ export default function App() {
         onImportSuccess={handleImportSuccess}
       />
 
-      <Modal open={editorOpen} title={selectedDate ? `Task - ${fmtDate(selectedDate)}` : "Task"} onClose={closeEditor}>
+      <Modal open={editorOpen} onClose={closeEditor}>
         {selectedDate ? (
           <Editor
             date={selectedDate}
@@ -477,6 +477,7 @@ export default function App() {
               closeEditor();
             }}
             topClients={topMonthClients}
+            allClients={clientNames}
             clientColors={settings.clientColors}
             taskSubtypes={settings.taskSubtypes}
             allPeople={allPeople}

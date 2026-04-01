@@ -152,16 +152,26 @@ export function Modal({ open, title, children, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-2xl rounded-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur border border-slate-200 dark:border-slate-700 shadow-soft dark:shadow-soft-dark">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
-          <div className="text-base font-semibold dark:text-slate-100">{title}</div>
+        {title ? (
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="text-base font-semibold dark:text-slate-100">{title}</div>
+            <button
+              className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+              onClick={onClose}
+              aria-label="Chiudi"
+            >
+              ×
+            </button>
+          </div>
+        ) : (
           <button
-            className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+            className="absolute top-4 right-4 z-10 rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
             onClick={onClose}
             aria-label="Chiudi"
           >
             ×
           </button>
-        </div>
+        )}
         <div className="p-5">{children}</div>
       </div>
     </div>
