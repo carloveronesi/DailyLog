@@ -24,6 +24,13 @@ export function normalizeEntryValue(value) {
   return (value || "").trim().toLocaleLowerCase("it-IT");
 }
 
+/**
+ * Deep equality check used to merge consecutive hour slots into a single visual block.
+ * Compares ALL content fields (including notes, wentWrong, nextSteps) so that two
+ * adjacent slots are only merged when every detail is identical.
+ * NOTE: intentionally different from isSameTaskEntry in tasks.js, which uses a
+ * lighter label-based comparison suited for full-day detection.
+ */
 export function isSameHourEntry(a, b) {
   if (!a || !b) return false;
   return (

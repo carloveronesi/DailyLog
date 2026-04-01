@@ -47,6 +47,7 @@ export default function App() {
     topMonthClients,
     upsertDay,
     deleteDay,
+    reloadFromStorage,
     prevMonth,
     nextMonth,
     goToday,
@@ -133,11 +134,8 @@ export default function App() {
   }
 
   function handleImportSuccess() {
-    // Force a reload of data from localStorage after import.
-    // Use a small delay to ensure all storage writes are completed
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    // Refresh data from localStorage without losing UI state (view, filters, active date).
+    reloadFromStorage();
   }
 
   const fmtDate = (d) => {
@@ -186,7 +184,9 @@ export default function App() {
   }
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
-  const clientNames = useMemo(() => listStoredClients(), [data, year, month]);
+  // listStoredClients scans all months in localStorage, not just the current one —
+  // re-derive whenever current month data changes (covers both saves and post-import reload).
+  const clientNames = useMemo(() => listStoredClients(), [data]);
 
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
@@ -551,10 +551,6 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
 
 
 

@@ -1,5 +1,6 @@
 import { ymKey } from "../utils/date";
-import { ensureSubtypesFormat } from "../domain/tasks";
+import { pad2 } from "../utils/date";
+import { ensureSubtypesFormat, normalizeHexColor } from "../domain/tasks";
 
 export const STORAGE_PREFIX = "dailylog:v1:";
 export const SETTINGS_KEY = STORAGE_PREFIX + "__settings";
@@ -16,11 +17,7 @@ const BACKUP_DB_NAME = "dailylog-backup-v1";
 const BACKUP_STORE_NAME = "settings";
 const BACKUP_HANDLE_KEY = "auto-backup-file-handle";
 
-const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
 
 function normalizeHourKey(key) {
   if (typeof key !== "string") return "";
@@ -58,15 +55,6 @@ function normalizeDayHours(day) {
   return { ...day, hours: normalized };
 }
 
-function normalizeHexColor(value) {
-  const raw = typeof value === "string" ? value.trim() : "";
-  if (!HEX_COLOR_RE.test(raw)) return "";
-  if (raw.length === 4) {
-    const expanded = raw.slice(1).split("").map((c) => c + c).join("");
-    return `#${expanded.toUpperCase()}`;
-  }
-  return raw.toUpperCase();
-}
 
 function normalizeClientColors(raw) {
   if (!raw || typeof raw !== "object") return {};
@@ -218,18 +206,9 @@ export function searchAllLogs(query) {
           const matchTitle = (entry.title || "").toLowerCase().includes(q);
           const matchNotes = (entry.notes || "").toLowerCase().includes(q);
           const matchClient = (entry.client || "").toLowerCase().includes(q);
-          const matchRetrospective = (entry.retrospective || "").toLowerCase().includes(q);
           const matchNextSteps = (entry.nextSteps || "").toLowerCase().includes(q);
 
-          if (matchTitle || matchNotes || matchClient || matchRetrospective || matchNextSteps) {
-            const uniqueKey = JSON.stringify({
-              t: entry.title || "",
-              n: entry.notes || "",
-              c: entry.client || "",
-              r: entry.retrospective || "",
-              s: entry.nextSteps || ""
-            });
-
+          if (matchTitle || matchNotes || matchClient || matchNextSteps) {
             if (!dayMatches.has(uniqueKey)) {
               dayMatches.set(uniqueKey, {
                 date: dateObj,

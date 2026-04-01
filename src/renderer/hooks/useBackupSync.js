@@ -148,7 +148,7 @@ export function useBackupSync(calendarData, year, month) {
 
     async function enableAutoBackup() {
         if (!supportsAutoBackup) {
-            alert("Browser non compatibile con salvataggio automatico su file. Usa Export manuale.");
+            setBackupStatus("Browser non compatibile con salvataggio automatico su file. Usa Export manuale.");
             return;
         }
 
@@ -165,7 +165,7 @@ export function useBackupSync(calendarData, year, month) {
 
             const allowed = await ensureFilePermission(handle);
             if (!allowed) {
-                alert("Permesso di scrittura non concesso.");
+                setBackupStatus("Permesso di scrittura non concesso.");
                 return;
             }
 
@@ -177,7 +177,7 @@ export function useBackupSync(calendarData, year, month) {
             setBackupStatus(`Backup aggiornato alle ${new Date().toLocaleTimeString("it-IT")}`);
         } catch (err) {
             if (err?.name === "AbortError") return;
-            alert(`Configurazione backup fallita: ${err?.message || err}`);
+            setBackupStatus(`Configurazione backup fallita: ${err?.message || err}`);
         }
     }
 

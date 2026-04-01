@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SLOT } from "../domain/tasks";
 import { loadMonthData, saveMonthData } from "../services/storage";
 import { dowMon0, ymd } from "../utils/date";
@@ -7,6 +7,8 @@ export function useCalendarData(initialYear, initialMonth) {
     const [year, setYear] = useState(initialYear);
     const [month, setMonth] = useState(initialMonth);
     const [data, setData] = useState(() => loadMonthData(year, month));
+    // Skip the very first persist: data was just loaded from storage, no need to write it back.
+    const isFirstMount = useRef(true);
 
     // Reload data when year or month changes
     useEffect(() => {
@@ -14,8 +16,12 @@ export function useCalendarData(initialYear, initialMonth) {
         setData(loaded);
     }, [year, month]);
 
-    // Persist on data change
+    // Persist on data change (skip the initial mount to avoid a redundant write)
     useEffect(() => {
+        if (isFirstMount.current) {
+            isFirstMount.current = false;
+            return;
+        }
         saveMonthData(year, month, data);
     }, [data, year, month]);
 
@@ -114,6 +120,10 @@ export function useCalendarData(initialYear, initialMonth) {
         });
     }
 
+    function reloadFromStorage() {
+        setData(loadMonthData(year, month));
+    }
+
     function prevMonth() {
         const d = new Date(year, month, 1);
         d.setMonth(d.getMonth() - 1);
@@ -149,6 +159,7 @@ export function useCalendarData(initialYear, initialMonth) {
         topMonthClients,
         upsertDay,
         deleteDay,
+        reloadFromStorage,
         prevMonth,
         nextMonth,
         goToday,

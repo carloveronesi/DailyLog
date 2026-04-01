@@ -1,3 +1,5 @@
+import { pad2 } from "../utils/date";
+
 export const TASK_TYPES = [
   { id: "client", label: "Task per cliente" },
   { id: "internal", label: "Task interni" },
@@ -28,10 +30,6 @@ export const SLOT = {
 };
 
 export const SLOT_MINUTES = 30;
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
 
 export function slotMinutes(value) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -223,7 +221,7 @@ export function displayLabel(entry, taskSubtypes = {}) {
   if (!entry) return "";
   const subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes) : "";
   const t = (entry.title || "").trim();
-  
+
   const formatLabel = (defaultLabel) => {
     let base = t || defaultLabel;
     if (subtypeLabel && subtypeLabel !== "Generico") {
@@ -243,6 +241,13 @@ export function displayLabel(entry, taskSubtypes = {}) {
   return formatLabel("Internal");
 }
 
+/**
+ * Label-based identity check used to detect whether AM and PM entries represent
+ * the same task (i.e. a full-day entry). Only compares type, subtypeId, and the
+ * display label — NOT notes or other detail fields.
+ * NOTE: intentionally lighter than isSameHourEntry in calendar.js, which does a
+ * full content comparison for merging adjacent hour blocks.
+ */
 export function isSameTaskEntry(a, b, taskSubtypes = {}) {
   if (!a || !b) return false;
   const typeA = a.type || "internal";

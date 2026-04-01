@@ -277,8 +277,8 @@ function EntryForm({
                 <div
                   className="absolute top-0 h-full rounded-full bg-slate-900 dark:bg-blue-500"
                   style={{
-                    left: `${((rangeStartMin - MORNING_SLOTS[0]) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
-                    width: `${((rangeEndMin - rangeStartMin) / (18 * 60 - MORNING_SLOTS[0])) * 100}%`,
+                    left: `${((rangeStartMin - MORNING_SLOTS[0]) / (AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES - MORNING_SLOTS[0])) * 100}%`,
+                    width: `${((rangeEndMin - rangeStartMin) / (AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES - MORNING_SLOTS[0])) * 100}%`,
                   }}
                 />
               </div>
@@ -380,6 +380,7 @@ function buildEndOptions(startMinute, sectionBoundaries) {
 export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {}, taskSubtypes = {}, allPeople = [], onSavePeople }) {
   const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
   const initialRangeStart = initialRange?.start ?? initialSlotMin;
+  const initialRangeEnd = initialRange?.end ?? null;
 
   const [entryAM, setEntryAM] = useState(defaultEntry());
   const [entryPM, setEntryPM] = useState(defaultEntry());
@@ -409,7 +410,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
     if (initialRangeStart !== null) {
       start = initialRangeStart;
-      end = initialRange?.end ?? (initialRangeStart + SLOT_MINUTES);
+      end = initialRangeEnd ?? (initialRangeStart + SLOT_MINUTES);
     } else if (hourKeys.length > 0) {
       const sorted = hourKeys.sort((a, b) => a - b);
       start = sorted[0];
@@ -432,7 +433,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
     const seedEntry = init.fullDay ? init.entryAM : (init.hourEntries[hourKey(start)] || defaultEntry());
     setDraftEntry(seedEntry);
-  }, [existingEntries, initialRangeStart, initialRange]);
+  }, [existingEntries, initialRangeStart, initialRangeEnd]);
 
   const activeEntry = fullDay ? entryAM : draftEntry;
 
