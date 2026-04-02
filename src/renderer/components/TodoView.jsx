@@ -204,10 +204,28 @@ export function TodoView({
         </div>
       </div>
 
-      {/* Todo Detail Modal */}
-      <Modal open={!!selectedTodo} onClose={() => setSelectedTodoId(null)} title="Dettaglio Attività">
-        {selectedTodo && (
-          <div className="space-y-6">
+      {/* Todo Detail Internal Overlay */}
+      {selectedTodo && (
+        <div className="absolute inset-0 z-30 flex flex-col bg-white dark:bg-slate-800 animate-in fade-in slide-in-from-right-6 duration-300">
+          {/* Header with Back Button */}
+          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/50">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setSelectedTodoId(null)}
+                className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition group"
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 transition">
+                  <Icon name="chev-left" className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-semibold">Torna alla lista</span>
+              </button>
+              <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+              <div className="text-sm font-bold text-slate-800 dark:text-slate-200">Dettaglio Attività</div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-10">
             <div className="flex items-center justify-between">
               <button 
                 onClick={() => toggleDone(selectedTodo.id)}
@@ -236,13 +254,13 @@ export function TodoView({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progetto</label>
                   <select
                     value={selectedTodo.project || ""}
                     onChange={(e) => updateTodo(selectedTodo.id, { project: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-200 outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-200 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                   >
                     <option value="">Nessuno</option>
                     <option value="Interno">Interno</option>
@@ -254,7 +272,7 @@ export function TodoView({
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tag</label>
-                  <div className="flex flex-wrap gap-1 min-h-[38px] p-1.5 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700">
+                  <div className="flex flex-wrap gap-1 min-h-[42px] p-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700">
                     {availableTags.map(tag => {
                       const isSelected = (selectedTodo.tags || []).includes(tag);
                       return (
@@ -318,27 +336,27 @@ export function TodoView({
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Descrizione</label>
+            <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="space-y-4">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Descrizione</label>
                 <textarea
                   value={selectedTodo.description}
                   onChange={(e) => updateTodo(selectedTodo.id, { description: e.target.value })}
                   placeholder="Aggiungi una descrizione dettagliata..."
-                  className="w-full min-h-[100px] bg-transparent border-none outline-none resize-none text-sm text-slate-600 dark:text-slate-400 placeholder-slate-400 dark:placeholder-slate-600 focus:ring-0 px-0"
+                  className="w-full min-h-[120px] bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 text-sm text-slate-600 dark:text-slate-400 placeholder-slate-400 dark:placeholder-slate-600 focus:ring-2 focus:ring-sky-500/10 outline-none transition"
                 />
               </div>
 
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">Sotto-task</label>
-                <div className="space-y-2">
+              <div className="space-y-4 pt-4">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Sotto-task</label>
+                <div className="space-y-2 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 bg-slate-50/30 dark:bg-slate-900/10">
                   {(selectedTodo.subtasks || []).map(st => (
                     <div key={st.id} className="flex items-center gap-3 group/st pr-2">
                       <button 
                         onClick={() => toggleSubtask(st.id)}
-                        className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${st.isDone ? "bg-sky-500 border-sky-500 text-white" : "border-slate-300 dark:border-slate-600 text-transparent hover:border-slate-400"}`}
+                        className={`shrink-0 w-4.5 h-4.5 rounded-lg border flex items-center justify-center transition-all ${st.isDone ? "bg-sky-500 border-sky-500 text-white" : "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent hover:border-sky-400"}`}
                       >
-                        <Icon name="check" className="w-2.5 h-2.5" />
+                        <Icon name="check" className="w-3 h-3" />
                       </button>
                       <span className={`text-sm flex-1 ${st.isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
                         {st.title}
@@ -347,18 +365,18 @@ export function TodoView({
                         onClick={() => deleteSubtask(st.id)}
                         className="opacity-0 group-hover/st:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity"
                       >
-                        <Icon name="trash" className="w-3.5 h-3.5" />
+                        <Icon name="trash" className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
-                  <div className="flex items-center gap-3 pt-1">
-                    <div className="w-4 h-4 flex items-center justify-center text-slate-300">
-                      <Icon name="plus" className="w-3 h-3" />
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="w-4.5 h-4.5 flex items-center justify-center text-slate-300">
+                      <Icon name="plus" className="w-3.5 h-3.5" />
                     </div>
                     <input 
                       type="text"
                       placeholder="Aggiungi sotto-task..."
-                      className="bg-transparent text-sm text-slate-600 dark:text-slate-400 outline-none flex-1 border-b border-transparent focus:border-slate-200 dark:focus:border-slate-700 pb-0.5"
+                      className="bg-transparent text-sm text-slate-600 dark:text-slate-400 outline-none flex-1 border-b border-transparent focus:border-slate-200 dark:focus:border-slate-700 pb-0.5 transition-colors"
                       value={newSubtaskTitle}
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       onKeyDown={(e) => {
@@ -369,15 +387,9 @@ export function TodoView({
                 </div>
               </div>
             </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-              <Button onClick={() => setSelectedTodoId(null)} className="bg-sky-600 text-white hover:bg-sky-700">
-                Chiudi
-              </Button>
-            </div>
           </div>
-        )}
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }
