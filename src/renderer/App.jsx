@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Editor } from "./components/Editor";
 import { SettingsModal } from "./components/SettingsModal";
 import { SummaryPanel } from "./components/SummaryPanel";
@@ -11,9 +11,11 @@ import { TodoView } from "./components/TodoView";
 import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
+import { useTaskOperations } from "./hooks/useTaskOperations";
+import { SettingsContext } from "./contexts/SettingsContext";
 import { ymd } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
-import { hourKey, WORK_SLOTS, SLOT_MINUTES, LOCATION_TYPES } from "./domain/tasks";
+import { LOCATION_TYPES } from "./domain/tasks";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
   const activeBtnClass = isActive ? "bg-slate-100 dark:bg-slate-800" : "";
@@ -86,14 +88,7 @@ export default function App() {
   const [hasInitializedView, setHasInitializedView] = useState(false);
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
-  const [blockedToast, setBlockedToast] = useState(null);
-  const blockedToastTimerRef = useRef(null);
-  // Cleanup toast timer on unmount
-  useEffect(() => {
-    return () => {
-      if (blockedToastTimerRef.current) clearTimeout(blockedToastTimerRef.current);
-    };
-  }, []);
+  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay });
 
   // Initialize view mode from settings once
   useEffect(() => {
@@ -139,12 +134,6 @@ export default function App() {
     reloadFromStorage();
   }
 
-  const fmtDate = (d) => {
-    if (!d) return "";
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    return `${dd}/${mm}/${d.getFullYear()}`;
-  };
 
   function toggleTheme() {
     setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
@@ -172,17 +161,6 @@ export default function App() {
     setMonthYear(now.getFullYear(), now.getMonth());
   }
 
-  function showBlockedToast(message) {
-    if (!message) return;
-    setBlockedToast(message);
-    if (blockedToastTimerRef.current) {
-      clearTimeout(blockedToastTimerRef.current);
-    }
-    blockedToastTimerRef.current = setTimeout(() => {
-      setBlockedToast(null);
-      blockedToastTimerRef.current = null;
-    }, 1800);
-  }
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   // listStoredClients scans all months in localStorage, not just the current one —
@@ -191,109 +169,6 @@ export default function App() {
 
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
-
-  function hasOverlap(hours, rangeStart, rangeEnd, ignoreStart, ignoreEnd) {
-    for (let m = rangeStart; m < rangeEnd; m += SLOT_MINUTES) {
-      if (ignoreStart !== undefined && ignoreEnd !== undefined && m >= ignoreStart && m < ignoreEnd) {
-        continue;
-      }
-      if (hours[hourKey(m)]) return true;
-    }
-    return false;
-  }
-
-  function onMoveTask(date, { start, end, newStart }) {
-    const specificDayData = monthDataByDate[ymd(date)] || null;
-    if (!specificDayData?.hours) return;
-    const duration = end - start;
-    const newEnd = newStart + duration;
-
-    if (hasOverlap(specificDayData.hours, newStart, newEnd, start, end)) {
-      showBlockedToast("Impossibile spostare: sovrappone un altro task.");
-      return;
-    }
-
-    // We only support moving tasks that stay within hour blocks (not AM/PM full blocks)
-    // and within the valid work slots
-    if (newStart < WORK_SLOTS[0] || newEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
-
-    const entryToMove = specificDayData.hours[hourKey(start)];
-    if (!entryToMove) return;
-
-    const nextHours = { ...specificDayData.hours };
-
-    // Clear old slots
-    for (let m = start; m < end; m += SLOT_MINUTES) {
-      delete nextHours[hourKey(m)];
-    }
-
-    // Fill new slots
-    for (let m = newStart; m < newEnd; m += SLOT_MINUTES) {
-      nextHours[hourKey(m)] = entryToMove;
-    }
-
-    upsertDay(date, {
-      AM: specificDayData.AM || null,
-      PM: specificDayData.PM || null,
-      hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-    });
-  }
-
-  function onResizeTask(date, { start, end, newStart, newEnd }) {
-    const specificDayData = monthDataByDate[ymd(date)] || null;
-    if (!specificDayData?.hours) return;
-    const entryToResize = specificDayData.hours[hourKey(start)];
-    if (!entryToResize) return;
-
-    // Use existing values if not provided
-    const finalStart = newStart !== undefined ? newStart : start;
-    const finalEnd = newEnd !== undefined ? newEnd : end;
-
-    // Boundary check
-    if (finalEnd <= finalStart || finalStart < WORK_SLOTS[0] || finalEnd > WORK_SLOTS[WORK_SLOTS.length - 1] + SLOT_MINUTES) return;
-
-    if (hasOverlap(specificDayData.hours, finalStart, finalEnd, start, end)) {
-      showBlockedToast("Impossibile ridimensionare: sovrappone un altro task.");
-      return;
-    }
-
-    const nextHours = { ...specificDayData.hours };
-
-    // Clear old slots
-    for (let m = start; m < end; m += SLOT_MINUTES) {
-      delete nextHours[hourKey(m)];
-    }
-
-    // Fill new slots
-    for (let m = finalStart; m < finalEnd; m += SLOT_MINUTES) {
-      nextHours[hourKey(m)] = entryToResize;
-    }
-
-    upsertDay(date, {
-      AM: specificDayData.AM || null,
-      PM: specificDayData.PM || null,
-      hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-    });
-  }
-
-  function handleSlotDeletion(date, { start, end }) {
-    const key = ymd(date);
-    const existing = monthDataByDate[key];
-    if (!existing?.hours) return;
-    const nextHours = {};
-    for (const [k, e] of Object.entries(existing.hours)) {
-      // keep slot if it's outside the deleted range
-      const [h, m] = k.split(":").map(Number);
-      const slotMin = h * 60 + m;
-      if (slotMin >= start && slotMin < end) continue;
-      nextHours[k] = e;
-    }
-    upsertDay(date, {
-      AM: null,
-      PM: null,
-      hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-    });
-  }
 
   function handleToggleLocation(date) {
     const key = ymd(date);
@@ -314,6 +189,7 @@ export default function App() {
       : "grid grid-cols-1 gap-5";
 
   return (
+    <SettingsContext.Provider value={{ settings, setSettings }}>
     <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white dark:bg-slate-950 transition-colors">
       {blockedToast ? (
         <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-rose-200/80 bg-rose-50/95 px-4 py-2 text-sm font-semibold text-rose-700 shadow-soft backdrop-blur dark:border-rose-900/60 dark:bg-rose-950/70 dark:text-rose-200">
@@ -384,7 +260,6 @@ export default function App() {
               gridDates={gridDates}
               monthDataByDate={monthDataByDate}
               onDayClick={openDayFromMonth}
-              clientColors={settings.clientColors}
               visibleFilter={summaryHoverFilter || summaryFixedFilter}
               onToggleLocation={handleToggleLocation}
             />
@@ -393,8 +268,6 @@ export default function App() {
             <WeekView
               activeDate={activeDate}
               monthDataByDate={monthDataByDate}
-              clientColors={settings.clientColors}
-              taskSubtypes={settings.taskSubtypes}
               onOpenSlot={({ date, start, end, slot }) => {
                  setActiveDate(date);
                  if (start !== undefined && end !== undefined) {
@@ -429,8 +302,6 @@ export default function App() {
               <DayView
                 date={activeDate}
                 dayData={dayData}
-                clientColors={settings.clientColors}
-                taskSubtypes={settings.taskSubtypes}
                 onOpenSlot={(slot) => openEditor(activeDate, slot)}
                 onMoveTask={(args) => onMoveTask(activeDate, args)}
                 onResizeTask={(args) => onResizeTask(activeDate, args)}
@@ -471,12 +342,10 @@ export default function App() {
                   year={year}
                   monthIndex0={month}
                   data={data}
-                  clientColors={settings.clientColors}
                   onHoverFilterChange={setSummaryHoverFilter}
                   activeFilter={summaryHoverFilter || summaryFixedFilter}
                   fixedFilter={summaryFixedFilter}
                   onFixedFilterChange={setSummaryFixedFilter}
-                  taskSubtypes={settings.taskSubtypes}
                 />
               </div>
             </aside>
@@ -517,8 +386,6 @@ export default function App() {
             }}
             topClients={topMonthClients}
             allClients={clientNames}
-            clientColors={settings.clientColors}
-            taskSubtypes={settings.taskSubtypes}
             allPeople={allPeople}
             onSavePeople={(updatedPeople) => {
               savePeople(updatedPeople);
@@ -589,6 +456,7 @@ export default function App() {
         </div>
       </Modal>
     </div>
+    </SettingsContext.Provider>
   );
 }
 

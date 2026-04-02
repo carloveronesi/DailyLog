@@ -1,22 +1,8 @@
 import { useMemo } from "react";
-import {
-  AFTERNOON_SLOTS,
-  MORNING_SLOTS,
-  SLOT_MINUTES,
-  badgePresentation,
-  displayLabel,
-  hourLabel,
-  getSubtypeLabel,
-} from "../domain/tasks";
-import {
-  BREAK_START,
-  BREAK_END,
-  DAY_SLOTS,
-  hasMissingNotes,
-  buildBlocks,
-  slotIndex
-} from "../domain/calendar";
+import { AFTERNOON_SLOTS, MORNING_SLOTS, SLOT_MINUTES, hourLabel } from "../domain/tasks";
+import { BREAK_START, BREAK_END, DAY_SLOTS, buildBlocks } from "../domain/calendar";
 import { useCalendarDrag } from "../hooks/useCalendarDrag";
+import { TaskBlock, computeBlockGeometry } from "./TaskBlock";
 import { monthNameIT } from "../utils/date";
 import { Button, Icon } from "./ui";
 
@@ -38,8 +24,6 @@ function clampToSection(section, min) {
 export function DayView({
   date,
   dayData,
-  clientColors = {},
-  taskSubtypes = {},
   onOpenSlot,
   onMoveTask,
   onResizeTask,
@@ -227,156 +211,43 @@ export function DayView({
             })}
 
             {blocks.map((block, idx) => {
-              const badge = badgePresentation(block.entry, clientColors);
-              const label = displayLabel(block.entry);
-              const startIdx = slotIndex(block.start);
-              const span = block.span || 1;
-              
-              const isBeingMoved = isMoving && moveTaskBlock?.start === block.start;
-              const isBeingResized = isResizing && resizeTaskBlock?.start === block.start;
-              
-              let currentTopIdx = startIdx;
-              let currentSpan = span;
-              let isGhost = false;
-
-              if (isBeingMoved) {
-                 const newStart = block.start + moveTaskDelta;
-                 const newStartIdx = slotIndex(newStart);
-                 if (newStartIdx >= 0) {
-                   currentTopIdx = newStartIdx;
-                 }
-                 isGhost = true;
-              } else if (isBeingResized) {
-                 if (resizeTaskDirection === 'top') {
-                     const newStart = block.start + resizeTaskDelta;
-                     const newStartIdx = slotIndex(newStart);
-                     const endIdx = slotIndex(block.end - SLOT_MINUTES);
-                     if (newStartIdx <= endIdx && newStartIdx >= 0) {
-                         currentTopIdx = newStartIdx;
-                         currentSpan = endIdx - newStartIdx + 1;
-                     }
-                 } else {
-                     const newEnd = block.end + resizeTaskDelta;
-                     const newEndIdx = slotIndex(newEnd - SLOT_MINUTES);
-                     if (newEndIdx >= startIdx) {
-                       currentSpan = newEndIdx - startIdx + 1;
-                     }
-                 }
-              }
-
+              const geo = computeBlockGeometry(block, {
+                isMoving, isResizing,
+                moveTaskBlock, moveTaskDelta,
+                resizeTaskBlock, resizeTaskDelta, resizeTaskDirection,
+              });
               return (
-                <div
+                <TaskBlock
                   key={`${block.start}-${idx}`}
-                  className={
-                    "group absolute z-20 rounded-2xl px-3 shadow-sm flex flex-col justify-center select-none overflow-hidden " +
-                    (currentSpan === 1 ? "py-0.5 " : "py-2 ") +
-                    badge.className + " " +
-                    (isGhost ? "opacity-70 scale-[0.98] ring-2 ring-sky-400 cursor-grabbing " : "transition hover:brightness-95 dark:hover:brightness-110 cursor-grab ") +
-                    (isAnyDragging ? "pointer-events-none " : "")
-                  }
-                  style={{
-                    top: `${currentTopIdx * ROW_HEIGHT + 1}px`,
-                    height: `${currentSpan * ROW_HEIGHT - 2}px`,
-                    left: '15%',
-                    right: '15%',
-                    ...badge.style,
-                  }}
-                  onMouseDown={(e) => {
-                     // Only allow moving blocks that are mapped to hours (not full AM/PM blocks)
-                     if (typeof block.start === 'number' && block.end && !e.target.closest('.resize-handle') && !e.target.closest('.delete-btn')) {
-                       e.stopPropagation();
-                       pendingMoveRef.current = { startY: e.clientY, block: { ...block }, colIdx: null };
-                     }
-                  }}
-                  onClick={(e) => {
-                    // Prevent click if we were dragging
-                    if ((isBeingMoved && moveTaskDelta !== 0) || (isBeingResized && resizeTaskDelta !== 0)) {
-                       return;
+                  block={block}
+                  {...geo}
+                  isAnyDragging={isAnyDragging}
+                  moveTaskDelta={moveTaskDelta}
+                  resizeTaskDelta={resizeTaskDelta}
+                  ROW_HEIGHT={ROW_HEIGHT}
+                  variant="day"
+                  onMouseDownBlock={(e) => {
+                    if (typeof block.start === "number" && block.end && !e.target.closest(".resize-handle") && !e.target.closest(".delete-btn")) {
+                      e.stopPropagation();
+                      pendingMoveRef.current = { startY: e.clientY, block: { ...block }, colIdx: null };
                     }
-                    if (e.target.closest('.resize-handle') || e.target.closest('.delete-btn')) return;
-                    
+                  }}
+                  onOpen={() => {
                     if (block.end && block.end > block.start + SLOT_MINUTES) {
                       onOpenSlot?.({ start: block.start, end: block.end });
                     } else {
                       onOpenSlot?.(block.slot);
                     }
                   }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {hasMissingNotes(block.entry) ? (
-                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85" />
-                  ) : null}
-                  {block.span === 1 ? (
-                    <div className="flex items-center gap-2 overflow-hidden py-1">
-                      <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 shrink-0">{block.label}</div>
-                      {block.entry.subtypeId && (
-                        <div className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 shrink-0">
-                          {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
-                        </div>
-                      )}
-                      <div className="text-sm font-bold truncate">{block.entry.title || label}</div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
-                        {block.entry.subtypeId && (
-                           <div className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300">
-                             {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
-                           </div>
-                        )}
-                      </div>
-                      <div className="mt-1 text-sm font-bold leading-tight line-clamp-2">{block.entry.title || label}</div>
-                    </>
-                  )}
-
-                  {/* Trash button visible on hover */}
-                  {onDeleteSlot && !isBeingMoved && !isBeingResized ? (
-                    <button
-                      type="button"
-                      className="delete-btn absolute right-2 bottom-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-7 w-7 rounded-lg bg-red-500/90 hover:bg-red-600 text-white shadow-sm"
-                      title="Elimina task"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const start = block.start;
-                        const end = block.end ?? (block.start + SLOT_MINUTES);
-                        onDeleteSlot({ start, end });
-                      }}
-                    >
-                      <Icon name="trash" className="w-3.5 h-3.5" />
-                    </button>
-                  ) : null}
-
-                  {/* Top Resize handle */}
-                  {block.end && typeof block.start === 'number' && !isBeingMoved ? (
-                     <div 
-                        className="resize-handle absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-t-2xl shadow-sm"
-                        onMouseDown={(e) => {
-                           e.stopPropagation();
-                           e.preventDefault();
-                           setResizeTaskBlock({ ...block });
-                           setResizeTaskDirection('top');
-                           setResizeTaskDelta(0);
-                        }}
-                     />
-                  ) : null}
-
-                  {/* Bottom Resize handle */}
-                  {block.end && typeof block.start === 'number' && !isBeingMoved ? (
-                     <div 
-                        className="resize-handle absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-b-2xl shadow-sm"
-                        onMouseDown={(e) => {
-                           e.stopPropagation();
-                           e.preventDefault();
-                           setResizeTaskBlock({ ...block });
-                           setResizeTaskDirection('bottom');
-                           setResizeTaskDelta(0);
-                        }}
-                     />
-                  ) : null}
-                </div>
+                  onDelete={onDeleteSlot ? () => {
+                    onDeleteSlot({ start: block.start, end: block.end ?? (block.start + SLOT_MINUTES) });
+                  } : null}
+                  onResizeMouseDown={(direction) => {
+                    setResizeTaskBlock({ ...block });
+                    setResizeTaskDirection(direction);
+                    setResizeTaskDelta(0);
+                  }}
+                />
               );
             })}
           </div>

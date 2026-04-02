@@ -1,4 +1,5 @@
 import { DayCell } from "./DayCell";
+import { useSettings } from "../contexts/SettingsContext";
 import { ymd } from "../utils/date";
 
 function matchesVisibleFilter(entry, visibleFilter) {
@@ -18,10 +19,11 @@ export function CalendarGrid({
     gridDates,
     monthDataByDate,
     onDayClick,
-    clientColors = {},
     visibleFilter = null,
     onToggleLocation,
 }) {
+    const { settings } = useSettings();
+    const clientColors = settings?.clientColors || {};
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (

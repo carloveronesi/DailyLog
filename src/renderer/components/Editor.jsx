@@ -4,7 +4,6 @@ import {
   LOCATION_TYPES,
   MORNING_SLOTS,
   SLOT_MINUTES,
-  TASK_TYPES,
   WORK_SLOTS,
   defaultEntry,
   hourKey,
@@ -14,6 +13,7 @@ import {
 } from "../domain/tasks";
 import { Button, Icon } from "./ui";
 import { EntryForm } from "./EntryForm";
+import { useSettings } from "../contexts/SettingsContext";
 
 function hasMeaning(e) {
   if (!e) return false;
@@ -70,7 +70,10 @@ function buildEndOptions(startMinute, sectionBoundaries) {
   return options;
 }
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, clientColors = {}, taskSubtypes = {}, allPeople = [], onSavePeople, allClients = [] }) {
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [] }) {
+  const { settings } = useSettings();
+  const clientColors = settings?.clientColors || {};
+  const taskSubtypes = settings?.taskSubtypes || {};
   const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
   const initialRangeStart = initialRange?.start ?? initialSlotMin;
   const initialRangeEnd = initialRange?.end ?? null;
@@ -236,8 +239,6 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           onChange={handleEntryChange}
           topClients={topClients}
           allClients={allClients}
-          clientColors={clientColors}
-          taskSubtypes={taskSubtypes}
           allPeople={allPeople}
           onSavePeople={onSavePeople}
           fullDay={fullDay}

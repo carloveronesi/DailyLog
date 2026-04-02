@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { AFTERNOON_SLOTS, MORNING_SLOTS, SLOT_MINUTES, TASK_TYPES } from "../domain/tasks";
 import { Icon } from "./ui";
+import { useSettings } from "../contexts/SettingsContext";
 
 export function EntryForm({
   entry,
   onChange,
   topClients,
   allClients = [],
-  clientColors,
-  taskSubtypes = {},
   allPeople = [],
   onSavePeople,
   fullDay,
@@ -23,6 +22,9 @@ export function EntryForm({
   autoAdjusted,
   hourLabel
 }) {
+  const { settings } = useSettings();
+  const clientColors = settings?.clientColors || {};
+  const taskSubtypes = settings?.taskSubtypes || {};
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const [personInput, setPersonInput] = useState("");
 

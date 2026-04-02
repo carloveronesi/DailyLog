@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { getClientColor, HOURS_PER_DAY, SLOT, WORK_SLOTS, getSubtypeLabel } from "../domain/tasks";
+import { useSettings } from "../contexts/SettingsContext";
 
 function isClientFilterActive(activeFilter, clientName) {
   return activeFilter?.kind === "client" && activeFilter.client === clientName;
@@ -31,13 +32,14 @@ export function SummaryPanel({
   year,
   monthIndex0,
   data,
-  clientColors = {},
   onHoverFilterChange,
   activeFilter = null,
   fixedFilter = null,
   onFixedFilterChange,
-  taskSubtypes = {},
 }) {
+  const { settings } = useSettings();
+  const clientColors = settings?.clientColors || {};
+  const taskSubtypes = settings?.taskSubtypes || {};
   const totals = useMemo(() => {
     const byClient = new Map();
     let internal = { total: 0, bySubtype: {} };
