@@ -65,7 +65,7 @@ export function EntryForm({
   const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]));
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4 min-h-0 flex-1">
       {/* Prima riga: Titolo */}
       <div className="mb-2 pr-8">
         <input
@@ -289,10 +289,10 @@ export function EntryForm({
       </div>
 
       {/* Quinta riga: Note */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
+      <div className="flex flex-col gap-1.5 flex-1 min-h-0">
+        <label className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
         <textarea
-          className="w-full h-24 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+          className="flex-1 min-h-[2.5rem] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
           value={entry.notes}
           onChange={(e) => setField("notes", e.target.value)}
           placeholder="Dettagli..."

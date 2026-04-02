@@ -232,57 +232,55 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const rangeDuration = formatDurationHours(Math.max(rangeEndMin - rangeStartMin, SLOT_MINUTES));
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-4">
-        <EntryForm
-          entry={activeEntry}
-          onChange={handleEntryChange}
-          topClients={topClients}
-          allClients={allClients}
-          allPeople={allPeople}
-          onSavePeople={onSavePeople}
-          fullDay={fullDay}
-          setFullDay={setFullDay}
-          rangeStartMin={rangeStartMin}
-          setRangeStartMin={setRangeStartMin}
-          rangeEndMin={rangeEndMin}
-          setRangeEndMin={setRangeEndMin}
-          startSection={startSection}
-          endOptions={endOptions}
-          rangeDuration={rangeDuration}
-          autoAdjusted={autoAdjusted}
-          hourLabel={hourLabel}
-        />
+    <div className="flex flex-col min-h-0 flex-1 gap-4">
+      <EntryForm
+        entry={activeEntry}
+        onChange={handleEntryChange}
+        topClients={topClients}
+        allClients={allClients}
+        allPeople={allPeople}
+        onSavePeople={onSavePeople}
+        fullDay={fullDay}
+        setFullDay={setFullDay}
+        rangeStartMin={rangeStartMin}
+        setRangeStartMin={setRangeStartMin}
+        rangeEndMin={rangeEndMin}
+        setRangeEndMin={setRangeEndMin}
+        startSection={startSection}
+        endOptions={endOptions}
+        rangeDuration={rangeDuration}
+        autoAdjusted={autoAdjusted}
+        hourLabel={hourLabel}
+      />
 
-        <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+      <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3">
+        <Button
+          className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
+          onClick={handleSave}
+          type="button"
+        >
+          Salva
+        </Button>
+
+        {fullDay ? (
           <Button
-            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
-            onClick={handleSave}
+            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            onClick={onDeleteDay}
             type="button"
           >
-            Salva
+            <Icon name="trash" className="mr-2" />
+            Elimina giornata
           </Button>
-
-          {fullDay ? (
-            <Button
-              className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
-              onClick={onDeleteDay}
-              type="button"
-            >
-              <Icon name="trash" className="mr-2" />
-              Elimina giornata
-            </Button>
-          ) : (
-            <Button
-              className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
-              onClick={handleDeleteSlot}
-              type="button"
-            >
-              <Icon name="trash" className="mr-2" />
-              Elimina task
-            </Button>
-          )}
-        </div>
+        ) : (
+          <Button
+            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            onClick={handleDeleteSlot}
+            type="button"
+          >
+            <Icon name="trash" className="mr-2" />
+            Elimina task
+          </Button>
+        )}
       </div>
     </div>
   );
