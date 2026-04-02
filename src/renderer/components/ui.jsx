@@ -134,6 +134,40 @@ export function Icon({ name, className = "" }) {
         <path d="M21.36 10l-3.36-4" stroke="#F43F5E" />
       </svg>
     );
+  if (name === "building")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+        <path d="M9 22v-4h6v4" />
+        <path d="M8 6h.01" />
+        <path d="M16 6h.01" />
+        <path d="M8 10h.01" />
+        <path d="M16 10h.01" />
+        <path d="M8 14h.01" />
+        <path d="M16 14h.01" />
+        <path d="M15 18h.01" />
+        <path d="M9 18h.01" />
+      </svg>
+    );
+  if (name === "home")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    );
+  if (name === "list-check")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 6l11 0" />
+        <path d="M9 12l11 0" />
+        <path d="M9 18l11 0" />
+        <path d="M5 6l0 .01" />
+        <path d="M5 12l0 .01" />
+        <path d="M5 18l0 .01" />
+      </svg>
+    );
+
   return null;
 }
 

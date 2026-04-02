@@ -20,6 +20,7 @@ export function CalendarGrid({
     onDayClick,
     clientColors = {},
     visibleFilter = null,
+    onToggleLocation,
 }) {
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
@@ -60,6 +61,7 @@ export function CalendarGrid({
                             entries={entries}
                             onDayClick={onDayClick}
                             clientColors={clientColors}
+                            onToggleLocation={onToggleLocation}
                         />
                     );
                 })}

@@ -29,6 +29,12 @@ export const SLOT = {
   PM: "PM",
 };
 
+export const LOCATION_TYPES = {
+  REMOTE: "remote",
+  OFFICE: "office",
+  CLIENT: "client",
+};
+
 export const SLOT_MINUTES = 30;
 
 export function slotMinutes(value) {

@@ -99,9 +99,10 @@ export function useCalendarData(initialYear, initialMonth) {
             const normalized = {
                 AM: entries.AM || null,
                 PM: entries.PM || null,
+                location: entries.location || null,
                 ...(hours ? { hours } : {}),
             };
-            const isEmpty = !normalized.AM && !normalized.PM && !normalized.hours;
+            const isEmpty = !normalized.AM && !normalized.PM && !normalized.hours && (!normalized.location || normalized.location === "remote");
             if (isEmpty) {
                 delete next.byDate[key];
             } else {

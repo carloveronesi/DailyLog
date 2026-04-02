@@ -7,12 +7,13 @@ import { CalendarGrid } from "./components/CalendarGrid";
 import { DayView } from "./components/DayView";
 import { WeekView } from "./components/WeekView";
 import { SearchModal } from "./components/SearchModal";
+import { TodoView } from "./components/TodoView";
 import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { ymd } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
-import { hourKey, WORK_SLOTS, SLOT_MINUTES } from "./domain/tasks";
+import { hourKey, WORK_SLOTS, SLOT_MINUTES, LOCATION_TYPES } from "./domain/tasks";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
   const activeBtnClass = isActive ? "bg-slate-100 dark:bg-slate-800" : "";
@@ -103,7 +104,7 @@ export default function App() {
   }, [settings?.defaultView, hasInitializedView]);
 
   useEffect(() => {
-    if (viewMode !== "day") return;
+    if (viewMode === "month") return;
     if (activeDate.getFullYear() === year && activeDate.getMonth() === month) return;
     setMonthYear(activeDate.getFullYear(), activeDate.getMonth());
   }, [viewMode, activeDate, year, month, setMonthYear]);
@@ -293,6 +294,19 @@ export default function App() {
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }
+
+  function handleToggleLocation(date) {
+    const key = ymd(date);
+    const existing = monthDataByDate[key] || {};
+    const current = existing.location || LOCATION_TYPES.REMOTE;
+    let next;
+    if (current === LOCATION_TYPES.REMOTE) next = LOCATION_TYPES.OFFICE;
+    else if (current === LOCATION_TYPES.OFFICE) next = LOCATION_TYPES.CLIENT;
+    else next = LOCATION_TYPES.REMOTE;
+
+    upsertDay(date, { ...existing, location: next });
+  }
+
   const mainLayoutClass = viewMode === "month"
     ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
     : "grid grid-cols-1 gap-5";
@@ -308,8 +322,14 @@ export default function App() {
       <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
         
         {/* Top */}
-        <div className="flex lg:flex-col items-center w-full lg:pt-4">
+        <div className="flex lg:flex-col items-center w-full lg:pt-4 space-x-2 lg:space-x-0 lg:space-y-1">
            <SidebarBtn icon="search" label="Cerca nello storico" onClick={() => setSearchOpen(true)} />
+           <SidebarBtn 
+              icon="list-check" 
+              label="DA FARE" 
+              onClick={() => setViewMode("todo")} 
+              isActive={viewMode === "todo"}
+           />
         </div>
         
         {/* Middle */}
@@ -364,6 +384,7 @@ export default function App() {
               onDayClick={openDayFromMonth}
               clientColors={settings.clientColors}
               visibleFilter={summaryHoverFilter || summaryFixedFilter}
+              onToggleLocation={handleToggleLocation}
             />
           )}
           {viewMode === "week" && (
@@ -398,6 +419,7 @@ export default function App() {
                  });
               }}
               goToday={goTodayDay}
+              onToggleLocation={handleToggleLocation}
             />
           )}
           {viewMode === "day" && (
@@ -413,8 +435,10 @@ export default function App() {
               onPrevDay={goPrevDay}
               onNextDay={goNextDay}
               onToday={goTodayDay}
+              onToggleLocation={handleToggleLocation}
             />
           )}
+          {viewMode === "todo" && <TodoView />}
 
           {viewMode === "month" ? (
             <aside className="space-y-4 flex flex-col lg:h-full lg:overflow-hidden">

@@ -47,6 +47,7 @@ export function DayView({
   onPrevDay,
   onNextDay,
   onToday,
+  onToggleLocation,
 }) {
   const dayNum = date.getDate();
   const weekday = WEEKDAY_SHORT[date.getDay()];
@@ -79,10 +80,26 @@ export function DayView({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Vista giornaliera</div>
-          <div className="flex items-baseline gap-3">
-            <div className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{dayNum}</div>
-            <div className="text-lg font-semibold text-slate-600 dark:text-slate-300">{weekday}</div>
-            <div className="text-lg font-semibold text-slate-500 dark:text-slate-400">{monthName} {year}</div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-baseline gap-3">
+              <div className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{dayNum}</div>
+              <div className="text-lg font-semibold text-slate-600 dark:text-slate-300">{weekday}</div>
+              <div className="text-lg font-semibold text-slate-500 dark:text-slate-400">{monthName} {year}</div>
+            </div>
+            <button
+               onClick={() => onToggleLocation?.(date)}
+               className={`ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                 dayData?.location && dayData.location !== "remote"
+                   ? "bg-sky-50 border-sky-200 text-sky-700 dark:bg-sky-500/10 dark:border-sky-500/30 dark:text-sky-400"
+                   : "bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+               }`}
+               title="Cambia sede di lavoro"
+            >
+              <Icon name={dayData?.location === "office" ? "building" : "home"} className="w-4 h-4" />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                {dayData?.location === "office" ? "In Ufficio" : dayData?.location === "client" ? "Sede Cliente" : "Da Remoto"}
+              </span>
+            </button>
           </div>
         </div>
 

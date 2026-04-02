@@ -49,7 +49,8 @@ export function WeekView({
   goToday,
   onMoveTask,
   onResizeTask,
-  onDeleteSlot
+  onDeleteSlot,
+  onToggleLocation
 }) {
   const weekDays = useMemo(() => getWorkweekDays(activeDate), [activeDate]);
   
@@ -168,7 +169,20 @@ export function WeekView({
                   <div key={colIdx} className="flex flex-col">
                     {/* Day Header */}
                     <div className="flex flex-col items-center justify-center h-[40px] mb-2 cursor-pointer group" onClick={() => onOpenSlot?.({ date, slot: null })}>
-                       <div className={`text-[11px] lg:text-xs font-semibold uppercase ${isToday ? 'text-sky-600 dark:text-sky-400 font-bold' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800'}`}>{WEEKDAY_NAMES[colIdx]}</div>
+                       <div className="flex items-center gap-1.5">
+                         <div className={`text-[11px] lg:text-xs font-semibold uppercase ${isToday ? 'text-sky-600 dark:text-sky-400 font-bold' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800'}`}>{WEEKDAY_NAMES[colIdx]}</div>
+                         <button
+                           onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
+                           className={`flex items-center justify-center rounded-lg p-0.5 transition-all ${
+                             monthDataByDate[ymd(date)]?.location && monthDataByDate[ymd(date)].location !== "remote"
+                               ? "text-sky-500 bg-sky-50 dark:bg-sky-500/10 dark:text-sky-400 opacity-100"
+                               : "text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                           }`}
+                           title={monthDataByDate[ymd(date)]?.location === "office" ? "In Ufficio" : monthDataByDate[ymd(date)]?.location === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
+                         >
+                           <Icon name={monthDataByDate[ymd(date)]?.location === "office" ? "building" : "home"} className="w-3.5 h-3.5" />
+                         </button>
+                       </div>
                        <div className={`text-lg lg:text-xl font-bold ${isToday ? 'text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/30 rounded-full w-8 h-8 flex items-center justify-center' : 'text-slate-700 dark:text-slate-200'}`}>
                          {date.getDate()}
                        </div>

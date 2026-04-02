@@ -1,4 +1,5 @@
 import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS, hourKey, TASK_TYPES } from "../domain/tasks";
+import { Icon } from "./ui";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -92,7 +93,7 @@ function buildHourSummary(hours) {
   return Array.from(groups.values()).sort((a, b) => b.count - a.count);
 }
 
-export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {} }) {
+export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {}, onToggleLocation }) {
   const d = date.getDate();
   const isToday = isCurrentMonth && date.toDateString() === new Date().toDateString();
   const am = entries?.AM;
@@ -134,6 +135,19 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
     <div className={base + " " + cursor + " " + bg + " " + todayRing} onClick={isClickable ? () => onDayClick(date) : undefined}>
       <div className="flex items-center justify-between px-0.5">
         <div className={dayNumTodayCls}>{d}</div>
+        {isCurrentMonth && !isWeekend && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
+            className={`flex items-center justify-center rounded-lg p-1 transition-all ${
+              entries?.location && entries.location !== "remote"
+                ? "text-sky-500 bg-sky-50 dark:bg-sky-500/10 dark:text-sky-400 opacity-100"
+                : "text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+            }`}
+            title={entries?.location === "office" ? "In Ufficio" : entries?.location === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
+          >
+            <Icon name={entries?.location === "office" ? "building" : "home"} className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {isCurrentMonth && !isWeekend ? (
