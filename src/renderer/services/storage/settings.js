@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS = {
   theme: "light",
   defaultView: "day",
   taskSubtypes: {},
+  todoTags: [],
 };
 
 function normalizeClientColors(raw) {
@@ -32,6 +33,7 @@ export function normalizeSettings(raw) {
     clientColors: normalizeClientColors(raw.clientColors),
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
     taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
+    todoTags: Array.isArray(raw.todoTags) ? raw.todoTags : [],
   };
 }
 

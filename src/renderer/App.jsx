@@ -309,7 +309,9 @@ export default function App() {
 
   const mainLayoutClass = viewMode === "month"
     ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
-    : "grid grid-cols-1 gap-5";
+    : viewMode === "day"
+      ? "grid grid-cols-1 lg:grid-cols-2 gap-5"
+      : "grid grid-cols-1 gap-5";
 
   return (
     <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white dark:bg-slate-950 transition-colors">
@@ -327,8 +329,8 @@ export default function App() {
            <SidebarBtn 
               icon="list-check" 
               label="DA FARE" 
-              onClick={() => setViewMode("todo")} 
-              isActive={viewMode === "todo"}
+              onClick={() => setViewMode("day")} 
+              isActive={viewMode === "day" && activeDate} // Just an example, maybe just isActive={false} if we want it to be a pure shortcut
            />
         </div>
         
@@ -423,22 +425,35 @@ export default function App() {
             />
           )}
           {viewMode === "day" && (
-            <DayView
-              date={activeDate}
-              dayData={dayData}
-              clientColors={settings.clientColors}
-              taskSubtypes={settings.taskSubtypes}
-              onOpenSlot={(slot) => openEditor(activeDate, slot)}
-              onMoveTask={(args) => onMoveTask(activeDate, args)}
-              onResizeTask={(args) => onResizeTask(activeDate, args)}
-              onDeleteSlot={(args) => handleSlotDeletion(activeDate, args)}
-              onPrevDay={goPrevDay}
-              onNextDay={goNextDay}
-              onToday={goTodayDay}
-              onToggleLocation={handleToggleLocation}
-            />
+            <>
+              <DayView
+                date={activeDate}
+                dayData={dayData}
+                clientColors={settings.clientColors}
+                taskSubtypes={settings.taskSubtypes}
+                onOpenSlot={(slot) => openEditor(activeDate, slot)}
+                onMoveTask={(args) => onMoveTask(activeDate, args)}
+                onResizeTask={(args) => onResizeTask(activeDate, args)}
+                onDeleteSlot={(args) => handleSlotDeletion(activeDate, args)}
+                onPrevDay={goPrevDay}
+                onNextDay={goNextDay}
+                onToday={goTodayDay}
+                onToggleLocation={handleToggleLocation}
+              />
+              <TodoView 
+                isEmbedded 
+                availableProjects={clientNames}
+                availableTags={settings.todoTags}
+                onAddGlobalTodoTag={(newTag) => {
+                  setSettings(prev => {
+                    const tags = prev.todoTags || [];
+                    if (tags.some(t => t.toLowerCase() === newTag.toLowerCase())) return prev;
+                    return { ...prev, todoTags: [...tags, newTag] };
+                  });
+                }}
+              />
+            </>
           )}
-          {viewMode === "todo" && <TodoView />}
 
           {viewMode === "month" ? (
             <aside className="space-y-4 flex flex-col lg:h-full lg:overflow-hidden">

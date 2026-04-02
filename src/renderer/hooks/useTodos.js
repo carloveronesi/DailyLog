@@ -12,12 +12,15 @@ export function useTodos() {
     setTodos((prev) => {
       const newTodo = {
         id: crypto.randomUUID(),
-        title: todoData.title || "Nuova attività",
+        title: todoData.title || "",
         description: todoData.description || "",
         group: todoData.group || "DA FARE",
         startDate: todoData.startDate || null,
         endDate: todoData.endDate || null,
         isDone: false,
+        subtasks: todoData.subtasks || [],
+        tags: todoData.tags || [],
+        project: todoData.project || "",
         createdAt: Date.now(),
       };
       const updated = [...prev, newTodo];
@@ -28,7 +31,19 @@ export function useTodos() {
 
   const updateTodo = useCallback((id, updates) => {
     setTodos((prev) => {
-      const updated = prev.map((t) => (t.id === id ? { ...t, ...updates } : t));
+      const updated = prev.map((t) => {
+        if (t.id !== id) return t;
+        
+        // Ensure subtasks, tags and project exist in the merged object
+        const merged = { 
+          ...t, 
+          ...updates,
+          subtasks: updates.subtasks !== undefined ? updates.subtasks : (t.subtasks || []),
+          tags: updates.tags !== undefined ? updates.tags : (t.tags || []),
+          project: updates.project !== undefined ? updates.project : (t.project || ""),
+        };
+        return merged;
+      });
       saveTodos(updated);
       return updated;
     });

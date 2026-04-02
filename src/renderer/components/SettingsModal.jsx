@@ -63,6 +63,28 @@ export function SettingsModal({
   }
 
   const [newSubtypes, setNewSubtypes] = useState({});
+  const [newTodoTag, setNewTodoTag] = useState("");
+
+  function addTodoTag() {
+    const val = newTodoTag.trim();
+    if (!val) return;
+    setSettings((prev) => {
+      const tags = prev.todoTags || [];
+      if (tags.some((t) => t.toLowerCase() === val.toLowerCase())) return prev;
+      return {
+        ...prev,
+        todoTags: [...tags, val],
+      };
+    });
+    setNewTodoTag("");
+  }
+
+  function removeTodoTag(tagName) {
+    setSettings((prev) => ({
+      ...prev,
+      todoTags: (prev.todoTags || []).filter((t) => t !== tagName),
+    }));
+  }
 
   function addSubtype(typeId) {
     const val = (newSubtypes[typeId] || "").trim();
@@ -296,6 +318,51 @@ export function SettingsModal({
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Sezione Tag Todo */}
+              <div className="pt-6 border-t border-slate-200 dark:border-slate-700/50">
+                <div className="space-y-1 mb-4">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Tag Attività (Todo)</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Definisci dei tag globali da assegnare alle tue attività nella todo-list.
+                  </div>
+                </div>
+                <div className="flex gap-2 w-full max-w-lg mb-4">
+                  <input
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
+                    placeholder="Es. Urgent, Personal, Progetti..."
+                    value={newTodoTag}
+                    onChange={(e) => setNewTodoTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTodoTag();
+                      }
+                    }}
+                  />
+                  <Button
+                    className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 py-2 shrink-0"
+                    onClick={addTodoTag}
+                    type="button"
+                  >
+                    Aggiungi
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(settings.todoTags || []).length === 0 ? (
+                    <span className="text-xs text-slate-400 italic">Nessun tag configurato.</span>
+                  ) : (
+                    (settings.todoTags || []).map((tag) => (
+                      <div key={tag} className="flex items-center gap-1.5 rounded-full bg-sky-50 pl-3 pr-1 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border border-sky-100 dark:border-sky-500/20">
+                        {tag}
+                        <button onClick={() => removeTodoTag(tag)} className="p-1 rounded-full text-sky-400 hover:text-rose-500 hover:bg-sky-100 dark:hover:bg-rose-500/20 transition-colors" title="Rimuovi">
+                          <Icon name="x" className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}
