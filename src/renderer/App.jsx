@@ -12,6 +12,7 @@ import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { useTaskOperations } from "./hooks/useTaskOperations";
+import { useUIState } from "./hooks/useUIState";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { ymd } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
@@ -74,91 +75,37 @@ export default function App() {
     useDefaultDesktopBackupDir,
   } = useBackupSync(data, year, month);
 
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [selectedRange, setSelectedRange] = useState(null);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [summaryHoverFilter, setSummaryHoverFilter] = useState(null);
-  const [summaryFixedFilter, setSummaryFixedFilter] = useState(null);
-  const [viewMode, setViewMode] = useState("day");
-  const [activeDate, setActiveDate] = useState(today);
-  const [showBackupConfirm, setShowBackupConfirm] = useState(false);
-  const [hasInitializedView, setHasInitializedView] = useState(false);
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
   const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay });
 
-  // Initialize view mode from settings once
-  useEffect(() => {
-    if (!hasInitializedView && settings?.defaultView) {
-      setViewMode(settings.defaultView);
-      setHasInitializedView(true);
-    }
-  }, [settings?.defaultView, hasInitializedView]);
+  const {
+    selectedDate, selectedSlot, selectedRange,
+    editorOpen,
+    settingsOpen, setSettingsOpen,
+    searchOpen, setSearchOpen,
+    summaryHoverFilter, setSummaryHoverFilter,
+    summaryFixedFilter, setSummaryFixedFilter,
+    viewMode, setViewMode,
+    activeDate, setActiveDate,
+    showBackupConfirm, setShowBackupConfirm,
+    openEditor, openDayFromMonth, closeEditor,
+    goPrevDay, goNextDay, goTodayDay,
+  } = useUIState({ settings, setMonthYear });
 
+  // Sincronizza mese calendario con la data attiva nelle viste settimana/giorno
   useEffect(() => {
     if (viewMode === "month") return;
     if (activeDate.getFullYear() === year && activeDate.getMonth() === month) return;
     setMonthYear(activeDate.getFullYear(), activeDate.getMonth());
   }, [viewMode, activeDate, year, month, setMonthYear]);
 
-  function openEditor(date, slotOrRange = null) {
-    setSelectedDate(date);
-    setSelectedSlot(null);
-    setSelectedRange(null);
-    if (slotOrRange && typeof slotOrRange === "object" && slotOrRange.start !== undefined) {
-      setSelectedRange(slotOrRange);
-    } else {
-      setSelectedSlot(slotOrRange);
-    }
-    setActiveDate(date);
-    setEditorOpen(true);
-  }
-
-  function openDayFromMonth(date) {
-    setActiveDate(date);
-    setViewMode("day");
-  }
-
-  function closeEditor() {
-    setEditorOpen(false);
-    setSelectedDate(null);
-    setSelectedSlot(null);
-    setSelectedRange(null);
-  }
-
   function handleImportSuccess() {
-    // Refresh data from localStorage without losing UI state (view, filters, active date).
     reloadFromStorage();
   }
 
-
   function toggleTheme() {
     setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
-  }
-
-  function goPrevDay() {
-    setActiveDate((prev) => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() - 1);
-      return next;
-    });
-  }
-
-  function goNextDay() {
-    setActiveDate((prev) => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() + 1);
-      return next;
-    });
-  }
-
-  function goTodayDay() {
-    const now = new Date();
-    setActiveDate(now);
-    setMonthYear(now.getFullYear(), now.getMonth());
   }
 
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
