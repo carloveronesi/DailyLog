@@ -227,9 +227,10 @@ export function DayView({
                   ROW_HEIGHT={ROW_HEIGHT}
                   variant="day"
                   onMouseDownBlock={(e) => {
+                    const section = slotSection(block.start);
                     if (typeof block.start === "number" && block.end && !e.target.closest(".resize-handle") && !e.target.closest(".delete-btn")) {
                       e.stopPropagation();
-                      pendingMoveRef.current = { startY: e.clientY, block: { ...block }, colIdx: null };
+                      pendingMoveRef.current = { startY: e.clientY, block: { ...block }, colIdx: section };
                     }
                   }}
                   onOpen={() => {
@@ -243,6 +244,8 @@ export function DayView({
                     onDeleteSlot({ start: block.start, end: block.end ?? (block.start + SLOT_MINUTES) });
                   } : null}
                   onResizeMouseDown={(direction) => {
+                    const section = slotSection(block.start);
+                    setDragSection(section);
                     setResizeTaskBlock({ ...block });
                     setResizeTaskDirection(direction);
                     setResizeTaskDelta(0);
