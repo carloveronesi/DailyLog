@@ -1,5 +1,4 @@
 # Nuove feature
-- filtri temporali nella ricerca (es periodo)
 - aggiungere voce "festività" tipo 1o maggio
 - scheda progetto dove puoi mettere le info di progetto
     - possibilità di cambiare nome del cliente da impostazioni
