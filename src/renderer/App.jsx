@@ -14,7 +14,7 @@ import { useBackupSync } from "./hooks/useBackupSync";
 import { useTaskOperations } from "./hooks/useTaskOperations";
 import { useUIState } from "./hooks/useUIState";
 import { SettingsContext } from "./contexts/SettingsContext";
-import { ymd } from "./utils/date";
+import { ymd, sameYMD } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
 import { LOCATION_TYPES } from "./domain/tasks";
 
@@ -91,6 +91,7 @@ export default function App() {
     showBackupConfirm, setShowBackupConfirm,
     openEditor, openDayFromMonth, closeEditor,
     goPrevDay, goNextDay, goTodayDay,
+    searchFilters, setSearchFilters,
   } = useUIState({ settings, setMonthYear });
 
   // Sincronizza mese calendario con la data attiva nelle viste settimana/giorno
@@ -129,10 +130,11 @@ export default function App() {
     upsertDay(date, { ...existing, location: next });
   }
 
+  const isToday = sameYMD(activeDate, new Date());
   const mainLayoutClass = viewMode === "month"
     ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
     : viewMode === "day"
-      ? "grid grid-cols-1 lg:grid-cols-2 gap-5"
+      ? (isToday ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : "grid grid-cols-1 gap-5")
       : "grid grid-cols-1 gap-5";
 
   return (
@@ -258,18 +260,20 @@ export default function App() {
                 onToday={goTodayDay}
                 onToggleLocation={handleToggleLocation}
               />
-              <TodoView 
-                isEmbedded 
-                availableProjects={clientNames}
-                availableTags={settings.todoTags}
-                onAddGlobalTodoTag={(newTag) => {
-                  setSettings(prev => {
-                    const tags = prev.todoTags || [];
-                    if (tags.some(t => t.toLowerCase() === newTag.toLowerCase())) return prev;
-                    return { ...prev, todoTags: [...tags, newTag] };
-                  });
-                }}
-              />
+              {isToday && (
+                <TodoView 
+                  isEmbedded 
+                  availableProjects={clientNames}
+                  availableTags={settings.todoTags}
+                  onAddGlobalTodoTag={(newTag) => {
+                    setSettings(prev => {
+                      const tags = prev.todoTags || [];
+                      if (tags.some(t => t.toLowerCase() === newTag.toLowerCase())) return prev;
+                      return { ...prev, todoTags: [...tags, newTag] };
+                    });
+                  }}
+                />
+              )}
             </>
           )}
 
@@ -345,6 +349,11 @@ export default function App() {
       <SearchModal
          open={searchOpen}
          onClose={() => setSearchOpen(false)}
+         allPeople={allPeople}
+         allClients={clientNames}
+         settings={settings}
+         filters={searchFilters}
+         setFilters={setSearchFilters}
          onSelectDate={(date, rawSlots) => {
              // Go to the month containing this date
              setMonthYear(date.getFullYear(), date.getMonth());

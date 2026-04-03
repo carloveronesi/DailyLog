@@ -1,9 +1,8 @@
 import { STORAGE_PREFIX, SETTINGS_KEY } from "./core";
 
-export function searchAllLogs(query) {
-  if (!query || typeof query !== "string") return [];
-  const q = query.toLowerCase().trim();
-  if (!q) return [];
+export function searchAllLogs(query, filters = {}) {
+  const { startDate, endDate, collaborator, project, type, subtypeId } = filters;
+  const q = (query || "").toLowerCase().trim();
 
   const results = [];
 
@@ -20,6 +19,10 @@ export function searchAllLogs(query) {
       if (!byDate || typeof byDate !== "object") continue;
 
       for (const dateKey of Object.keys(byDate)) {
+        // Date range filter
+        if (startDate && dateKey < startDate) continue;
+        if (endDate && dateKey > endDate) continue;
+
         const day = byDate[dateKey];
         if (!day) continue;
         
@@ -31,23 +34,31 @@ export function searchAllLogs(query) {
 
         const checkEntry = (entry, slotLabel) => {
           if (!entry || typeof entry !== "object") return;
+          
+          // Apply text query
           const matchTitle = (entry.title || "").toLowerCase().includes(q);
           const matchNotes = (entry.notes || "").toLowerCase().includes(q);
           const matchClient = (entry.client || "").toLowerCase().includes(q);
           const matchNextSteps = (entry.nextSteps || "").toLowerCase().includes(q);
+          const queryMatches = !q || (matchTitle || matchNotes || matchClient || matchNextSteps);
+          if (!queryMatches) return;
 
-          if (matchTitle || matchNotes || matchClient || matchNextSteps) {
-            const uniqueKey = JSON.stringify(entry);
-            if (!dayMatches.has(uniqueKey)) {
-              dayMatches.set(uniqueKey, {
-                date: dateObj,
-                dateKey,
-                slots: [slotLabel],
-                entry
-              });
-            } else {
-              dayMatches.get(uniqueKey).slots.push(slotLabel);
-            }
+          // Apply specific filters
+          if (type && entry.type !== type) return;
+          if (project && entry.client !== project) return;
+          if (subtypeId && entry.subtypeId !== subtypeId) return;
+          if (collaborator && !(entry.collaborators || []).includes(collaborator)) return;
+
+          const uniqueKey = JSON.stringify(entry);
+          if (!dayMatches.has(uniqueKey)) {
+            dayMatches.set(uniqueKey, {
+              date: dateObj,
+              dateKey,
+              slots: [slotLabel],
+              entry
+            });
+          } else {
+            dayMatches.get(uniqueKey).slots.push(slotLabel);
           }
         };
 

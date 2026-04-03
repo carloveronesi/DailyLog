@@ -21,6 +21,14 @@ export function useUIState({ settings, setMonthYear }) {
   const [activeDate, setActiveDate] = useState(() => new Date());
   const [showBackupConfirm, setShowBackupConfirm] = useState(false);
   const [hasInitializedView, setHasInitializedView] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    startDate: "",
+    endDate: "",
+    collaborator: "",
+    project: "",
+    type: "",
+    subtypeId: ""
+  });
 
   useEffect(() => {
     if (!hasInitializedView && settings?.defaultView) {
@@ -88,5 +96,6 @@ export function useUIState({ settings, setMonthYear }) {
     showBackupConfirm, setShowBackupConfirm,
     openEditor, openDayFromMonth, closeEditor,
     goPrevDay, goNextDay, goTodayDay,
+    searchFilters, setSearchFilters,
   };
 }
