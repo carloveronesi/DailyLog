@@ -177,7 +177,7 @@ export function Icon({ name, className = "" }) {
   return null;
 }
 
-export function Modal({ open, title, children, onClose }) {
+export function Modal({ open, title, children, onClose, className = "max-w-2xl" }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
@@ -191,7 +191,7 @@ export function Modal({ open, title, children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl max-h-[calc(100svh-2rem)] flex flex-col rounded-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur border border-slate-200 dark:border-slate-700 shadow-soft dark:shadow-soft-dark">
+      <div className={`relative w-full ${className} max-h-[calc(100svh-2rem)] flex flex-col rounded-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur border border-slate-200 dark:border-slate-700 shadow-soft dark:shadow-soft-dark`}>
         {title ? (
           <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
             <div className="text-base font-semibold dark:text-slate-100">{title}</div>
