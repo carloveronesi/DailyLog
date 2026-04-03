@@ -6,24 +6,27 @@ import { dowMon0, ymd } from "../utils/date";
 export function useCalendarData(initialYear, initialMonth) {
     const [year, setYear] = useState(initialYear);
     const [month, setMonth] = useState(initialMonth);
-    const [data, setData] = useState(() => loadMonthData(year, month));
-    // Skip the very first persist: data was just loaded from storage, no need to write it back.
-    const isFirstMount = useRef(true);
+    
+    // Cache multiple months: { "YYYY-MM": { byDate: {...} } }
+    const [monthsData, setMonthsData] = useState({});
 
-    // Reload data when year or month changes
+    // Whenever focal year/month changes, ensure we have current, prev, and next months
     useEffect(() => {
-        const loaded = loadMonthData(year, month);
-        setData(loaded);
+        const focal = new Date(year, month, 1);
+        const prev = new Date(year, month - 1, 1);
+        const next = new Date(year, month + 1, 1);
+
+        const newMonthsData = {};
+        [prev, focal, next].forEach(d => {
+            const y = d.getFullYear();
+            const m = d.getMonth();
+            const monthStr = String(m + 1).padStart(2, '0');
+            const mKey = `${y}-${monthStr}`;
+            
+            newMonthsData[mKey] = loadMonthData(y, m);
+        });
+        setMonthsData(prevData => ({ ...prevData, ...newMonthsData }));
     }, [year, month]);
-
-    // Persist on data change (skip the initial mount to avoid a redundant write)
-    useEffect(() => {
-        if (isFirstMount.current) {
-            isFirstMount.current = false;
-            return;
-        }
-        saveMonthData(year, month, data);
-    }, [data, year, month]);
 
     const gridDates = useMemo(() => {
         const first = new Date(year, month, 1);
@@ -64,11 +67,31 @@ export function useCalendarData(initialYear, initialMonth) {
         return weeks.flat();
     }, [year, month]);
 
-    const monthDataByDate = data?.byDate || {};
+    // Merged data from all cached months
+    const monthDataByDate = useMemo(() => {
+        const merged = {};
+        Object.values(monthsData).forEach(m => {
+            if (m?.byDate) {
+                Object.assign(merged, m.byDate);
+            }
+        });
+        return merged;
+    }, [monthsData]);
+
+    // Data for the focal month (for backward compat and backup sync)
+    const data = useMemo(() => {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const mKey = `${year}-${monthStr}`;
+        return monthsData[mKey] || { byDate: {} };
+    }, [monthsData, year, month]);
 
     const topMonthClients = useMemo(() => {
         const countByClient = new Map();
         for (const dateKey of Object.keys(monthDataByDate)) {
+            const dObj = new Date(dateKey);
+            // Only count clients for the focal month to keep the top clients list consistent with view
+            if (dObj.getFullYear() !== year || dObj.getMonth() !== month) continue;
+
             const day = monthDataByDate[dateKey];
             for (const s of [SLOT.AM, SLOT.PM]) {
                 const e = day?.[s];
@@ -89,40 +112,75 @@ export function useCalendarData(initialYear, initialMonth) {
             .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "it"))
             .slice(0, 3)
             .map(([clientName]) => clientName);
-    }, [monthDataByDate]);
+    }, [monthDataByDate, year, month]);
 
     function upsertDay(date, entries) {
         const key = ymd(date);
-        setData((prev) => {
-            const next = { ...prev, byDate: { ...(prev.byDate || {}) } };
-            const hours = entries.hours && Object.keys(entries.hours).length > 0 ? entries.hours : undefined;
-            const normalized = {
-                AM: entries.AM || null,
-                PM: entries.PM || null,
-                location: entries.location || null,
-                ...(hours ? { hours } : {}),
-            };
-            const isEmpty = !normalized.AM && !normalized.PM && !normalized.hours && (!normalized.location || normalized.location === "remote");
+        const [y, mStr] = key.split("-");
+        const targetYear = parseInt(y);
+        const targetMonth0 = parseInt(mStr) - 1;
+        const mKey = `${y}-${mStr}`;
+
+        const hours = entries.hours && Object.keys(entries.hours).length > 0 ? entries.hours : undefined;
+        const normalized = {
+            AM: entries.AM || null,
+            PM: entries.PM || null,
+            location: entries.location || null,
+            ...(hours ? { hours } : {}),
+        };
+        const isEmpty = !normalized.AM && !normalized.PM && !normalized.hours && (!normalized.location || normalized.location === "remote");
+
+        setMonthsData(prev => {
+            const currentMonthData = prev[mKey] || { byDate: {} };
+            const nextByDate = { ...currentMonthData.byDate };
             if (isEmpty) {
-                delete next.byDate[key];
+                delete nextByDate[key];
             } else {
-                next.byDate[key] = normalized;
+                nextByDate[key] = normalized;
             }
-            return next;
+            const nextMonthData = { ...currentMonthData, byDate: nextByDate };
+            
+            // Persist specifically to the correct month bucket
+            saveMonthData(targetYear, targetMonth0, nextMonthData);
+            
+            return { ...prev, [mKey]: nextMonthData };
         });
     }
 
     function deleteDay(date) {
         const key = ymd(date);
-        setData((prev) => {
-            const next = { ...prev, byDate: { ...(prev.byDate || {}) } };
-            delete next.byDate[key];
-            return next;
+        const [y, mStr] = key.split("-");
+        const targetYear = parseInt(y);
+        const targetMonth0 = parseInt(mStr) - 1;
+        const mKey = `${y}-${mStr}`;
+
+        setMonthsData(prev => {
+            const currentMonthData = prev[mKey] || { byDate: {} };
+            const nextByDate = { ...currentMonthData.byDate };
+            delete nextByDate[key];
+            const nextMonthData = { ...currentMonthData, byDate: nextByDate };
+            
+            saveMonthData(targetYear, targetMonth0, nextMonthData);
+            
+            return { ...prev, [mKey]: nextMonthData };
         });
     }
 
     function reloadFromStorage() {
-        setData(loadMonthData(year, month));
+        // Refresh focal, prev and next
+        const focal = new Date(year, month, 1);
+        const prev = new Date(year, month - 1, 1);
+        const next = new Date(year, month + 1, 1);
+
+        const newMonthsData = {};
+        [prev, focal, next].forEach(d => {
+            const y = d.getFullYear();
+            const m = d.getMonth();
+            const monthStr = String(m + 1).padStart(2, '0');
+            const mKey = `${y}-${monthStr}`;
+            newMonthsData[mKey] = loadMonthData(y, m);
+        });
+        setMonthsData(prev => ({ ...prev, ...newMonthsData }));
     }
 
     function prevMonth() {
@@ -151,6 +209,15 @@ export function useCalendarData(initialYear, initialMonth) {
         setMonth(nextMonth);
     }
 
+    // SetData is preserved for backward compatibility but might not work exactly as before
+    // since it now only updates the focal month in state.
+    const setData = (newData) => {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const mKey = `${year}-${monthStr}`;
+        setMonthsData(prev => ({ ...prev, [mKey]: newData }));
+        saveMonthData(year, month, newData);
+    };
+
     return {
         year,
         month,
@@ -168,3 +235,4 @@ export function useCalendarData(initialYear, initialMonth) {
         setData,
     };
 }
+
