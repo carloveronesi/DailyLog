@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "./components/Editor";
 import { SettingsModal } from "./components/SettingsModal";
 import { SummaryPanel } from "./components/SummaryPanel";
@@ -118,7 +118,10 @@ export default function App() {
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
 
-  function handleToggleLocation(date) {
+  const searchTimeoutRef = useRef(null);
+  useEffect(() => () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); }, []);
+
+  const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
     const existing = monthDataByDate[key] || {};
     const current = existing.location || LOCATION_TYPES.REMOTE;
@@ -128,7 +131,7 @@ export default function App() {
     else next = LOCATION_TYPES.REMOTE;
 
     upsertDay(date, { ...existing, location: next });
-  }
+  }, [monthDataByDate, upsertDay]);
 
   const isToday = sameYMD(activeDate, new Date());
   const mainLayoutClass = viewMode === "month"
@@ -371,14 +374,17 @@ export default function App() {
                  
                  const start = mins[0];
                  const end = mins[mins.length - 1] + 30; // Add 30 minutes for the last slot
-                 setTimeout(() => openEditor(date, { start, end }), 10);
+                 if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                 searchTimeoutRef.current = setTimeout(() => openEditor(date, { start, end }), 10);
                } else {
                  // only AM or PM
                  // we can leave editor's fallback logic by passing null, but we forcefully open it
-                 setTimeout(() => openEditor(date), 10);
+                 if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                 searchTimeoutRef.current = setTimeout(() => openEditor(date), 10);
                }
              } else {
-               setTimeout(() => openEditor(date), 10);
+               if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+               searchTimeoutRef.current = setTimeout(() => openEditor(date), 10);
              }
          }}
       />

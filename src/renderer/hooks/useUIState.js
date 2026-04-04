@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 /**
  * Gestisce tutto lo stato UI di navigazione: modal aperti, vista corrente,
@@ -50,10 +50,10 @@ export function useUIState({ settings, setMonthYear }) {
     setEditorOpen(true);
   }
 
-  function openDayFromMonth(date) {
+  const openDayFromMonth = useCallback((date) => {
     setActiveDate(date);
     setViewMode("day");
-  }
+  }, []);
 
   function closeEditor() {
     setEditorOpen(false);

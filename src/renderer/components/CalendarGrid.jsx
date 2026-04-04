@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { DayCell } from "./DayCell";
 import { useSettings } from "../contexts/SettingsContext";
 import { ymd } from "../utils/date";
@@ -23,7 +24,7 @@ export function CalendarGrid({
     onToggleLocation,
 }) {
     const { settings } = useSettings();
-    const clientColors = settings?.clientColors || {};
+    const clientColors = useMemo(() => settings?.clientColors || {}, [settings?.clientColors]);
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (

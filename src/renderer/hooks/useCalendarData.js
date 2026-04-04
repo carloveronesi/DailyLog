@@ -117,8 +117,8 @@ export function useCalendarData(initialYear, initialMonth) {
     function upsertDay(date, entries) {
         const key = ymd(date);
         const [y, mStr] = key.split("-");
-        const targetYear = parseInt(y);
-        const targetMonth0 = parseInt(mStr) - 1;
+        const targetYear = parseInt(y, 10);
+        const targetMonth0 = parseInt(mStr, 10) - 1;
         const mKey = `${y}-${mStr}`;
 
         const hours = entries.hours && Object.keys(entries.hours).length > 0 ? entries.hours : undefined;
@@ -150,8 +150,8 @@ export function useCalendarData(initialYear, initialMonth) {
     function deleteDay(date) {
         const key = ymd(date);
         const [y, mStr] = key.split("-");
-        const targetYear = parseInt(y);
-        const targetMonth0 = parseInt(mStr) - 1;
+        const targetYear = parseInt(y, 10);
+        const targetMonth0 = parseInt(mStr, 10) - 1;
         const mKey = `${y}-${mStr}`;
 
         setMonthsData(prev => {

@@ -52,98 +52,90 @@ export function useBackupSync(calendarData, year, month) {
     // Desktop app: initialize auto-backup target path
     useEffect(() => {
         if (!hasDesktopBridge || !desktopBridge?.getAutoBackupPath) return;
-        let cancelled = false;
+        const controller = new AbortController();
 
         (async () => {
             try {
                 const filePath = await desktopBridge.getAutoBackupPath(settings.desktopBackupDir);
-                if (cancelled) return;
+                if (controller.signal.aborted) return;
                 setDesktopBackupPath(filePath || "");
             } catch (err) {
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setDesktopBackupStatus(`Backup desktop non disponibile: ${err?.message || err}`);
                 }
             }
         })();
 
-        return () => {
-            cancelled = true;
-        };
+        return () => controller.abort();
     }, [desktopBridge, hasDesktopBridge, settings.desktopBackupDir]);
 
     // Desktop app: write backup in configured desktop folder at every data change
     useEffect(() => {
         if (!hasDesktopBridge || !desktopBridge?.writeAutoBackup) return;
-        let cancelled = false;
+        const controller = new AbortController();
 
         (async () => {
             try {
                 const payload = JSON.stringify(collectExportData(), null, 2);
                 const result = await desktopBridge.writeAutoBackup(payload, settings.desktopBackupDir);
-                if (cancelled) return;
+                if (controller.signal.aborted) return;
                 if (result?.filePath) setDesktopBackupPath(result.filePath);
                 setDesktopBackupStatus(`Backup desktop aggiornato alle ${new Date().toLocaleTimeString("it-IT")}`);
             } catch (err) {
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setDesktopBackupStatus(`Backup desktop in errore: ${err?.message || err}`);
                 }
             }
         })();
 
-        return () => {
-            cancelled = true;
-        };
+        return () => controller.abort();
     }, [desktopBridge, hasDesktopBridge, calendarData, year, month, settings.desktopBackupDir]);
 
     // Optional auto-backup on file (Browser)
     useEffect(() => {
         if (hasDesktopBridge) return;
         if (!backupFileHandle) return;
-        let cancelled = false;
+        const controller = new AbortController();
 
         (async () => {
             try {
                 const allowed = await ensureFilePermission(backupFileHandle);
                 if (!allowed) throw new Error("permesso file negato");
                 await writeBackupToFile(backupFileHandle);
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     const hhmmss = new Date().toLocaleTimeString("it-IT");
                     setBackupStatus(`Backup aggiornato alle ${hhmmss}`);
                 }
             } catch (err) {
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setBackupStatus(`Backup in errore: ${err?.message || err}`);
                 }
             }
         })();
 
-        return () => {
-            cancelled = true;
-        };
+        return () => controller.abort();
     }, [hasDesktopBridge, backupFileHandle, calendarData, year, month]);
 
     // Restore persisted backup file handle across sessions
     useEffect(() => {
         if (hasDesktopBridge) return;
         if (!supportsHandlePersistence) return;
-        let cancelled = false;
+        const controller = new AbortController();
 
         (async () => {
             try {
                 const handle = await restoreBackupHandle();
-                if (!handle || cancelled) return;
+                if (!handle || controller.signal.aborted) return;
                 setBackupFileHandle(handle);
                 setBackupStatus("Backup auto ripristinato");
             } catch (err) {
-                if (!cancelled) {
+                if (!controller.signal.aborted) {
                     setBackupStatus(`Backup non ripristinato: ${err?.message || err}`);
                 }
             }
         })();
 
-        return () => {
-            cancelled = true;
-        };
+        return () => controller.abort();
     }, [hasDesktopBridge, supportsHandlePersistence]);
 
     async function enableAutoBackup() {

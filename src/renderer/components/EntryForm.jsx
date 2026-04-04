@@ -59,18 +59,22 @@ export function EntryForm({
   const currentSubtypes = taskSubtypes[entry.type] || [];
   const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]));
 
+  function generateSubtypeId(label) {
+    return label.toLowerCase().trim().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
   const handleSubtypeChange = (val) => {
     if (!val) {
       setField("subtypeId", null);
       return;
     }
 
-    // Se è un valore nuovo non presente nella lista attuale dei sottotipi per questo tipo
-    const newId = val.toLowerCase().trim().replace(/[\s\W-]+/g, "-");
+    const newId = generateSubtypeId(val);
+    if (!newId) return; // input composto solo da caratteri speciali
+
     const exists = currentSubtypes.some(st => st.id === newId || st.label.toLowerCase() === val.toLowerCase());
 
-    if (!exists && val.trim() !== "") {
-      // Aggiorna le impostazioni globali
+    if (!exists) {
       setSettings(prev => {
         const st = prev.taskSubtypes || {};
         const list = st[entry.type] || [];
@@ -78,15 +82,14 @@ export function EntryForm({
           ...prev,
           taskSubtypes: {
             ...st,
-            [entry.type]: [...list, { id: newId, label: val }]
+            [entry.type]: [...list, { id: newId, label: val.trim() }]
           }
         };
       });
       setField("subtypeId", newId);
     } else {
-      // Se esiste già, assicuriamoci di usare l'ID corretto
       const existing = currentSubtypes.find(st => st.id === newId || st.label.toLowerCase() === val.toLowerCase());
-      setField("subtypeId", existing ? existing.id : val);
+      setField("subtypeId", existing ? existing.id : newId);
     }
   };
 

@@ -3,10 +3,11 @@ import { hourKey, WORK_SLOTS, SLOT_MINUTES } from "../domain/tasks";
 import { ymd } from "../utils/date";
 
 function hasOverlap(hours, rangeStart, rangeEnd, ignoreStart, ignoreEnd) {
+  const hasIgnore = ignoreStart !== undefined && ignoreEnd !== undefined;
+  const ignoreFrom = hasIgnore ? Math.min(ignoreStart, ignoreEnd) : undefined;
+  const ignoreTo   = hasIgnore ? Math.max(ignoreStart, ignoreEnd) : undefined;
   for (let m = rangeStart; m < rangeEnd; m += SLOT_MINUTES) {
-    if (ignoreStart !== undefined && ignoreEnd !== undefined && m >= ignoreStart && m < ignoreEnd) {
-      continue;
-    }
+    if (hasIgnore && m >= ignoreFrom && m < ignoreTo) continue;
     if (hours[hourKey(m)]) return true;
   }
   return false;

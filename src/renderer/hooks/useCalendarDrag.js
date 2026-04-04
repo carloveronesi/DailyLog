@@ -34,15 +34,32 @@ export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDa
     };
   }, [dragStart, dragHover, isDraggingEmpty]);
 
+  // Ref always-current per evitare re-attach degli event listener ad ogni render.
+  // handleUp e handleMove leggono da questo ref invece di catturare valori stale in chiusura.
+  const stateRef = useRef({});
+  stateRef.current = {
+    dragStart, dragHover, activeDragCol, isDraggingEmpty,
+    isMoving, isResizing, moveTaskBlock, moveTaskDelta,
+    resizeTaskBlock, resizeTaskDelta, resizeTaskDirection,
+    onOpenSlot, onMoveTask, onResizeTask, getColDate, clampToSection,
+  };
+
   useEffect(() => {
     function handleUp() {
+      const {
+        isDraggingEmpty, dragStart, dragHover, activeDragCol,
+        isMoving, moveTaskDelta, moveTaskBlock,
+        isResizing, resizeTaskDelta, resizeTaskBlock, resizeTaskDirection,
+        onOpenSlot, onMoveTask, onResizeTask, getColDate, clampToSection,
+      } = stateRef.current;
+
       if (isDraggingEmpty) {
         let start = Math.min(dragStart, dragHover);
         let end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
-        
+
         if (clampToSection) {
-            start = clampToSection(activeDragCol, start);
-            end = clampToSection(activeDragCol, end);
+          start = clampToSection(activeDragCol, start);
+          end = clampToSection(activeDragCol, end);
         }
 
         const colDate = getColDate ? getColDate(activeDragCol) : null;
@@ -50,21 +67,21 @@ export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDa
         setDragStart(null);
         setDragHover(null);
         setActiveDragCol(null);
-        
+
         if (getColDate) {
-            onOpenSlot?.({ date: colDate, start, end });
+          onOpenSlot?.({ date: colDate, start, end });
         } else {
-            onOpenSlot?.({ start, end });
+          onOpenSlot?.({ start, end });
         }
       } else if (isMoving) {
         if (moveTaskDelta !== 0 && onMoveTask) {
-           const newStart = moveTaskBlock.start + moveTaskDelta;
-           const colDate = getColDate ? getColDate(activeDragCol) : null;
-           if (getColDate) {
-               onMoveTask(colDate, { start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
-           } else {
-               onMoveTask({ start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
-           }
+          const newStart = moveTaskBlock.start + moveTaskDelta;
+          const colDate = getColDate ? getColDate(activeDragCol) : null;
+          if (getColDate) {
+            onMoveTask(colDate, { start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
+          } else {
+            onMoveTask({ start: moveTaskBlock.start, end: moveTaskBlock.end, newStart });
+          }
         }
         setMoveTaskBlock(null);
         setMoveTaskDelta(0);
@@ -72,23 +89,23 @@ export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDa
         setActiveDragCol(null);
       } else if (isResizing) {
         if (resizeTaskDelta !== 0 && onResizeTask) {
-           let newStart = resizeTaskBlock.start;
-           let newEnd = resizeTaskBlock.end;
-           
-           if (resizeTaskDirection === 'top') {
-              newStart = resizeTaskBlock.start + resizeTaskDelta;
-           } else {
-              newEnd = resizeTaskBlock.end + resizeTaskDelta;
-           }
+          let newStart = resizeTaskBlock.start;
+          let newEnd = resizeTaskBlock.end;
 
-           if (newEnd > newStart) {
-              const colDate = getColDate ? getColDate(activeDragCol) : null;
-              if (getColDate) {
-                  onResizeTask(colDate, { start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
-              } else {
-                  onResizeTask({ start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
-              }
-           }
+          if (resizeTaskDirection === 'top') {
+            newStart = resizeTaskBlock.start + resizeTaskDelta;
+          } else {
+            newEnd = resizeTaskBlock.end + resizeTaskDelta;
+          }
+
+          if (newEnd > newStart) {
+            const colDate = getColDate ? getColDate(activeDragCol) : null;
+            if (getColDate) {
+              onResizeTask(colDate, { start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
+            } else {
+              onResizeTask({ start: resizeTaskBlock.start, end: resizeTaskBlock.end, newStart, newEnd });
+            }
+          }
         }
         setResizeTaskBlock(null);
         setResizeTaskDelta(0);
@@ -99,12 +116,8 @@ export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDa
       }
     }
 
-    window.addEventListener("mouseup", handleUp);
-    return () => window.removeEventListener("mouseup", handleUp);
-  }, [dragStart, dragHover, activeDragCol, isDraggingEmpty, isMoving, isResizing, moveTaskBlock, moveTaskDelta, resizeTaskBlock, resizeTaskDelta, resizeTaskDirection, onOpenSlot, onMoveTask, onResizeTask, getColDate, clampToSection]);
-
-  useEffect(() => {
     function handleMove(e) {
+      const { isMoving, isResizing, isDraggingEmpty } = stateRef.current;
       if (!pendingMoveRef.current || isMoving || isResizing || isDraggingEmpty) return;
       const { startY, block, colIdx } = pendingMoveRef.current;
       if (Math.abs(e.clientY - startY) < 5) return;
@@ -114,9 +127,14 @@ export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDa
       pendingMoveRef.current = null;
     }
 
+    window.addEventListener("mouseup", handleUp);
     window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
-  }, [isMoving, isResizing, isDraggingEmpty]);
+    return () => {
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("mousemove", handleMove);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // deps vuote: i valori correnti sono sempre letti da stateRef.current
 
   return {
     activeDragCol, setActiveDragCol,

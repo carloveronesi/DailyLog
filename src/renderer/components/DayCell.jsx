@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS, hourKey, TASK_TYPES } from "../domain/tasks";
 import { Icon } from "./ui";
 
@@ -93,7 +94,7 @@ function buildHourSummary(hours) {
   return Array.from(groups.values()).sort((a, b) => b.count - a.count);
 }
 
-export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {}, onToggleLocation }) {
+export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {}, onToggleLocation }) {
   const d = date.getDate();
   const isToday = isCurrentMonth && date.toDateString() === new Date().toDateString();
   const am = entries?.AM;
@@ -243,9 +244,5 @@ export function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, 
       )}
     </div>
   );
-}
-
-
-
-
+});
 

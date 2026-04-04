@@ -141,7 +141,8 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const endOptions = buildEndOptions(rangeStartMin, [...new Set([...sectionStartOptions.map((v) => v + SLOT_MINUTES), sectionEndBoundary])]);
 
   useEffect(() => {
-    if (rangeEndMin <= rangeStartMin) {
+    const sectionMax = rangeStartMin < 13 * 60 ? 13 * 60 : 18 * 60;
+    if (rangeEndMin <= rangeStartMin || rangeEndMin > sectionMax) {
       const fallback = rangeStartMin + SLOT_MINUTES;
       setRangeEndMin(fallback);
       setAutoAdjusted(true);
