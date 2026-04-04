@@ -19,19 +19,36 @@ export function SettingsModal({
 }) {
   const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState("personalizzazione");
+  const [importStatus, setImportStatus] = useState(null); // { ok: bool, message: string }
+  const [pendingImportFile, setPendingImportFile] = useState(null);
 
-  async function handleImport(e) {
+  function handleTabChange(tab) {
+    setActiveTab(tab);
+    setImportStatus(null);
+  }
+
+  function handleImportFileSelected(e) {
     const f = e.target.files?.[0];
     if (!f) return;
+    setPendingImportFile(f);
+    e.target.value = "";
+  }
+
+  async function confirmImport() {
+    if (!pendingImportFile) return;
+    const f = pendingImportFile;
+    setPendingImportFile(null);
     try {
       const count = await importAll(f);
-      alert(`Import completato. Voci aggiornate: ${count}`);
+      setImportStatus({ ok: true, message: `Import completato. Voci aggiornate: ${count}` });
       if (onImportSuccess) onImportSuccess();
     } catch (err) {
-      alert(`Import fallito: ${err?.message || err}`);
-    } finally {
-      e.target.value = "";
+      setImportStatus({ ok: false, message: `Import fallito: ${err?.message || err}` });
     }
+  }
+
+  function cancelImport() {
+    setPendingImportFile(null);
   }
 
   function setClientColor(clientName, color) {
@@ -89,11 +106,12 @@ export function SettingsModal({
   function addSubtype(typeId) {
     const val = (newSubtypes[typeId] || "").trim();
     if (!val) return;
+    const newId = val.toLowerCase().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, "");
+    if (!newId) return;
     setSettings((prev) => {
       const st = prev.taskSubtypes || {};
       const list = st[typeId] || [];
-      const newId = val.toLowerCase().trim().replace(/[\s\W-]+/g, "-");
-      if (list.some((x) => (x.id || x) === newId || x === val)) return prev;
+      if (list.some((x) => x.id === newId || x.label.toLowerCase() === val.toLowerCase())) return prev;
       return {
         ...prev,
         taskSubtypes: {
@@ -113,7 +131,7 @@ export function SettingsModal({
         ...prev,
         taskSubtypes: {
           ...st,
-          [typeId]: list.filter((x) => (x.id || x) !== idToRemove && x !== idToRemove),
+          [typeId]: list.filter((x) => x.id !== idToRemove),
         },
       };
     });
@@ -125,7 +143,7 @@ export function SettingsModal({
         <div className="flex items-center justify-around border-b border-slate-200 dark:border-slate-700/50 mb-6 shrink-0">
           <button
             type="button"
-            onClick={() => setActiveTab("personalizzazione")}
+            onClick={() => handleTabChange("personalizzazione")}
             className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "personalizzazione"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
@@ -138,7 +156,7 @@ export function SettingsModal({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("clienti")}
+            onClick={() => handleTabChange("clienti")}
             className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "clienti"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
@@ -151,7 +169,7 @@ export function SettingsModal({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("task")}
+            onClick={() => handleTabChange("task")}
             className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "task"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
@@ -164,7 +182,7 @@ export function SettingsModal({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("salvataggio")}
+            onClick={() => handleTabChange("salvataggio")}
             className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "salvataggio"
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
@@ -389,8 +407,13 @@ export function SettingsModal({
                     <Icon name="upload" className="mr-2 w-4 h-4" />
                     Importa Backup
                   </Button>
-                  <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImport} />
+                  <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFileSelected} />
                 </div>
+                {importStatus && (
+                  <p className={`text-sm mt-1 ${importStatus.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                    {importStatus.message}
+                  </p>
+                )}
               </div>
 
               {hasDesktopBridge && (
@@ -464,6 +487,35 @@ export function SettingsModal({
           </Button>
         </div>
       </div>
+
+      <Modal
+        open={Boolean(pendingImportFile)}
+        title="Importare il backup?"
+        onClose={cancelImport}
+      >
+        <div className="space-y-4">
+          <p className="text-slate-600 dark:text-slate-400">
+            Stai per importare <span className="font-semibold text-slate-800 dark:text-slate-200">{pendingImportFile?.name}</span>.
+            Tutti i dati esistenti verranno sovrascritti con quelli del file. L&apos;operazione non è reversibile.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              className="bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              onClick={cancelImport}
+              type="button"
+            >
+              Annulla
+            </Button>
+            <Button
+              className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600"
+              onClick={confirmImport}
+              type="button"
+            >
+              Importa
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Modal>
   );
 }

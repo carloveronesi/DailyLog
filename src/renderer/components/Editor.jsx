@@ -218,16 +218,28 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setSaveError(null);
     try {
       if (fullDay) {
-        const cleanAM = hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
-        if (!cleanAM) return;
-        onSave({ AM: cleanAM, PM: cleanAM, location, hours: undefined });
+        if (hasMeaning(entryAM)) {
+          const cleanAM = normalizeForType(entryAM);
+          if (!cleanAM.title?.trim()) {
+            setSaveError("Il titolo è obbligatorio");
+            return;
+          }
+          onSave({ AM: cleanAM, PM: cleanAM, location, hours: undefined });
+          return;
+        }
+        onSave({ AM: null, PM: null, location, hours: undefined });
         return;
       }
 
       const nextHours = {};
       for (const [key, entry] of Object.entries(hourEntries)) {
         if (!hasMeaning(entry)) continue;
-        nextHours[key] = normalizeForType(entry);
+        const normalized = normalizeForType(entry);
+        if (!normalized.title?.trim()) {
+          setSaveError("Il titolo è obbligatorio");
+          return;
+        }
+        nextHours[key] = normalized;
       }
 
       onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
@@ -237,6 +249,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   }
 
   const rangeDuration = formatDurationHours(Math.max(rangeEndMin - rangeStartMin, SLOT_MINUTES));
+  
+  const activeNormalized = normalizeForType(activeEntry);
+  const isSaveDisabled = !activeNormalized.title?.trim();
 
   return (
     <div className="flex flex-col min-h-0 flex-1 gap-4">
@@ -260,12 +275,13 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
         hourLabel={hourLabel}
       />
 
-      <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3">
+      <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3 rounded-b-3xl">
         <div className="flex items-center gap-3">
           <Button
-            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
+            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10 disabled:opacity-30 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
             onClick={handleSave}
             type="button"
+            disabled={isSaveDisabled}
           >
             Salva
           </Button>

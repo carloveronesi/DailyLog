@@ -58,6 +58,7 @@ export function useTaskOperations({ monthDataByDate, upsertDay }) {
     upsertDay(date, {
       AM: specificDayData.AM || null,
       PM: specificDayData.PM || null,
+      location: specificDayData.location || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }
@@ -85,6 +86,7 @@ export function useTaskOperations({ monthDataByDate, upsertDay }) {
     upsertDay(date, {
       AM: specificDayData.AM || null,
       PM: specificDayData.PM || null,
+      location: specificDayData.location || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }

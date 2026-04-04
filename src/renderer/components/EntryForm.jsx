@@ -27,7 +27,7 @@ export function EntryForm({
   const taskSubtypes = settings?.taskSubtypes || {};
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const [personInput, setPersonInput] = useState("");
-  
+
   const addCollaborator = (name) => {
     const cleanName = name.trim();
     if (!cleanName) return;
@@ -96,12 +96,15 @@ export function EntryForm({
   return (
     <div className="flex flex-col gap-4 min-h-0 flex-1">
       {/* Prima riga: Titolo */}
-      <div className="mb-2 pr-8">
+      <div className="mb-2 pr-8 space-y-1.5">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          Titolo <span className="text-rose-500">*</span>
+        </label>
         <input
           className="w-full bg-transparent text-xl font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
           value={entry.title}
           onChange={(e) => setField("title", e.target.value)}
-          placeholder={entry.type === "vacation" ? "Titolo (es. Ferie)" : entry.type === "event" ? "Titolo (es. Meetup)" : "Titolo (es. Refactor codice)"}
+          placeholder="Titolo"
         />
       </div>
 
