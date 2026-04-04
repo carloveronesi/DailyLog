@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
-      "Bash(node --input-type=module --experimental-vm-modules)"
+      "Bash(node --input-type=module --experimental-vm-modules)",
+      "Bash(node:*)"
     ]
   }
 }

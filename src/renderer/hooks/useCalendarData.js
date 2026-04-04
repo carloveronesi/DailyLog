@@ -88,9 +88,9 @@ export function useCalendarData(initialYear, initialMonth) {
     const topMonthClients = useMemo(() => {
         const countByClient = new Map();
         for (const dateKey of Object.keys(monthDataByDate)) {
-            const dObj = new Date(dateKey);
+            const [dYear, dMonth] = dateKey.split("-").map(s => parseInt(s, 10));
             // Only count clients for the focal month to keep the top clients list consistent with view
-            if (dObj.getFullYear() !== year || dObj.getMonth() !== month) continue;
+            if (dYear !== year || dMonth - 1 !== month) continue;
 
             const day = monthDataByDate[dateKey];
             for (const s of [SLOT.AM, SLOT.PM]) {

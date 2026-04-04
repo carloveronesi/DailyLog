@@ -206,7 +206,7 @@ export function ensureSubtypesFormat(settingsSubtypes) {
     migrated[typeId] = list.map((item) => {
       if (typeof item === "string") {
         return {
-          id: item.toLowerCase().trim().replace(/[\s\W-]+/g, "-"),
+          id: item.toLowerCase().trim().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, ""),
           label: item,
         };
       }

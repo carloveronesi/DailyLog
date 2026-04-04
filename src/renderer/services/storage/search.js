@@ -28,7 +28,7 @@ export function searchAllLogs(query, filters = {}) {
         
         // Parse date from dateKey (YYYY-MM-DD)
         const [y, m, d] = dateKey.split("-").map(Number);
-        if (!y || !m || !d) continue;
+        if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) continue;
         const dateObj = new Date(y, m - 1, d);
         const dayMatches = new Map();
 

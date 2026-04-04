@@ -20,6 +20,8 @@ export function useTaskOperations({ monthDataByDate, upsertDay }) {
   useEffect(() => {
     return () => {
       if (blockedToastTimerRef.current) clearTimeout(blockedToastTimerRef.current);
+      blockedToastTimerRef.current = null;
+      setBlockedToast(null);
     };
   }, []);
 
@@ -99,8 +101,9 @@ export function useTaskOperations({ monthDataByDate, upsertDay }) {
       nextHours[k] = e;
     }
     upsertDay(date, {
-      AM: null,
-      PM: null,
+      AM: existing.AM || null,
+      PM: existing.PM || null,
+      location: existing.location || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
     });
   }

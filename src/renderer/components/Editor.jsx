@@ -93,6 +93,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [fullDay, setFullDay] = useState(false);
   const [location, setLocation] = useState(existingEntries?.location || LOCATION_TYPES.REMOTE);
   const [autoAdjusted, setAutoAdjusted] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
     const init = initFromExisting(existingEntries);
@@ -214,20 +215,25 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   }
 
   function handleSave() {
-    if (fullDay) {
-      const cleanAM = hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
-      if (!cleanAM) return;
-      onSave({ AM: cleanAM, PM: cleanAM, location, hours: undefined });
-      return;
-    }
+    setSaveError(null);
+    try {
+      if (fullDay) {
+        const cleanAM = hasMeaning(entryAM) ? normalizeForType(entryAM) : null;
+        if (!cleanAM) return;
+        onSave({ AM: cleanAM, PM: cleanAM, location, hours: undefined });
+        return;
+      }
 
-    const nextHours = {};
-    for (const [key, entry] of Object.entries(hourEntries)) {
-      if (!hasMeaning(entry)) continue;
-      nextHours[key] = normalizeForType(entry);
-    }
+      const nextHours = {};
+      for (const [key, entry] of Object.entries(hourEntries)) {
+        if (!hasMeaning(entry)) continue;
+        nextHours[key] = normalizeForType(entry);
+      }
 
-    onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
+      onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
+    } catch (err) {
+      setSaveError(err?.message || "Errore durante il salvataggio");
+    }
   }
 
   const rangeDuration = formatDurationHours(Math.max(rangeEndMin - rangeStartMin, SLOT_MINUTES));
@@ -255,13 +261,18 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       />
 
       <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3">
-        <Button
-          className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
-          onClick={handleSave}
-          type="button"
-        >
-          Salva
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10"
+            onClick={handleSave}
+            type="button"
+          >
+            Salva
+          </Button>
+          {saveError && (
+            <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>
+          )}
+        </div>
 
         {fullDay ? (
           <Button
