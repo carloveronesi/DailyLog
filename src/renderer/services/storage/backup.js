@@ -13,6 +13,41 @@ export function collectExportData() {
   return out;
 }
 
+export function listStoredMonths() {
+  const monthRe = /^dailylog:v1:(\d{4}-\d{2})$/;
+  const months = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k) {
+      const m = k.match(monthRe);
+      if (m) months.push(m[1]);
+    }
+  }
+  return months.sort();
+}
+
+export function exportMonths(monthYMs) {
+  if (!monthYMs || monthYMs.length === 0) return;
+  const out = {};
+  for (const ym of monthYMs) {
+    const k = STORAGE_PREFIX + ym;
+    const val = localStorage.getItem(k);
+    if (val !== null) out[k] = val;
+  }
+  const dateTag = monthYMs.length === 1
+    ? monthYMs[0]
+    : `${monthYMs[0]}_${monthYMs[monthYMs.length - 1]}`;
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dailylog_export_${dateTag}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function exportAll() {
   const out = collectExportData();
   const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });

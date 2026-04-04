@@ -1,25 +1,14 @@
 import { useMemo } from "react";
-import { AFTERNOON_SLOTS, MORNING_SLOTS, SLOT_MINUTES, hourLabel } from "../domain/tasks";
-import { BREAK_START, BREAK_END, DAY_SLOTS, buildBlocks } from "../domain/calendar";
+import { SLOT_MINUTES, hourLabel } from "../domain/tasks";
+import { buildBlocks } from "../domain/calendar";
 import { useCalendarDrag } from "../hooks/useCalendarDrag";
 import { TaskBlock, computeBlockGeometry } from "./TaskBlock";
 import { monthNameIT } from "../utils/date";
 import { Button, Icon } from "./ui";
+import { useWorkSlots } from "../contexts/SettingsContext";
 
 const WEEKDAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 const ROW_HEIGHT = 35;
-
-function slotSection(slotMin) {
-  if (slotMin >= BREAK_START && slotMin < BREAK_END) return "break";
-  return slotMin < BREAK_START ? "AM" : "PM";
-}
-
-function clampToSection(section, min) {
-  if (section === "AM") {
-    return Math.min(Math.max(min, MORNING_SLOTS[0]), MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES);
-  }
-  return Math.min(Math.max(min, AFTERNOON_SLOTS[0]), AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
-}
 
 export function DayView({
   date,
@@ -33,12 +22,26 @@ export function DayView({
   onToday,
   onToggleLocation,
 }) {
+  const workSlots = useWorkSlots();
+  const { MORNING_SLOTS, AFTERNOON_SLOTS, DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
+
+  function slotSection(slotMin) {
+    if (slotMin >= BREAK_START && slotMin < BREAK_END) return "break";
+    return slotMin < BREAK_START ? "AM" : "PM";
+  }
+
+  function clampToSection(section, min) {
+    if (section === "AM") {
+      return Math.min(Math.max(min, MORNING_SLOTS[0]), MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES);
+    }
+    return Math.min(Math.max(min, AFTERNOON_SLOTS[0]), AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
+  }
   const dayNum = date.getDate();
   const weekday = WEEKDAY_SHORT[date.getDay()];
   const monthName = monthNameIT(date.getMonth());
   const year = date.getFullYear();
 
-  const blocks = buildBlocks(dayData);
+  const blocks = buildBlocks(dayData, workSlots);
 
   const {
     activeDragCol: dragSection,
@@ -215,7 +218,7 @@ export function DayView({
                 isMoving, isResizing,
                 moveTaskBlock, moveTaskDelta,
                 resizeTaskBlock, resizeTaskDelta, resizeTaskDirection,
-              });
+              }, DAY_SLOTS);
               return (
                 <TaskBlock
                   key={`${block.start}-${idx}`}

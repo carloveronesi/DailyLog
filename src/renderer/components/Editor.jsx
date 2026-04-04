@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  AFTERNOON_SLOTS,
   LOCATION_TYPES,
-  MORNING_SLOTS,
   SLOT_MINUTES,
-  WORK_SLOTS,
   defaultEntry,
   hourKey,
   hourLabel,
@@ -13,7 +10,7 @@ import {
 } from "../domain/tasks";
 import { Button, Icon } from "./ui";
 import { EntryForm } from "./EntryForm";
-import { useSettings } from "../contexts/SettingsContext";
+import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 
 function hasMeaning(e) {
   if (!e) return false;
@@ -37,13 +34,13 @@ function normalizeForType(e) {
   return out;
 }
 
-function initFromExisting(existingEntries) {
+function initFromExisting(existingEntries, workSlots) {
   const hours = existingEntries?.hours || {};
   const entryAM = existingEntries?.AM ? { ...defaultEntry(), ...existingEntries.AM } : defaultEntry();
   const entryPM = existingEntries?.PM ? { ...defaultEntry(), ...existingEntries.PM } : defaultEntry();
 
   const allHourEntries = {};
-  for (const h of WORK_SLOTS) {
+  for (const h of workSlots) {
     const k = hourKey(h);
     const existing = hours[k];
     allHourEntries[k] = existing ? { ...defaultEntry(), ...existing } : defaultEntry();
@@ -72,6 +69,7 @@ function buildEndOptions(startMinute, sectionBoundaries) {
 
 export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [] }) {
   const { settings } = useSettings();
+  const { MORNING_SLOTS, AFTERNOON_SLOTS, WORK_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
   const initialSlotMin = typeof initialSlot === "number" || typeof initialSlot === "string" ? slotMinutes(initialSlot) : null;
@@ -96,7 +94,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    const init = initFromExisting(existingEntries);
+    const init = initFromExisting(existingEntries, WORK_SLOTS);
     setEntryAM(init.entryAM);
     setEntryPM(init.entryPM);
     setHourEntries(init.hourEntries);
@@ -136,13 +134,15 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
   const activeEntry = fullDay ? entryAM : draftEntry;
 
-  const startSection = rangeStartMin < 13 * 60 ? "AM" : "PM";
+  const morningEnd = settings.workHours?.morningEnd ?? (13 * 60);
+  const afternoonEnd = settings.workHours?.afternoonEnd ?? (18 * 60);
+  const startSection = rangeStartMin < morningEnd ? "AM" : "PM";
   const sectionStartOptions = startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS;
-  const sectionEndBoundary = startSection === "AM" ? 13 * 60 : 18 * 60;
+  const sectionEndBoundary = startSection === "AM" ? morningEnd : afternoonEnd;
   const endOptions = buildEndOptions(rangeStartMin, [...new Set([...sectionStartOptions.map((v) => v + SLOT_MINUTES), sectionEndBoundary])]);
 
   useEffect(() => {
-    const sectionMax = rangeStartMin < 13 * 60 ? 13 * 60 : 18 * 60;
+    const sectionMax = rangeStartMin < morningEnd ? morningEnd : afternoonEnd;
     if (rangeEndMin <= rangeStartMin || rangeEndMin > sectionMax) {
       const fallback = rangeStartMin + SLOT_MINUTES;
       setRangeEndMin(fallback);
@@ -151,7 +151,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [rangeStartMin, rangeEndMin]);
+  }, [rangeStartMin, rangeEndMin, morningEnd, afternoonEnd]);
 
   useEffect(() => {
     if (isInitializingRef.current) {

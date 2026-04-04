@@ -1,6 +1,7 @@
 import { memo } from "react";
-import { badgePresentation, displayLabel, hasMorningHours, hasAfternoonHours, isSameTaskEntry, MORNING_SLOTS, AFTERNOON_SLOTS, hourKey, TASK_TYPES } from "../domain/tasks";
+import { badgePresentation, displayLabel, isSameTaskEntry, hourKey, TASK_TYPES } from "../domain/tasks";
 import { Icon } from "./ui";
+import { useWorkSlots } from "../contexts/SettingsContext";
 
 function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -95,12 +96,14 @@ function buildHourSummary(hours) {
 }
 
 export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {}, onToggleLocation }) {
+  const { MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const d = date.getDate();
   const isToday = isCurrentMonth && date.toDateString() === new Date().toDateString();
   const am = entries?.AM;
   const pm = entries?.PM;
-  const morningHoursActive = hasMorningHours(entries);
-  const afternoonHoursActive = hasAfternoonHours(entries);
+  const hours = entries?.hours || {};
+  const morningHoursActive = MORNING_SLOTS.some((h) => hours[hourKey(h)]);
+  const afternoonHoursActive = AFTERNOON_SLOTS.some((h) => hours[hourKey(h)]);
   const hasHourly = !!entries?.hours && Object.keys(entries.hours).length > 0;
 
   // Full day: AM === PM, no hourly entries

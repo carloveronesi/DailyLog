@@ -3,17 +3,22 @@ import {
   MORNING_SLOTS,
   SLOT_MINUTES,
   WORK_SLOTS,
-  hasAfternoonHours,
-  hasMorningHours,
   hourKey,
   hourLabel,
   isSameTaskEntry,
+  buildSlots,
 } from "./tasks";
 
 export const BREAK_START = 13 * 60;
 export const BREAK_END = 14 * 60;
 
 export const DAY_SLOTS = [...MORNING_SLOTS, BREAK_START, BREAK_START + SLOT_MINUTES, ...AFTERNOON_SLOTS];
+
+const DEFAULT_WORK_SLOTS = {
+  MORNING_SLOTS,
+  AFTERNOON_SLOTS,
+  WORK_SLOTS,
+};
 
 export function hasMissingNotes(entry) {
   if (!entry || entry.type === "vacation" || entry.type === "event") return false;
@@ -43,16 +48,17 @@ export function isSameHourEntry(a, b) {
   );
 }
 
-export function buildHourBlocks(dayData) {
+export function buildHourBlocks(dayData, workSlots = DEFAULT_WORK_SLOTS) {
   if (!dayData?.hours) return [];
   const blocks = [];
   let current = null;
   const hourKeys = Object.keys(dayData.hours || {});
   const hasHalfSlots = hourKeys.some((k) => k.endsWith(":30"));
+  const effectiveWorkSlots = workSlots.WORK_SLOTS;
 
   const slotsToScan = hasHalfSlots
-    ? WORK_SLOTS
-    : WORK_SLOTS.filter((slot) => slot % 60 === 0);
+    ? effectiveWorkSlots
+    : effectiveWorkSlots.filter((slot) => slot % 60 === 0);
   const stepMinutes = hasHalfSlots ? SLOT_MINUTES : 60;
   const spanStep = hasHalfSlots ? 1 : 2;
 
@@ -89,21 +95,30 @@ export function buildHourBlocks(dayData) {
   });
 }
 
-export function buildBlocks(dayData) {
+export function buildBlocks(dayData, workSlots = DEFAULT_WORK_SLOTS) {
   if (!dayData) return [];
   const am = dayData.AM || null;
   const pm = dayData.PM || null;
-  const morningHoursActive = hasMorningHours(dayData);
-  const afternoonHoursActive = hasAfternoonHours(dayData);
+  const effectiveMorningSlots = workSlots.MORNING_SLOTS;
+  const effectiveAfternoonSlots = workSlots.AFTERNOON_SLOTS;
+  const hours = dayData.hours || {};
+  const morningHoursActive = effectiveMorningSlots.some((h) => hours[hourKey(h)]);
+  const afternoonHoursActive = effectiveAfternoonSlots.some((h) => hours[hourKey(h)]);
   const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
+
+  // Compute daySlots for span calculation
+  const breakStart = workSlots.BREAK_START ?? BREAK_START;
+  const breakEnd = workSlots.BREAK_END ?? BREAK_END;
+  const breakSlots = buildSlots(breakStart, breakEnd);
+  const daySlotsForSpan = [...effectiveMorningSlots, ...breakSlots, ...effectiveAfternoonSlots];
 
   if (isFullDay && am) {
     return [
       {
         entry: am,
-        start: MORNING_SLOTS[0],
-        end: AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES,
-        span: DAY_SLOTS.length,
+        start: effectiveMorningSlots[0],
+        end: effectiveAfternoonSlots[effectiveAfternoonSlots.length - 1] + SLOT_MINUTES,
+        span: daySlotsForSpan.length,
         slot: "AM",
         label: "Giornata intera",
       },
@@ -111,7 +126,7 @@ export function buildBlocks(dayData) {
   }
 
   if (morningHoursActive || afternoonHoursActive) {
-    return buildHourBlocks(dayData).map((b) => ({
+    return buildHourBlocks(dayData, workSlots).map((b) => ({
       ...b,
       slot: b.start,
     }));
@@ -121,9 +136,9 @@ export function buildBlocks(dayData) {
   if (am) {
     blocks.push({
       entry: am,
-      start: MORNING_SLOTS[0],
-      end: MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES,
-      span: MORNING_SLOTS.length,
+      start: effectiveMorningSlots[0],
+      end: effectiveMorningSlots[effectiveMorningSlots.length - 1] + SLOT_MINUTES,
+      span: effectiveMorningSlots.length,
       slot: "AM",
       label: "Mattina",
     });
@@ -132,9 +147,9 @@ export function buildBlocks(dayData) {
   if (pm) {
     blocks.push({
       entry: pm,
-      start: AFTERNOON_SLOTS[0],
-      end: AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES,
-      span: AFTERNOON_SLOTS.length,
+      start: effectiveAfternoonSlots[0],
+      end: effectiveAfternoonSlots[effectiveAfternoonSlots.length - 1] + SLOT_MINUTES,
+      span: effectiveAfternoonSlots.length,
       slot: "PM",
       label: "Pomeriggio",
     });
@@ -143,6 +158,6 @@ export function buildBlocks(dayData) {
   return blocks;
 }
 
-export function slotIndex(slotMin) {
-  return DAY_SLOTS.indexOf(slotMin);
+export function slotIndex(slotMin, daySlots = DAY_SLOTS) {
+  return daySlots.indexOf(slotMin);
 }

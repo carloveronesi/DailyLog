@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { SLOT_MINUTES, hourLabel } from "../domain/tasks";
-import { DAY_SLOTS, BREAK_START, BREAK_END, buildBlocks } from "../domain/calendar";
+import { buildBlocks } from "../domain/calendar";
 import { useCalendarDrag } from "../hooks/useCalendarDrag";
 import { TaskBlock, computeBlockGeometry } from "./TaskBlock";
 import { ymd } from "../utils/date";
 import { Button, Icon } from "./ui";
+import { useWorkSlots } from "../contexts/SettingsContext";
 
 const ROW_HEIGHT = 35;
 const WEEKDAY_NAMES = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì"];
@@ -38,16 +39,19 @@ export function WeekView({
   onDeleteSlot,
   onToggleLocation
 }) {
+  const workSlots = useWorkSlots();
+  const { DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
   const weekDays = useMemo(() => getWorkweekDays(activeDate), [activeDate]);
-  
+
   // Create an array mapping each weekday index (0-4) to its blocks
   const dayColumns = useMemo(() => {
     return weekDays.map((d) => {
       const key = ymd(d);
       const data = monthDataByDate[key] || null;
-      return buildBlocks(data);
+      return buildBlocks(data, workSlots);
     });
-  }, [weekDays, monthDataByDate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekDays, monthDataByDate, workSlots]);
 
   // Week header label (e.g. "4 - 8 Marzo 2026")
   const weekTitle = useMemo(() => {
@@ -242,7 +246,7 @@ export function WeekView({
                             isMoving, isResizing, isActiveCol,
                             moveTaskBlock, moveTaskDelta,
                             resizeTaskBlock, resizeTaskDelta, resizeTaskDirection,
-                          });
+                          }, DAY_SLOTS);
                           return (
                             <TaskBlock
                               key={`${block.start}-${idx}`}

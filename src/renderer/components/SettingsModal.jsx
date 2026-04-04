@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
-import { importAll } from "../services/storage";
+import { useRef, useState, useEffect } from "react";
+import { importAll, listStoredMonths, exportMonths } from "../services/storage";
+import { loadTodos, saveTodos } from "../services/storage/todo";
 import { Button, Icon, Modal, Segmented } from "./ui";
-import { getClientColor, normalizeClientKey, normalizeHexColor, TASK_TYPES } from "../domain/tasks";
+import { getClientColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, hourLabel } from "../domain/tasks";
 
 export function SettingsModal({
   open,
@@ -16,11 +17,17 @@ export function SettingsModal({
   clientNames = [],
   exportAll,
   onImportSuccess,
+  backupFileHandle,
+  backupStatus,
+  supportsAutoBackup,
+  enableAutoBackup,
+  onDisableAutoBackup,
 }) {
   const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState("personalizzazione");
   const [importStatus, setImportStatus] = useState(null); // { ok: bool, message: string }
   const [pendingImportFile, setPendingImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState(null); // { months, dateRange, dayCount } | { error: string } | null
 
   function handleTabChange(tab) {
     setActiveTab(tab);
@@ -49,7 +56,47 @@ export function SettingsModal({
 
   function cancelImport() {
     setPendingImportFile(null);
+    setImportPreview(null);
   }
+
+  useEffect(() => {
+    if (!pendingImportFile) {
+      setImportPreview(null);
+      return;
+    }
+    let cancelled = false;
+    pendingImportFile.text().then((text) => {
+      if (cancelled) return;
+      try {
+        const data = JSON.parse(text);
+        if (!data || typeof data !== "object") {
+          setImportPreview({ error: "Il file non è un export DailyLog valido." });
+          return;
+        }
+        const monthRe = /^dailylog:v1:\d{4}-\d{2}$/;
+        const monthKeys = Object.keys(data).filter((k) => monthRe.test(k));
+        if (monthKeys.length === 0) {
+          setImportPreview({ error: "Il file non contiene dati DailyLog riconoscibili." });
+          return;
+        }
+        const sorted = [...monthKeys].sort();
+        const dateRange = `${sorted[0].replace("dailylog:v1:", "")} → ${sorted[sorted.length - 1].replace("dailylog:v1:", "")}`;
+        let dayCount = 0;
+        for (const k of monthKeys) {
+          const monthData = data[k];
+          if (monthData && typeof monthData === "object" && monthData.byDate) {
+            dayCount += Object.keys(monthData.byDate).length;
+          }
+        }
+        setImportPreview({ months: monthKeys.length, dateRange, dayCount });
+      } catch {
+        setImportPreview({ error: "Il file non è un JSON valido." });
+      }
+    }).catch(() => {
+      if (!cancelled) setImportPreview({ error: "Impossibile leggere il file." });
+    });
+    return () => { cancelled = true; };
+  }, [pendingImportFile]);
 
   function setClientColor(clientName, color) {
     const key = normalizeClientKey(clientName);
@@ -79,8 +126,74 @@ export function SettingsModal({
     });
   }
 
+  const [availableMonths, setAvailableMonths] = useState([]);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+
+  useEffect(() => {
+    if (activeTab !== "salvataggio") return;
+    const months = listStoredMonths();
+    setAvailableMonths(months);
+    if (months.length > 0) {
+      setExportFrom((prev) => (prev && months.includes(prev) ? prev : months[0]));
+      setExportTo((prev) => (prev && months.includes(prev) ? prev : months[months.length - 1]));
+    }
+  }, [activeTab]);
+
+  function handleExportRange() {
+    const range = availableMonths.filter((m) => m >= exportFrom && m <= exportTo);
+    if (range.length === 0) return;
+    exportMonths(range);
+  }
+
   const [newSubtypes, setNewSubtypes] = useState({});
   const [newTodoTag, setNewTodoTag] = useState("");
+  const [editingSubtype, setEditingSubtype] = useState(null); // { typeId, id, label }
+  const [editingTag, setEditingTag] = useState(null);         // string (vecchio nome)
+  const [editingTagValue, setEditingTagValue] = useState("");
+
+  function saveSubtypeRename() {
+    if (!editingSubtype) return;
+    const newLabel = editingSubtype.label.trim();
+    if (newLabel) {
+      setSettings((prev) => {
+        const st = prev.taskSubtypes || {};
+        const list = st[editingSubtype.typeId] || [];
+        return {
+          ...prev,
+          taskSubtypes: {
+            ...st,
+            [editingSubtype.typeId]: list.map((x) =>
+              x.id === editingSubtype.id ? { ...x, label: newLabel } : x
+            ),
+          },
+        };
+      });
+    }
+    setEditingSubtype(null);
+  }
+
+  function saveTagRename() {
+    const newTag = editingTagValue.trim();
+    if (newTag && newTag !== editingTag) {
+      setSettings((prev) => ({
+        ...prev,
+        todoTags: (prev.todoTags || []).map((t) => (t === editingTag ? newTag : t)),
+      }));
+      // Propaga rinomina a tutti i todo che usano il vecchio tag
+      const currentTodos = loadTodos();
+      if (currentTodos.some((todo) => (todo.tags || []).includes(editingTag))) {
+        saveTodos(
+          currentTodos.map((todo) => ({
+            ...todo,
+            tags: (todo.tags || []).map((t) => (t === editingTag ? newTag : t)),
+          }))
+        );
+      }
+    }
+    setEditingTag(null);
+    setEditingTagValue("");
+  }
 
   function addTodoTag() {
     const val = newTodoTag.trim();
@@ -134,6 +247,36 @@ export function SettingsModal({
           [typeId]: list.filter((x) => x.id !== idToRemove),
         },
       };
+    });
+  }
+
+  function moveSubtype(typeId, id, direction) {
+    setSettings((prev) => {
+      const st = prev.taskSubtypes || {};
+      const list = [...(st[typeId] || [])];
+      const idx = list.findIndex((x) => x.id === id);
+      if (idx < 0) return prev;
+      if (direction === "up" && idx === 0) return prev;
+      if (direction === "down" && idx === list.length - 1) return prev;
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      [list[idx], list[swapIdx]] = [list[swapIdx], list[idx]];
+      return {
+        ...prev,
+        taskSubtypes: { ...st, [typeId]: list },
+      };
+    });
+  }
+
+  function moveTag(tag, direction) {
+    setSettings((prev) => {
+      const tags = [...(prev.todoTags || [])];
+      const idx = tags.indexOf(tag);
+      if (idx < 0) return prev;
+      if (direction === "up" && idx === 0) return prev;
+      if (direction === "down" && idx === tags.length - 1) return prev;
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      [tags[idx], tags[swapIdx]] = [tags[swapIdx], tags[idx]];
+      return { ...prev, todoTags: tags };
     });
   }
 
@@ -283,6 +426,85 @@ export function SettingsModal({
                   />
                 </div>
               </div>
+
+              {/* Tema */}
+              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Tema</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Scegli il tema dell&apos;interfaccia.</div>
+                </div>
+                <div className="pt-2">
+                  <Segmented
+                    value={settings.theme || "light"}
+                    onChange={(val) => setSettings((prev) => ({ ...prev, theme: val }))}
+                    options={[
+                      { label: "Chiaro", value: "light" },
+                      { label: "Scuro", value: "dark" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              {/* Orario lavorativo */}
+              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Orario lavorativo</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Configura le fasce orarie visualizzate nel calendario.</div>
+                </div>
+                {(() => {
+                  const workHours = settings.workHours || {};
+                  const timeOptions = [];
+                  for (let m = 6 * 60; m <= 22 * 60; m += 30) {
+                    timeOptions.push(m);
+                  }
+                  const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                  const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block";
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className={labelCls}>Mattina — inizio</span>
+                        <select
+                          className={selectCls}
+                          value={workHours.morningStart ?? 540}
+                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, morningStart: Number(e.target.value) } }))}
+                        >
+                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <span className={labelCls}>Mattina — fine</span>
+                        <select
+                          className={selectCls}
+                          value={workHours.morningEnd ?? 780}
+                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, morningEnd: Number(e.target.value) } }))}
+                        >
+                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <span className={labelCls}>Pomeriggio — inizio</span>
+                        <select
+                          className={selectCls}
+                          value={workHours.afternoonStart ?? 840}
+                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, afternoonStart: Number(e.target.value) } }))}
+                        >
+                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <span className={labelCls}>Pomeriggio — fine</span>
+                        <select
+                          className={selectCls}
+                          value={workHours.afternoonEnd ?? 1080}
+                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, afternoonEnd: Number(e.target.value) } }))}
+                        >
+                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
 
@@ -323,9 +545,54 @@ export function SettingsModal({
                         (settings.taskSubtypes?.[t.id] || []).map((val) => {
                           const id = val.id || val;
                           const label = val.label || val;
+                          const isEditing = editingSubtype?.typeId === t.id && editingSubtype?.id === id;
                           return (
                             <div key={id} className="flex items-center gap-1.5 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {label}
+                              {isEditing ? (
+                                <input
+                                  autoFocus
+                                  className="bg-transparent outline-none text-xs font-semibold w-24 min-w-0"
+                                  value={editingSubtype.label}
+                                  onChange={(e) => setEditingSubtype((prev) => ({ ...prev, label: e.target.value }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") saveSubtypeRename();
+                                    if (e.key === "Escape") setEditingSubtype(null);
+                                  }}
+                                  onBlur={saveSubtypeRename}
+                                />
+                              ) : (
+                                <span
+                                  className="cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                                  title="Clicca per rinominare"
+                                  onClick={() => setEditingSubtype({ typeId: t.id, id, label })}
+                                >
+                                  {label}
+                                </span>
+                              )}
+                              {(() => {
+                                const list = settings.taskSubtypes?.[t.id] || [];
+                                const idx = list.findIndex((x) => (x.id || x) === id);
+                                return (
+                                  <>
+                                    <button
+                                      onClick={() => moveSubtype(t.id, id, "up")}
+                                      disabled={idx <= 0}
+                                      className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                      title="Sposta su"
+                                    >
+                                      <Icon name="chev-up" className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => moveSubtype(t.id, id, "down")}
+                                      disabled={idx >= list.length - 1}
+                                      className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                      title="Sposta giù"
+                                    >
+                                      <Icon name="chev-down" className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                );
+                              })()}
                               <button onClick={() => removeSubtype(t.id, id)} className="p-1 rounded-full text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Rimuovi">
                                 <Icon name="x" className="w-3.5 h-3.5" />
                               </button>
@@ -373,7 +640,51 @@ export function SettingsModal({
                   ) : (
                     (settings.todoTags || []).map((tag) => (
                       <div key={tag} className="flex items-center gap-1.5 rounded-full bg-sky-50 pl-3 pr-1 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border border-sky-100 dark:border-sky-500/20">
-                        {tag}
+                        {editingTag === tag ? (
+                          <input
+                            autoFocus
+                            className="bg-transparent outline-none text-xs font-semibold text-sky-700 dark:text-sky-400 w-20 min-w-0"
+                            value={editingTagValue}
+                            onChange={(e) => setEditingTagValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveTagRename();
+                              if (e.key === "Escape") { setEditingTag(null); setEditingTagValue(""); }
+                            }}
+                            onBlur={saveTagRename}
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:text-sky-500 dark:hover:text-sky-300 transition-colors"
+                            title="Clicca per rinominare"
+                            onClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
+                          >
+                            {tag}
+                          </span>
+                        )}
+                        {(() => {
+                          const tags = settings.todoTags || [];
+                          const idx = tags.indexOf(tag);
+                          return (
+                            <>
+                              <button
+                                onClick={() => moveTag(tag, "up")}
+                                disabled={idx <= 0}
+                                className="p-1 rounded-full text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                title="Sposta su"
+                              >
+                                <Icon name="chev-up" className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => moveTag(tag, "down")}
+                                disabled={idx >= tags.length - 1}
+                                className="p-1 rounded-full text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                title="Sposta giù"
+                              >
+                                <Icon name="chev-down" className="w-3 h-3" />
+                              </button>
+                            </>
+                          );
+                        })()}
                         <button onClick={() => removeTodoTag(tag)} className="p-1 rounded-full text-sky-400 hover:text-rose-500 hover:bg-sky-100 dark:hover:bg-rose-500/20 transition-colors" title="Rimuovi">
                           <Icon name="x" className="w-3.5 h-3.5" />
                         </button>
@@ -415,6 +726,96 @@ export function SettingsModal({
                   </p>
                 )}
               </div>
+
+              {availableMonths.length > 0 && (
+                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                  <div className="space-y-1">
+                    <div className="text-base font-bold text-slate-900 dark:text-white">Esporta per periodo</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Seleziona un intervallo di mesi da esportare in JSON.</div>
+                  </div>
+                  {(() => {
+                    const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                    const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block";
+                    const rangeCount = availableMonths.filter((m) => m >= exportFrom && m <= exportTo).length;
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className={labelCls}>Da</span>
+                            <select className={selectCls} value={exportFrom} onChange={(e) => setExportFrom(e.target.value)}>
+                              {availableMonths.map((m) => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <span className={labelCls}>A</span>
+                            <select className={selectCls} value={exportTo} onChange={(e) => setExportTo(e.target.value)}>
+                              {availableMonths.map((m) => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Button
+                            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-6 disabled:opacity-40"
+                            onClick={handleExportRange}
+                            type="button"
+                            disabled={rangeCount === 0}
+                          >
+                            <Icon name="download" className="mr-2 w-4 h-4" />
+                            Esporta selezione
+                          </Button>
+                          {rangeCount > 0 && (
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {rangeCount} {rangeCount === 1 ? "mese" : "mesi"}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {!hasDesktopBridge && (
+                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                  <div className="space-y-1">
+                    <div className="text-base font-bold text-slate-900 dark:text-white">Backup Automatico</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      Salva automaticamente i dati su un file locale ad ogni modifica.
+                    </div>
+                  </div>
+                  {supportsAutoBackup ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${backupFileHandle ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} />
+                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                          {backupStatus || "Backup automatico non attivo."}
+                        </span>
+                      </div>
+                      {backupFileHandle ? (
+                        <Button
+                          className="bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-xl"
+                          onClick={onDisableAutoBackup}
+                          type="button"
+                        >
+                          Disattiva backup automatico
+                        </Button>
+                      ) : (
+                        <Button
+                          className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-6"
+                          onClick={enableAutoBackup}
+                          type="button"
+                        >
+                          Attiva backup automatico
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      Il tuo browser non supporta il salvataggio automatico su file. Usa Export manuale.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {hasDesktopBridge && (
                 <div className="space-y-4">
@@ -496,7 +897,29 @@ export function SettingsModal({
         <div className="space-y-4">
           <p className="text-slate-600 dark:text-slate-400">
             Stai per importare <span className="font-semibold text-slate-800 dark:text-slate-200">{pendingImportFile?.name}</span>.
-            Tutti i dati esistenti verranno sovrascritti con quelli del file. L&apos;operazione non è reversibile.
+          </p>
+          {importPreview === null && (
+            <p className="text-sm text-slate-400 dark:text-slate-500 italic">Analisi del file in corso…</p>
+          )}
+          {importPreview && importPreview.error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800/50 dark:bg-red-900/20">
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">{importPreview.error}</p>
+            </div>
+          ) : importPreview && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-1 dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Anteprima contenuto</div>
+              <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <span className="font-semibold">{importPreview.months}</span>
+                <span className="text-slate-500">{importPreview.months === 1 ? "mese" : "mesi"}</span>
+                <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
+                <span className="font-semibold">{importPreview.dayCount}</span>
+                <span className="text-slate-500">{importPreview.dayCount === 1 ? "giorno con dati" : "giorni con dati"}</span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{importPreview.dateRange}</div>
+            </div>
+          )}
+          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+            Tutti i dati esistenti verranno sovrascritti. L&apos;operazione non è reversibile.
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <Button
@@ -507,9 +930,10 @@ export function SettingsModal({
               Annulla
             </Button>
             <Button
-              className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600"
+              className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600 disabled:opacity-40"
               onClick={confirmImport}
               type="button"
+              disabled={Boolean(importPreview?.error) || importPreview === null}
             >
               Importa
             </Button>

@@ -9,7 +9,25 @@ export const DEFAULT_SETTINGS = {
   defaultView: "day",
   taskSubtypes: {},
   todoTags: [],
+  workHours: {
+    morningStart: 9 * 60,    // 540
+    morningEnd: 13 * 60,     // 780
+    afternoonStart: 14 * 60, // 840
+    afternoonEnd: 18 * 60,   // 1080
+  },
 };
+
+function normalizeWorkHours(raw) {
+  const d = DEFAULT_SETTINGS.workHours;
+  if (!raw || typeof raw !== "object") return { ...d };
+  const ms = typeof raw.morningStart === "number" ? raw.morningStart : d.morningStart;
+  const me = typeof raw.morningEnd === "number" ? raw.morningEnd : d.morningEnd;
+  const as = typeof raw.afternoonStart === "number" ? raw.afternoonStart : d.afternoonStart;
+  const ae = typeof raw.afternoonEnd === "number" ? raw.afternoonEnd : d.afternoonEnd;
+  // Ensure logical consistency
+  if (ms >= me || as >= ae || me > as) return { ...d };
+  return { morningStart: ms, morningEnd: me, afternoonStart: as, afternoonEnd: ae };
+}
 
 function normalizeClientColors(raw) {
   if (!raw || typeof raw !== "object") return {};
@@ -34,6 +52,7 @@ export function normalizeSettings(raw) {
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
     taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
     todoTags: Array.isArray(raw.todoTags) ? raw.todoTags : [],
+    workHours: normalizeWorkHours(raw.workHours),
   };
 }
 

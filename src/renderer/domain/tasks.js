@@ -69,10 +69,19 @@ export function slotLabel(value) {
   return slotKey(value);
 }
 
-function buildSlots(startMin, endMin) {
+export function buildSlots(startMin, endMin) {
   const out = [];
   for (let m = startMin; m < endMin; m += SLOT_MINUTES) out.push(m);
   return out;
+}
+
+export function buildWorkSlots(workHours) {
+  const { morningStart, morningEnd, afternoonStart, afternoonEnd } = workHours;
+  const MORNING_SLOTS = buildSlots(morningStart, morningEnd);
+  const AFTERNOON_SLOTS = buildSlots(afternoonStart, afternoonEnd);
+  const WORK_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
+  const HOURS_PER_DAY = WORK_SLOTS.length / 2;
+  return { MORNING_SLOTS, AFTERNOON_SLOTS, WORK_SLOTS, HOURS_PER_DAY };
 }
 
 export const MORNING_SLOTS = buildSlots(9 * 60, 13 * 60); // 09:00 -> 12:30

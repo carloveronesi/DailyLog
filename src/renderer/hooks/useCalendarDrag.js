@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { SLOT_MINUTES } from '../domain/tasks';
 import { slotIndex } from '../domain/calendar';
+import { useWorkSlots } from '../contexts/SettingsContext';
 
 export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDate, clampToSection }) {
+  const { DAY_SLOTS } = useWorkSlots();
   const [activeDragCol, setActiveDragCol] = useState(null);
   
   const [dragStart, setDragStart] = useState(null);
@@ -25,14 +27,14 @@ export function useCalendarDrag({ onOpenSlot, onMoveTask, onResizeTask, getColDa
     if (!isDraggingEmpty) return null;
     const start = Math.min(dragStart, dragHover);
     const end = Math.max(dragStart, dragHover) + SLOT_MINUTES;
-    const startIndex = slotIndex(start);
-    const endIndex = slotIndex(end - SLOT_MINUTES);
+    const startIndex = slotIndex(start, DAY_SLOTS);
+    const endIndex = slotIndex(end - SLOT_MINUTES, DAY_SLOTS);
     if (startIndex < 0 || endIndex < 0) return null;
     return {
       startIndex,
       span: endIndex - startIndex + 1,
     };
-  }, [dragStart, dragHover, isDraggingEmpty]);
+  }, [dragStart, dragHover, isDraggingEmpty, DAY_SLOTS]);
 
   // Ref always-current per evitare re-attach degli event listener ad ogni render.
   // handleUp e handleMove leggono da questo ref invece di catturare valori stale in chiusura.

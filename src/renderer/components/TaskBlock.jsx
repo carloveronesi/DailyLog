@@ -1,5 +1,5 @@
 import { SLOT_MINUTES, badgePresentation, displayLabel, getSubtypeLabel } from "../domain/tasks";
-import { hasMissingNotes, slotIndex } from "../domain/calendar";
+import { hasMissingNotes, slotIndex, DAY_SLOTS } from "../domain/calendar";
 import { useSettings } from "../contexts/SettingsContext";
 import { Icon } from "./ui";
 
@@ -39,14 +39,14 @@ const STYLES = {
  *                               resizeTaskBlock, resizeTaskDelta, resizeTaskDirection }
  * @returns {{ currentTopIdx, currentSpan, isGhost, isBeingMoved, isBeingResized }}
  */
-export function computeBlockGeometry(block, dragState) {
+export function computeBlockGeometry(block, dragState, daySlots = DAY_SLOTS) {
   const {
     isMoving, isResizing, isActiveCol = true,
     moveTaskBlock, moveTaskDelta,
     resizeTaskBlock, resizeTaskDelta, resizeTaskDirection,
   } = dragState;
 
-  const startIdx = slotIndex(block.start);
+  const startIdx = slotIndex(block.start, daySlots);
   const span = block.span || 1;
 
   const isBeingMoved = isMoving && isActiveCol && moveTaskBlock?.start === block.start;
@@ -57,19 +57,19 @@ export function computeBlockGeometry(block, dragState) {
   let isGhost = false;
 
   if (isBeingMoved) {
-    const newStartIdx = slotIndex(block.start + moveTaskDelta);
+    const newStartIdx = slotIndex(block.start + moveTaskDelta, daySlots);
     if (newStartIdx >= 0) currentTopIdx = newStartIdx;
     isGhost = true;
   } else if (isBeingResized) {
     if (resizeTaskDirection === "top") {
-      const newStartIdx = slotIndex(block.start + resizeTaskDelta);
-      const endIdx = slotIndex(block.end - SLOT_MINUTES);
+      const newStartIdx = slotIndex(block.start + resizeTaskDelta, daySlots);
+      const endIdx = slotIndex(block.end - SLOT_MINUTES, daySlots);
       if (newStartIdx <= endIdx && newStartIdx >= 0) {
         currentTopIdx = newStartIdx;
         currentSpan = endIdx - newStartIdx + 1;
       }
     } else {
-      const newEndIdx = slotIndex(block.end + resizeTaskDelta - SLOT_MINUTES);
+      const newEndIdx = slotIndex(block.end + resizeTaskDelta - SLOT_MINUTES, daySlots);
       if (newEndIdx >= startIdx) currentSpan = newEndIdx - startIdx + 1;
     }
   }

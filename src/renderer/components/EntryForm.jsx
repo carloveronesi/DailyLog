@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { AFTERNOON_SLOTS, MORNING_SLOTS, SLOT_MINUTES, TASK_TYPES } from "../domain/tasks";
+import { SLOT_MINUTES, TASK_TYPES } from "../domain/tasks";
 import { Icon } from "./ui";
-import { useSettings } from "../contexts/SettingsContext";
+import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { Combobox } from "./Combobox";
 
 export function EntryForm({
@@ -24,6 +24,7 @@ export function EntryForm({
   hourLabel
 }) {
   const { settings, setSettings } = useSettings();
+  const { MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const taskSubtypes = settings?.taskSubtypes || {};
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const [personInput, setPersonInput] = useState("");

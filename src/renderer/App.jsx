@@ -16,7 +16,7 @@ import { useUIState } from "./hooks/useUIState";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { ymd, sameYMD } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
-import { LOCATION_TYPES } from "./domain/tasks";
+import { LOCATION_TYPES, buildWorkSlots } from "./domain/tasks";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
   const activeBtnClass = isActive ? "bg-slate-100 dark:bg-slate-800" : "";
@@ -77,7 +77,8 @@ export default function App() {
 
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
-  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay });
+  const { WORK_SLOTS } = buildWorkSlots(settings.workHours);
+  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
 
   const {
     selectedDate, selectedSlot, selectedRange,
@@ -103,10 +104,6 @@ export default function App() {
 
   function handleImportSuccess() {
     reloadFromStorage();
-  }
-
-  function toggleTheme() {
-    setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }));
   }
 
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
@@ -180,18 +177,28 @@ export default function App() {
 
           {/* Bottom */}
           <div className="flex lg:flex-col items-center w-full lg:pb-4">
-            <SidebarBtn icon={settings.theme === "dark" ? "sun" : "moon"} label="Cambia Tema" onClick={toggleTheme} />
             <SidebarBtn icon="settings" label="Impostazioni" onClick={() => setSettingsOpen(true)} />
 
-            {!hasDesktopBridge ? (
-              <SidebarBtn
-                icon={backupFileHandle ? "check" : "upload"}
-                label={backupFileHandle ? "Backup attivo" : "Backup auto"}
-                onClick={backupFileHandle ? () => setShowBackupConfirm(true) : enableAutoBackup}
+            {!hasDesktopBridge && (
+              <button
+                type="button"
+                onClick={backupFileHandle ? () => setShowBackupConfirm(true) : (supportsAutoBackup ? enableAutoBackup : undefined)}
                 disabled={!supportsAutoBackup && !backupFileHandle}
-                activeClass={backupFileHandle ? "text-emerald-600 dark:text-emerald-500" : ""}
-              />
-            ) : null}
+                className={`relative flex items-center justify-center w-full p-3 lg:p-4 transition-colors rounded-2xl lg:rounded-none group/btn overflow-visible ${!supportsAutoBackup && !backupFileHandle ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"}`}
+                title={backupFileHandle ? "Backup automatico attivo — clicca per disattivare" : supportsAutoBackup ? "Backup automatico non attivo — clicca per attivare" : "Backup automatico non supportato dal browser"}
+              >
+                <Icon
+                  name={backupFileHandle ? "check" : "upload"}
+                  className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${backupFileHandle ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"}`}
+                />
+                {!backupFileHandle && supportsAutoBackup && (
+                  <span className="absolute top-2 right-2 lg:top-3 lg:right-3 w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500 animate-pulse" />
+                )}
+                <span className="hidden lg:block absolute left-full ml-3 whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-all transform translate-x-1 group-hover/btn:translate-x-0 font-bold text-[11px] uppercase tracking-widest text-white bg-slate-900/90 dark:bg-slate-700/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl z-[100] pointer-events-none before:content-[''] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2 before:border-4 before:border-transparent before:border-r-slate-900/90 dark:before:border-r-slate-700/95">
+                  {backupFileHandle ? "Backup attivo" : "Backup non attivo"}
+                </span>
+              </button>
+            )}
 
           </div>
         </nav>
@@ -315,6 +322,11 @@ export default function App() {
           clientNames={clientNames}
           exportAll={exportAll}
           onImportSuccess={handleImportSuccess}
+          backupFileHandle={backupFileHandle}
+          backupStatus={backupStatus}
+          supportsAutoBackup={supportsAutoBackup}
+          enableAutoBackup={enableAutoBackup}
+          onDisableAutoBackup={() => setShowBackupConfirm(true)}
         />
 
         <Modal open={editorOpen} onClose={closeEditor}>

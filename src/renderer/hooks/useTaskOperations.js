@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { hourKey, WORK_SLOTS, SLOT_MINUTES } from "../domain/tasks";
+import { hourKey, SLOT_MINUTES, WORK_SLOTS as DEFAULT_WORK_SLOTS } from "../domain/tasks";
 import { ymd } from "../utils/date";
 
 function hasOverlap(hours, rangeStart, rangeEnd, ignoreStart, ignoreEnd) {
@@ -13,7 +13,7 @@ function hasOverlap(hours, rangeStart, rangeEnd, ignoreStart, ignoreEnd) {
   return false;
 }
 
-export function useTaskOperations({ monthDataByDate, upsertDay }) {
+export function useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS = DEFAULT_WORK_SLOTS }) {
   const [blockedToast, setBlockedToast] = useState(null);
   const blockedToastTimerRef = useRef(null);
 
