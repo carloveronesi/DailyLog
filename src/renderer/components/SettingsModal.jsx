@@ -24,7 +24,7 @@ export function SettingsModal({
   onDisableAutoBackup,
 }) {
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState("personalizzazione");
+  const [activeTab, setActiveTab] = useState("aspetto");
   const [importStatus, setImportStatus] = useState(null); // { ok: bool, message: string }
   const [pendingImportFile, setPendingImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null); // { months, dateRange, dayCount } | { error: string } | null
@@ -284,74 +284,42 @@ export function SettingsModal({
     <Modal open={open} title="Impostazioni" onClose={onClose}>
       <div className="flex flex-col h-[600px] max-h-[70vh]">
         <div className="flex items-center justify-around border-b border-slate-200 dark:border-slate-700/50 mb-6 shrink-0">
-          <button
-            type="button"
-            onClick={() => handleTabChange("personalizzazione")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "personalizzazione"
+          {[
+            { key: "aspetto", label: "Aspetto" },
+            { key: "task", label: "Attività" },
+            { key: "clienti", label: "Clienti" },
+            { key: "salvataggio", label: "Salvataggio" },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handleTabChange(key)}
+              className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === key
                 ? "text-slate-900 dark:text-white"
                 : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
               }`}
-          >
-            Personalizzazione
-            {activeTab === "personalizzazione" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange("clienti")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "clienti"
-                ? "text-slate-900 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-              }`}
-          >
-            Clienti
-            {activeTab === "clienti" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange("task")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "task"
-                ? "text-slate-900 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-              }`}
-          >
-            Attività
-            {activeTab === "task" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange("salvataggio")}
-            className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === "salvataggio"
-                ? "text-slate-900 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-              }`}
-          >
-            Salvataggio
-            {activeTab === "salvataggio" && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
-            )}
-          </button>
-
+            >
+              {label}
+              {activeTab === key && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
+              )}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
           {activeTab === "clienti" && (
-            <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-              <div className="space-y-1">
-                <div className="text-base font-bold text-slate-900 dark:text-white">Tavolozza Colori Clienti</div>
-                <div className="text-sm text-slate-500 dark:text-slate-400">
-                  Fai clic su un colore per personalizzarlo.
+            <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+              <div className="px-6 pt-6 pb-4">
+                <div className="text-base font-bold text-slate-900 dark:text-white">Colori clienti</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  Clicca su un colore per personalizzarlo. I colori non assegnati sono generati automaticamente.
                 </div>
               </div>
 
               {clientNames.length === 0 ? (
-                <div className="text-sm text-slate-500 dark:text-slate-400 italic">
-                  Nessun cliente trovato nei dati salvati.
+                <div className="px-6 pb-6 text-sm text-slate-400 dark:text-slate-500 italic">
+                  Nessun cliente trovato nei log salvati.
                 </div>
               ) : (
                 <div className="space-y-0 -mx-6">
@@ -381,24 +349,27 @@ export function SettingsModal({
                               style={{ backgroundColor: color }}
                             />
                           </label>
-                          <span className="text-base font-medium text-slate-800 dark:text-slate-200">
-                            {clientName}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                              {clientName}
+                            </span>
+                            {!hasCustom && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
+                                auto
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => resetClientColor(clientName)}
-                          type="button"
-                          disabled={!hasCustom}
-                          className={
-                            "p-2 rounded-full transition-all " +
-                            (hasCustom
-                              ? "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/50 hover:scale-110"
-                              : "text-slate-300 dark:text-slate-700 opacity-40 pointer-events-none")
-                          }
-                          title="Reset colore"
-                        >
-                          <Icon name={hasCustom ? "reset-rainbow" : "rotate-ccw"} className="w-5 h-5" />
-                        </button>
+                        {hasCustom && (
+                          <button
+                            onClick={() => resetClientColor(clientName)}
+                            type="button"
+                            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50 transition-all hover:scale-110"
+                            title="Ripristina colore automatico"
+                          >
+                            <Icon name="rotate-ccw" className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -407,41 +378,48 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "personalizzazione" && (
+          {activeTab === "aspetto" && (
             <div className="space-y-4">
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
-                <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Vista predefinita all&apos;avvio</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Scegli quale visualizzazione mostrare quando apri l&apos;applicazione.</div>
+              {/* Aspetto: tema + vista riuniti */}
+              <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+                <div className="px-6 pt-6 pb-2">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Aspetto</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Personalizza la visualizzazione dell&apos;interfaccia.</div>
                 </div>
-                <div className="pt-2">
-                  <Segmented
-                    value={settings.defaultView || "day"}
-                    onChange={(val) => setSettings(prev => ({ ...prev, defaultView: val }))}
-                    options={[
-                      { label: "Giorno", value: "day" },
-                      { label: "Settimana", value: "week" },
-                      { label: "Mese", value: "month" }
-                    ]}
-                  />
-                </div>
-              </div>
-
-              {/* Tema */}
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
-                <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Tema</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Scegli il tema dell&apos;interfaccia.</div>
-                </div>
-                <div className="pt-2">
-                  <Segmented
-                    value={settings.theme || "light"}
-                    onChange={(val) => setSettings((prev) => ({ ...prev, theme: val }))}
-                    options={[
-                      { label: "Chiaro", value: "light" },
-                      { label: "Scuro", value: "dark" },
-                    ]}
-                  />
+                <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  <div className="px-6 py-4 flex items-center justify-between gap-6">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Tema</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Chiaro o scuro</div>
+                    </div>
+                    <div className="shrink-0">
+                      <Segmented
+                        value={settings.theme || "light"}
+                        onChange={(val) => setSettings((prev) => ({ ...prev, theme: val }))}
+                        options={[
+                          { label: "Chiaro", value: "light" },
+                          { label: "Scuro", value: "dark" },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="px-6 py-4 flex items-center justify-between gap-6">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Vista all&apos;avvio</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Visualizzazione predefinita</div>
+                    </div>
+                    <div className="shrink-0">
+                      <Segmented
+                        value={settings.defaultView || "day"}
+                        onChange={(val) => setSettings((prev) => ({ ...prev, defaultView: val }))}
+                        options={[
+                          { label: "Giorno", value: "day" },
+                          { label: "Settimana", value: "week" },
+                          { label: "Mese", value: "month" },
+                        ]}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -509,11 +487,12 @@ export function SettingsModal({
           )}
 
           {activeTab === "task" && (
+            <div className="space-y-4">
             <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
               <div className="space-y-1">
-                <div className="text-base font-bold text-slate-900 dark:text-white">Sottotipi di Attività</div>
+                <div className="text-base font-bold text-slate-900 dark:text-white">Sottotipi</div>
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                  Definisci dei titoli prestabiliti per compilare velocemente i tuoi task.
+                  Titoli prestabiliti per compilare velocemente i tuoi task.
                 </div>
               </div>
               <div className="space-y-6 pt-2">
@@ -605,12 +584,14 @@ export function SettingsModal({
                 ))}
               </div>
 
-              {/* Sezione Tag Todo */}
-              <div className="pt-6 border-t border-slate-200 dark:border-slate-700/50">
-                <div className="space-y-1 mb-4">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Tag Attività (Todo)</div>
+            </div>
+
+            {/* Card Tag Todo */}
+            <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Tag Todo</div>
                   <div className="text-sm text-slate-500 dark:text-slate-400">
-                    Definisci dei tag globali da assegnare alle tue attività nella todo-list.
+                    Tag globali da assegnare alle attività nella todo-list.
                   </div>
                 </div>
                 <div className="flex gap-2 w-full max-w-lg mb-4">
@@ -692,70 +673,55 @@ export function SettingsModal({
                     ))
                   )}
                 </div>
-              </div>
+            </div>
             </div>
           )}
 
           {activeTab === "salvataggio" && (
             <div className="space-y-4">
               <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                {/* Card Esporta */}
                 <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Import / Export</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">
-                    Esporta tutti i dati in JSON oppure importa un backup esistente.
-                  </div>
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Esporta</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Salva i tuoi dati in formato JSON.</div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-6" onClick={exportAll} type="button">
-                    <Icon name="download" className="mr-2 w-4 h-4" />
-                    Esporta JSON
-                  </Button>
-                  <Button
-                    className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl px-6"
-                    onClick={() => fileInputRef.current?.click()}
-                    type="button"
-                  >
-                    <Icon name="upload" className="mr-2 w-4 h-4" />
-                    Importa Backup
-                  </Button>
-                  <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFileSelected} />
-                </div>
-                {importStatus && (
-                  <p className={`text-sm mt-1 ${importStatus.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                    {importStatus.message}
-                  </p>
-                )}
-              </div>
-
-              {availableMonths.length > 0 && (
-                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                  <div className="space-y-1">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">Esporta per periodo</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">Seleziona un intervallo di mesi da esportare in JSON.</div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tutti i dati</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Esporta l&apos;intero archivio</div>
+                    </div>
+                    <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 shrink-0" onClick={exportAll} type="button">
+                      <Icon name="download" className="mr-2 w-4 h-4" />
+                      Esporta tutto
+                    </Button>
                   </div>
-                  {(() => {
+                  {availableMonths.length > 0 && (() => {
                     const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
-                    const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block";
                     const rangeCount = availableMonths.filter((m) => m >= exportFrom && m <= exportTo).length;
                     return (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="pt-4 border-t border-slate-100 dark:border-slate-700/50 space-y-3">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Per periodo</div>
+                          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Seleziona l&apos;intervallo di mesi</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <span className={labelCls}>Da</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block">Da</span>
                             <select className={selectCls} value={exportFrom} onChange={(e) => setExportFrom(e.target.value)}>
                               {availableMonths.map((m) => <option key={m} value={m}>{m}</option>)}
                             </select>
                           </div>
                           <div>
-                            <span className={labelCls}>A</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block">A</span>
                             <select className={selectCls} value={exportTo} onChange={(e) => setExportTo(e.target.value)}>
                               {availableMonths.map((m) => <option key={m} value={m}>{m}</option>)}
                             </select>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <Button
-                            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-6 disabled:opacity-40"
+                            className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl px-4 disabled:opacity-40"
                             onClick={handleExportRange}
                             type="button"
                             disabled={rangeCount === 0}
@@ -764,16 +730,44 @@ export function SettingsModal({
                             Esporta selezione
                           </Button>
                           {rangeCount > 0 && (
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                            <span className="text-xs text-slate-400 dark:text-slate-500">
                               {rangeCount} {rangeCount === 1 ? "mese" : "mesi"}
                             </span>
                           )}
                         </div>
-                      </>
+                      </div>
                     );
                   })()}
                 </div>
-              )}
+              </div>
+
+              {/* Card Importa */}
+              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Importa</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Ripristina da un file di backup JSON.</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Seleziona file</div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Sovrascrive i dati esistenti</div>
+                  </div>
+                  <Button
+                    className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl px-4 shrink-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    type="button"
+                  >
+                    <Icon name="upload" className="mr-2 w-4 h-4" />
+                    Importa backup
+                  </Button>
+                  <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFileSelected} />
+                </div>
+                {importStatus && (
+                  <p className={`text-sm ${importStatus.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                    {importStatus.message}
+                  </p>
+                )}
+              </div>
 
               {!hasDesktopBridge && (
                 <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
