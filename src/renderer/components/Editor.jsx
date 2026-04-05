@@ -3,6 +3,7 @@ import {
   LOCATION_TYPES,
   SLOT_MINUTES,
   defaultEntry,
+  displayLabel,
   hourKey,
   hourLabel,
   isSameTaskEntry,
@@ -11,6 +12,9 @@ import {
 import { Button, Icon } from "./ui";
 import { EntryForm } from "./EntryForm";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
+import { dowMon0, ymd } from "../utils/date";
+
+const DOW_NAMES_IT = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
 function hasMeaning(e) {
   if (!e) return false;
@@ -68,7 +72,7 @@ function buildEndOptions(startMinute, sectionBoundaries) {
 }
 
 export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [] }) {
-  const { settings } = useSettings();
+  const { settings, setSettings } = useSettings();
   const { MORNING_SLOTS, AFTERNOON_SLOTS, WORK_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -249,9 +253,80 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   }
 
   const rangeDuration = formatDurationHours(Math.max(rangeEndMin - rangeStartMin, SLOT_MINUTES));
-  
+
   const activeNormalized = normalizeForType(activeEntry);
   const isSaveDisabled = !activeNormalized.title?.trim();
+
+  // Recurring task logic
+  const dow = dowMon0(date);
+  const recurringTasks = settings?.recurringTasks || [];
+  const [recurringFeedback, setRecurringFeedback] = useState(false);
+  const [recurringFreq, setRecurringFreq] = useState("weekly");
+  const [recurringDow, setRecurringDow] = useState(dow);
+  const [recurringDom, setRecurringDom] = useState(date.getDate());
+
+  // Trova il task ricorrente che corrisponde alla configurazione attuale
+  const existingRecurring = recurringTasks.find(t => {
+    const freq = t.frequency || "weekly";
+    if (freq !== recurringFreq) return false;
+    if (freq === "daily") return true;
+    if (freq === "monthly") return t.dayOfMonth === recurringDom;
+    return (t.dowMon0 ?? 0) === recurringDow;
+  }) || null;
+
+  const existingRecurringLabel = existingRecurring
+    ? displayLabel(existingRecurring.AM || existingRecurring.PM ||
+        (existingRecurring.hours ? Object.values(existingRecurring.hours)[0] : null))
+    : null;
+
+  function samePatternFilter(t) {
+    const freq = t.frequency || "weekly";
+    if (freq !== recurringFreq) return true;
+    if (freq === "daily") return false;
+    if (freq === "monthly") return t.dayOfMonth !== recurringDom;
+    return (t.dowMon0 ?? 0) !== recurringDow;
+  }
+
+  function handleSaveRecurring() {
+    let content;
+    if (fullDay) {
+      const cleanAM = normalizeForType(entryAM);
+      if (!cleanAM.title?.trim()) return;
+      content = { AM: cleanAM, PM: cleanAM, hours: null };
+    } else {
+      const cleanEntry = normalizeForType(draftEntry);
+      if (!cleanEntry.title?.trim()) return;
+      const hours = {};
+      const start = Math.min(rangeStartMin, rangeEndMin);
+      const end = Math.max(rangeStartMin, rangeEndMin);
+      for (let m = start; m < end; m += SLOT_MINUTES) {
+        hours[hourKey(m)] = cleanEntry;
+      }
+      content = { AM: null, PM: null, hours };
+    }
+    const needsAnchor = recurringFreq === "biweekly" || recurringFreq === "triweekly";
+    const newTask = {
+      id: Date.now().toString(),
+      frequency: recurringFreq,
+      dowMon0: recurringFreq !== "daily" && recurringFreq !== "monthly" ? recurringDow : null,
+      dayOfMonth: recurringFreq === "monthly" ? recurringDom : null,
+      anchorYmd: needsAnchor ? ymd(date) : null,
+      ...content,
+    };
+    setSettings(prev => ({
+      ...prev,
+      recurringTasks: [...(prev.recurringTasks || []).filter(samePatternFilter), newTask],
+    }));
+    setRecurringFeedback(true);
+    setTimeout(() => setRecurringFeedback(false), 2000);
+  }
+
+  function handleRemoveRecurring() {
+    setSettings(prev => ({
+      ...prev,
+      recurringTasks: (prev.recurringTasks || []).filter(samePatternFilter),
+    }));
+  }
 
   return (
     <div className="flex flex-col min-h-0 flex-1 gap-4">
@@ -274,6 +349,69 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
         autoAdjusted={autoAdjusted}
         hourLabel={hourLabel}
       />
+
+      {hasMeaning(activeEntry) && (
+        <div className={`rounded-2xl border px-4 py-3 flex flex-col gap-2.5 transition-colors ${recurringFeedback ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700/50 dark:bg-slate-800/50'}`}>
+          {/* Riga header */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Icon name="repeat" className={`w-4 h-4 shrink-0 transition-colors ${recurringFeedback ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'}`} />
+              <span className={`text-xs font-semibold transition-colors ${recurringFeedback ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                {recurringFeedback ? 'Modello salvato!' : 'Ripeti'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              {existingRecurring ? (
+                <>
+                  <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Aggiorna</button>
+                  <button type="button" onClick={handleRemoveRecurring} className="text-xs font-semibold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">Rimuovi</button>
+                </>
+              ) : (
+                <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Salva modello</button>
+              )}
+            </div>
+          </div>
+          {/* Selettori frequenza */}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={recurringFreq}
+              onChange={e => setRecurringFreq(e.target.value)}
+              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              <option value="daily">Ogni giorno (lun-ven)</option>
+              <option value="weekly">Ogni settimana</option>
+              <option value="biweekly">Ogni 2 settimane</option>
+              <option value="triweekly">Ogni 3 settimane</option>
+              <option value="monthly">Ogni mese</option>
+            </select>
+            {(recurringFreq === "weekly" || recurringFreq === "biweekly" || recurringFreq === "triweekly") && (
+              <select
+                value={recurringDow}
+                onChange={e => setRecurringDow(Number(e.target.value))}
+                className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                {[["Lunedì",0],["Martedì",1],["Mercoledì",2],["Giovedì",3],["Venerdì",4]].map(([lbl, v]) => (
+                  <option key={v} value={v}>{lbl}</option>
+                ))}
+              </select>
+            )}
+            {recurringFreq === "monthly" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500 dark:text-slate-400">giorno</span>
+                <input
+                  type="number" min={1} max={28}
+                  value={recurringDom}
+                  onChange={e => setRecurringDom(Math.max(1, Math.min(28, Number(e.target.value))))}
+                  className="text-xs w-14 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                />
+              </div>
+            )}
+          </div>
+          {existingRecurring && !recurringFeedback && (
+            <div className="text-xs text-slate-400 dark:text-slate-500 truncate">Modello attivo: {existingRecurringLabel}</div>
+          )}
+        </div>
+      )}
 
       <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3 rounded-b-3xl">
         <div className="flex items-center gap-3">

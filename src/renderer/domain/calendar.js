@@ -161,3 +161,34 @@ export function buildBlocks(dayData, workSlots = DEFAULT_WORK_SLOTS) {
 export function slotIndex(slotMin, daySlots = DAY_SLOTS) {
   return daySlots.indexOf(slotMin);
 }
+
+/**
+ * Verifica se un task ricorrente corrisponde a una data specifica.
+ * frequency: "daily" | "weekly" | "biweekly" | "triweekly" | "monthly"
+ * dowMon0: 0=Lun…4=Ven  (usato per weekly/biweekly/triweekly)
+ * dayOfMonth: 1-31       (usato per monthly)
+ * anchorYmd: "YYYY-MM-DD" (usato per biweekly/triweekly come data di riferimento)
+ */
+export function matchesRecurringPattern(task, date) {
+  const freq = task.frequency || "weekly";
+  const dow = (date.getDay() + 6) % 7;
+
+  if (freq === "daily") return true;
+
+  if (freq === "monthly") {
+    return date.getDate() === (task.dayOfMonth ?? 1);
+  }
+
+  // weekly / biweekly / triweekly: controlla prima il giorno della settimana
+  if ((task.dowMon0 ?? 0) !== dow) return false;
+
+  const intervalDays = freq === "triweekly" ? 21 : freq === "biweekly" ? 14 : 7;
+  if (intervalDays === 7) return true;
+
+  if (!task.anchorYmd) return true;
+  const [ay, am, ad] = task.anchorYmd.split("-").map(Number);
+  const anchor = new Date(ay, am - 1, ad);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((d - anchor) / (24 * 60 * 60 * 1000));
+  return Math.abs(diffDays) % intervalDays === 0;
+}

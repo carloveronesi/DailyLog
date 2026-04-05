@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = {
   defaultView: "day",
   taskSubtypes: {},
   todoTags: [],
+  recurringTasks: [],
   workHours: {
     morningStart: 9 * 60,    // 540
     morningEnd: 13 * 60,     // 780
@@ -52,6 +53,7 @@ export function normalizeSettings(raw) {
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
     taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
     todoTags: Array.isArray(raw.todoTags) ? raw.todoTags : [],
+    recurringTasks: Array.isArray(raw.recurringTasks) ? raw.recurringTasks : [],
     workHours: normalizeWorkHours(raw.workHours),
   };
 }

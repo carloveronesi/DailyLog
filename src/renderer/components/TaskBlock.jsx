@@ -13,6 +13,8 @@ const STYLES = {
     missingNotes: "absolute right-1 top-1 h-1.5 w-1.5 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85",
     deleteBtn: "delete-btn absolute right-1 bottom-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-5 w-5 rounded bg-red-500/90 hover:bg-red-600 text-white shadow-sm",
     deleteIcon: "w-2.5 h-2.5",
+    copyBtn: "copy-btn absolute left-1 bottom-1 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-5 w-5 rounded bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 shadow-sm",
+    copyIcon: "w-2.5 h-2.5",
     resizeTop: "resize-handle absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-t-xl shadow-sm",
     resizeBottom: "resize-handle absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-b-xl shadow-sm",
   },
@@ -25,6 +27,8 @@ const STYLES = {
     missingNotes: "absolute right-2 top-2 h-2 w-2 rounded-full border border-[#F2A19A] bg-[#FFF9F8] dark:border-[#E88D86] dark:bg-slate-800/85",
     deleteBtn: "delete-btn absolute right-2 bottom-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-7 w-7 rounded-lg bg-red-500/90 hover:bg-red-600 text-white shadow-sm",
     deleteIcon: "w-3.5 h-3.5",
+    copyBtn: "copy-btn absolute left-2 bottom-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center h-7 w-7 rounded-lg bg-white/80 dark:bg-slate-700/80 hover:bg-white dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 shadow-sm",
+    copyIcon: "w-3.5 h-3.5",
     resizeTop: "resize-handle absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-t-2xl shadow-sm",
     resizeBottom: "resize-handle absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize transition-opacity z-40 opacity-0 group-hover:opacity-100 bg-sky-500 rounded-b-2xl shadow-sm",
   },
@@ -111,6 +115,7 @@ export function TaskBlock({
   variant = "day",
   onOpen,
   onDelete,
+  onCopy,
   onMouseDownBlock,
   onResizeMouseDown,
 }) {
@@ -197,6 +202,18 @@ export function TaskBlock({
           </>
         )
       )}
+
+      {onCopy && !isBeingMoved && !isBeingResized ? (
+        <button
+          type="button"
+          className={s.copyBtn}
+          title="Copia task"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onCopy(); }}
+        >
+          <Icon name="clipboard" className={s.copyIcon} />
+        </button>
+      ) : null}
 
       {onDelete && !isBeingMoved && !isBeingResized ? (
         <button

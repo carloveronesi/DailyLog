@@ -14,9 +14,10 @@ import { useBackupSync } from "./hooks/useBackupSync";
 import { useTaskOperations } from "./hooks/useTaskOperations";
 import { useUIState } from "./hooks/useUIState";
 import { SettingsContext } from "./contexts/SettingsContext";
-import { ymd, sameYMD } from "./utils/date";
+import { ymd, sameYMD, dowMon0 } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
-import { LOCATION_TYPES, buildWorkSlots } from "./domain/tasks";
+import { LOCATION_TYPES, SLOT_MINUTES, buildWorkSlots, hourKey } from "./domain/tasks";
+import { matchesRecurringPattern } from "./domain/calendar";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
   const activeBtnClass = isActive ? "bg-slate-100 dark:bg-slate-800" : "";
@@ -51,6 +52,9 @@ export default function App() {
     topMonthClients,
     upsertDay,
     deleteDay,
+    undoLastChange,
+    hasUndo,
+    saveCount,
     reloadFromStorage,
     prevMonth,
     nextMonth,
@@ -106,6 +110,83 @@ export default function App() {
     reloadFromStorage();
   }
 
+  // Copia giorno
+  const [copiedDay, setCopiedDay] = useState(null);
+
+  function handleCopyDay(date) {
+    const data = monthDataByDate[ymd(date)];
+    if (!data) return;
+    setCopiedDay(data);
+  }
+
+  function handlePasteDay(date) {
+    if (!copiedDay) return;
+    upsertDay(date, { ...copiedDay });
+  }
+
+  function handleCancelPaste() {
+    setCopiedDay(null);
+    copiedEntryRef.current = null;
+    setCopiedEntry(null);
+  }
+
+  // Copia singolo task/slot
+  const [copiedEntry, setCopiedEntry] = useState(null); // { entry, slotCount }
+  // Ref aggiornato in modo sincrono per evitare closure stale negli handler onOpenSlot
+  const copiedEntryRef = useRef(null);
+
+  function handleCopyEntry(entry, start, end) {
+    const slotCount = end && start !== undefined ? Math.round((end - start) / SLOT_MINUTES) : 1;
+    const val = { entry: { ...entry }, slotCount };
+    copiedEntryRef.current = val;
+    setCopiedEntry(val);
+    setCopiedDay(null);
+  }
+
+  function handlePasteEntry(date, slotStart) {
+    const val = copiedEntryRef.current;
+    if (!val) return;
+    const existing = monthDataByDate[ymd(date)] || {};
+    const newHours = { ...(existing.hours || {}) };
+    for (let i = 0; i < val.slotCount; i++) {
+      newHours[hourKey(slotStart + i * SLOT_MINUTES)] = { ...val.entry };
+    }
+    upsertDay(date, { ...existing, hours: newHours });
+    copiedEntryRef.current = null;
+    setCopiedEntry(null);
+  }
+
+  // Task ricorrenti
+  function handleApplyRecurring(date) {
+    const task = settings.recurringTasks?.find(t => matchesRecurringPattern(t, date));
+    if (!task) return;
+    if (task.hours) {
+      const existing = monthDataByDate[ymd(date)] || {};
+      upsertDay(date, { ...existing, hours: { ...(existing.hours || {}), ...task.hours } });
+    } else {
+      upsertDay(date, { AM: task.AM || null, PM: task.PM || null, location: null });
+    }
+  }
+
+  function handleFillMonth() {
+    const tasks = settings.recurringTasks || [];
+    if (tasks.length === 0) return;
+    for (const d of gridDates) {
+      if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+      if (d.getDay() === 0 || d.getDay() === 6) continue;
+      const key = ymd(d);
+      const dayData = monthDataByDate[key];
+      if (dayData?.AM || dayData?.PM || (dayData?.hours && Object.keys(dayData.hours).length > 0)) continue;
+      const task = tasks.find(t => matchesRecurringPattern(t, d));
+      if (!task) continue;
+      if (task.hours) {
+        upsertDay(d, { hours: { ...task.hours } });
+      } else {
+        upsertDay(d, { AM: task.AM || null, PM: task.PM || null, location: null });
+      }
+    }
+  }
+
   const selectedKey = selectedDate ? ymd(selectedDate) : null;
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   // listStoredClients scans all months in localStorage, not just the current one —
@@ -117,6 +198,50 @@ export default function App() {
 
   const searchTimeoutRef = useRef(null);
   useEffect(() => () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); }, []);
+
+  // Toast "Salvato" + undo
+  const [savedToast, setSavedToast] = useState(false);
+  const savedToastTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (saveCount === 0) return;
+    setSavedToast(true);
+    if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current);
+    savedToastTimerRef.current = setTimeout(() => {
+      setSavedToast(false);
+      savedToastTimerRef.current = null;
+    }, 4000);
+  }, [saveCount]);
+
+  useEffect(() => () => { if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current); }, []);
+
+  function handleUndo() {
+    undoLastChange();
+    setSavedToast(false);
+    if (savedToastTimerRef.current) {
+      clearTimeout(savedToastTimerRef.current);
+      savedToastTimerRef.current = null;
+    }
+  }
+
+  // Ctrl+Z shortcut + ESC per annullare paste mode
+  useEffect(() => {
+    function onKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        if (editorOpen || settingsOpen || searchOpen) return;
+        e.preventDefault();
+        handleUndo();
+      }
+      if (e.key === "Escape" && (copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
+        setCopiedDay(null);
+        copiedEntryRef.current = null;
+        setCopiedEntry(null);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorOpen, settingsOpen, searchOpen, hasUndo, copiedDay, copiedEntry]);
 
   const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
@@ -143,6 +268,37 @@ export default function App() {
         {blockedToast ? (
           <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-rose-200/80 bg-rose-50/95 px-4 py-2 text-sm font-semibold text-rose-700 shadow-soft backdrop-blur dark:border-rose-900/60 dark:bg-rose-950/70 dark:text-rose-200">
             {blockedToast}
+          </div>
+        ) : null}
+        {(copiedDay || copiedEntry) && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-sky-200/80 bg-sky-50/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-sky-800/50 dark:bg-sky-950/80">
+            <Icon name="clipboard" className="w-4 h-4 text-sky-500 dark:text-sky-400 shrink-0" />
+            <span className="text-sm font-semibold text-sky-700 dark:text-sky-300">
+              {copiedEntry ? "Clicca su uno slot vuoto per incollare" : "Clicca un giorno per incollare"}
+            </span>
+            <span className="w-px h-4 bg-sky-200 dark:bg-sky-700" />
+            <button type="button" onClick={handleCancelPaste} className="text-sm font-semibold text-sky-500 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-200 transition-colors">
+              Annulla
+              <span className="ml-1.5 text-[10px] font-normal text-sky-400 dark:text-sky-600">Esc</span>
+            </button>
+          </div>
+        )}
+        {savedToast ? (
+          <div className={`fixed ${(copiedDay || copiedEntry) ? "bottom-20" : "bottom-6"} left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-emerald-800/50 dark:bg-emerald-950/80`}>
+            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Salvato</span>
+            {hasUndo && (
+              <>
+                <span className="w-px h-4 bg-emerald-200 dark:bg-emerald-700" />
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 transition-colors"
+                >
+                  Annulla
+                  <span className="ml-1.5 text-[10px] font-normal text-emerald-400 dark:text-emerald-600">Ctrl+Z</span>
+                </button>
+              </>
+            )}
           </div>
         ) : null}
         {/* Sidebar: bottom on mobile, left on desktop */}
@@ -212,9 +368,11 @@ export default function App() {
                   month={month}
                   gridDates={gridDates}
                   monthDataByDate={monthDataByDate}
-                  onDayClick={openDayFromMonth}
+                  onDayClick={copiedDay ? handlePasteDay : openDayFromMonth}
                   visibleFilter={summaryHoverFilter || summaryFixedFilter}
                   onToggleLocation={handleToggleLocation}
+                  pasteMode={!!copiedDay}
+                  onApplyRecurring={handleApplyRecurring}
                 />
               )}
               {viewMode === "week" && (
@@ -222,6 +380,10 @@ export default function App() {
                   activeDate={activeDate}
                   monthDataByDate={monthDataByDate}
                   onOpenSlot={({ date, start, end, slot }) => {
+                    if (copiedEntryRef.current && start !== undefined) {
+                      handlePasteEntry(date, start);
+                      return;
+                    }
                     setActiveDate(date);
                     if (start !== undefined && end !== undefined) {
                       openEditor(date, { start, end });
@@ -248,6 +410,10 @@ export default function App() {
                   }}
                   goToday={goTodayDay}
                   onToggleLocation={handleToggleLocation}
+                  onCopyDay={handleCopyDay}
+                  pasteMode={!!copiedDay}
+                  onPasteDay={handlePasteDay}
+                  onCopyEntry={handleCopyEntry}
                 />
               )}
               {viewMode === "day" && (
@@ -255,7 +421,13 @@ export default function App() {
                   <DayView
                     date={activeDate}
                     dayData={dayData}
-                    onOpenSlot={(slot) => openEditor(activeDate, slot)}
+                    onOpenSlot={(slot) => {
+                      if (copiedEntryRef.current && slot?.start !== undefined) {
+                        handlePasteEntry(activeDate, slot.start);
+                        return;
+                      }
+                      openEditor(activeDate, slot);
+                    }}
                     onMoveTask={(args) => onMoveTask(activeDate, args)}
                     onResizeTask={(args) => onResizeTask(activeDate, args)}
                     onDeleteSlot={(args) => handleSlotDeletion(activeDate, args)}
@@ -263,6 +435,10 @@ export default function App() {
                     onNextDay={goNextDay}
                     onToday={goTodayDay}
                     onToggleLocation={handleToggleLocation}
+                    onCopyDay={() => handleCopyDay(activeDate)}
+                    pasteMode={!!copiedDay}
+                    onPasteDay={() => handlePasteDay(activeDate)}
+                    onCopyEntry={handleCopyEntry}
                   />
                   {isToday && (
                     <TodoView
@@ -290,6 +466,7 @@ export default function App() {
                       prevMonth={prevMonth}
                       nextMonth={nextMonth}
                       goToday={goToday}
+                      onFillMonth={settings.recurringTasks?.length > 0 ? handleFillMonth : undefined}
                     />
                   </div>
                   <div className="flex-1 min-h-0 overflow-y-auto rounded-3xl pb-2">

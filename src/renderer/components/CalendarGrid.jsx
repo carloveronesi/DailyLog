@@ -22,6 +22,8 @@ export function CalendarGrid({
     onDayClick,
     visibleFilter = null,
     onToggleLocation,
+    pasteMode,
+    onApplyRecurring,
 }) {
     const { settings } = useSettings();
     const clientColors = useMemo(() => settings?.clientColors || {}, [settings?.clientColors]);
@@ -65,6 +67,8 @@ export function CalendarGrid({
                             onDayClick={onDayClick}
                             clientColors={clientColors}
                             onToggleLocation={onToggleLocation}
+                            pasteMode={pasteMode && isCurrentMonth && !isWeekend}
+                            onApplyRecurring={onApplyRecurring}
                         />
                     );
                 })}

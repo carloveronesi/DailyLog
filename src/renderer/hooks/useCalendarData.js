@@ -3,12 +3,39 @@ import { SLOT } from "../domain/tasks";
 import { loadMonthData, saveMonthData } from "../services/storage";
 import { dowMon0, ymd } from "../utils/date";
 
+// Kept outside the hook to avoid re-creating on every render
+function restoreEntry(entry, setMonthsData) {
+  const { dateKey, mKey, targetYear, targetMonth0, previousData } = entry;
+  setMonthsData(prev => {
+    const currentMonthData = prev[mKey] || { byDate: {} };
+    const nextByDate = { ...currentMonthData.byDate };
+    if (previousData) {
+      nextByDate[dateKey] = previousData;
+    } else {
+      delete nextByDate[dateKey];
+    }
+    const nextMonthData = { ...currentMonthData, byDate: nextByDate };
+    saveMonthData(targetYear, targetMonth0, nextMonthData);
+    return { ...prev, [mKey]: nextMonthData };
+  });
+}
+
 export function useCalendarData(initialYear, initialMonth) {
     const [year, setYear] = useState(initialYear);
     const [month, setMonth] = useState(initialMonth);
-    
+
     // Cache multiple months: { "YYYY-MM": { byDate: {...} } }
     const [monthsData, setMonthsData] = useState({});
+
+    // Undo support
+    const monthsDataRef = useRef({});
+    const undoEntryRef = useRef(null);
+    const [hasUndo, setHasUndo] = useState(false);
+    const [saveCount, setSaveCount] = useState(0);
+
+    useEffect(() => {
+        monthsDataRef.current = monthsData;
+    }, [monthsData]);
 
     // Whenever focal year/month changes, ensure we have current, prev, and next months
     useEffect(() => {
@@ -121,6 +148,12 @@ export function useCalendarData(initialYear, initialMonth) {
         const targetMonth0 = parseInt(mStr, 10) - 1;
         const mKey = `${y}-${mStr}`;
 
+        // Capture undo snapshot before modifying
+        const prevDayData = monthsDataRef.current[mKey]?.byDate?.[key] ?? null;
+        undoEntryRef.current = { dateKey: key, mKey, targetYear, targetMonth0, previousData: prevDayData };
+        setHasUndo(true);
+        setSaveCount(c => c + 1);
+
         const hours = entries.hours && Object.keys(entries.hours).length > 0 ? entries.hours : undefined;
         const normalized = {
             AM: entries.AM || null,
@@ -139,10 +172,7 @@ export function useCalendarData(initialYear, initialMonth) {
                 nextByDate[key] = normalized;
             }
             const nextMonthData = { ...currentMonthData, byDate: nextByDate };
-            
-            // Persist specifically to the correct month bucket
             saveMonthData(targetYear, targetMonth0, nextMonthData);
-            
             return { ...prev, [mKey]: nextMonthData };
         });
     }
@@ -154,16 +184,28 @@ export function useCalendarData(initialYear, initialMonth) {
         const targetMonth0 = parseInt(mStr, 10) - 1;
         const mKey = `${y}-${mStr}`;
 
+        // Capture undo snapshot before deleting
+        const prevDayData = monthsDataRef.current[mKey]?.byDate?.[key] ?? null;
+        undoEntryRef.current = { dateKey: key, mKey, targetYear, targetMonth0, previousData: prevDayData };
+        setHasUndo(true);
+        setSaveCount(c => c + 1);
+
         setMonthsData(prev => {
             const currentMonthData = prev[mKey] || { byDate: {} };
             const nextByDate = { ...currentMonthData.byDate };
             delete nextByDate[key];
             const nextMonthData = { ...currentMonthData, byDate: nextByDate };
-            
             saveMonthData(targetYear, targetMonth0, nextMonthData);
-            
             return { ...prev, [mKey]: nextMonthData };
         });
+    }
+
+    function undoLastChange() {
+        const entry = undoEntryRef.current;
+        if (!entry) return;
+        undoEntryRef.current = null;
+        setHasUndo(false);
+        restoreEntry(entry, setMonthsData);
     }
 
     function reloadFromStorage() {
@@ -227,6 +269,9 @@ export function useCalendarData(initialYear, initialMonth) {
         topMonthClients,
         upsertDay,
         deleteDay,
+        undoLastChange,
+        hasUndo,
+        saveCount,
         reloadFromStorage,
         prevMonth,
         nextMonth,

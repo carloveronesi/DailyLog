@@ -21,6 +21,10 @@ export function DayView({
   onNextDay,
   onToday,
   onToggleLocation,
+  onCopyDay,
+  pasteMode,
+  onPasteDay,
+  onCopyEntry,
 }) {
   const workSlots = useWorkSlots();
   const { MORNING_SLOTS, AFTERNOON_SLOTS, DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
@@ -91,6 +95,25 @@ export function DayView({
         </div>
 
         <div className="flex items-center gap-2">
+          {pasteMode ? (
+            <Button
+              className="bg-sky-500 border border-sky-600 text-white hover:bg-sky-600 dark:bg-sky-600 dark:border-sky-700 dark:hover:bg-sky-500 flex items-center gap-1.5"
+              onClick={onPasteDay}
+              type="button"
+            >
+              <Icon name="clipboard" className="w-4 h-4" />
+              Incolla qui
+            </Button>
+          ) : (
+            <Button
+              className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+              onClick={onCopyDay}
+              type="button"
+              title="Copia questo giorno"
+            >
+              <Icon name="clipboard" className="w-4 h-4" />
+            </Button>
+          )}
           <Button
             className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
             onClick={onPrevDay}
@@ -231,7 +254,7 @@ export function DayView({
                   variant="day"
                   onMouseDownBlock={(e) => {
                     const section = slotSection(block.start);
-                    if (typeof block.start === "number" && block.end && !e.target.closest(".resize-handle") && !e.target.closest(".delete-btn")) {
+                    if (typeof block.start === "number" && block.end && !e.target.closest(".resize-handle") && !e.target.closest(".delete-btn") && !e.target.closest(".copy-btn")) {
                       e.stopPropagation();
                       pendingMoveRef.current = { startY: e.clientY, block: { ...block }, colIdx: section };
                     }
@@ -243,6 +266,7 @@ export function DayView({
                       onOpenSlot?.(block.slot);
                     }
                   }}
+                  onCopy={onCopyEntry ? () => onCopyEntry(block.entry, block.start, block.end) : undefined}
                   onDelete={onDeleteSlot ? () => {
                     onDeleteSlot({ start: block.start, end: block.end ?? (block.start + SLOT_MINUTES) });
                   } : null}
