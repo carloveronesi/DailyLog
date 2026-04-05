@@ -95,12 +95,11 @@ export function useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS = DEF
     const key = ymd(date);
     const existing = monthDataByDate[key];
     if (!existing?.hours) return;
+    const toDelete = new Set();
+    for (let m = start; m < end; m += SLOT_MINUTES) toDelete.add(hourKey(m));
     const nextHours = {};
     for (const [k, e] of Object.entries(existing.hours)) {
-      const [h, m] = k.split(":").map(Number);
-      const slotMin = h * 60 + m;
-      if (slotMin >= start && slotMin < end) continue;
-      nextHours[k] = e;
+      if (!toDelete.has(k)) nextHours[k] = e;
     }
     upsertDay(date, {
       AM: existing.AM || null,

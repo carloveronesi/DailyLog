@@ -160,11 +160,11 @@ export default function App() {
   function handleApplyRecurring(date) {
     const task = settings.recurringTasks?.find(t => matchesRecurringPattern(t, date));
     if (!task) return;
+    const existing = monthDataByDate[ymd(date)] || {};
     if (task.hours) {
-      const existing = monthDataByDate[ymd(date)] || {};
       upsertDay(date, { ...existing, hours: { ...(existing.hours || {}), ...task.hours } });
     } else {
-      upsertDay(date, { AM: task.AM || null, PM: task.PM || null, location: null });
+      upsertDay(date, { AM: task.AM || null, PM: task.PM || null, location: existing.location || null });
     }
   }
 
@@ -180,9 +180,9 @@ export default function App() {
       const task = tasks.find(t => matchesRecurringPattern(t, d));
       if (!task) continue;
       if (task.hours) {
-        upsertDay(d, { hours: { ...task.hours } });
+        upsertDay(d, { ...(dayData || {}), hours: { ...task.hours } });
       } else {
-        upsertDay(d, { AM: task.AM || null, PM: task.PM || null, location: null });
+        upsertDay(d, { AM: task.AM || null, PM: task.PM || null, location: dayData?.location || null });
       }
     }
   }

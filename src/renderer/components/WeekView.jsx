@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { SLOT_MINUTES, hourLabel } from "../domain/tasks";
 import { buildBlocks } from "../domain/calendar";
 import { useCalendarDrag } from "../hooks/useCalendarDrag";
@@ -80,6 +80,19 @@ export function WeekView({
 
   const getColDate = (colIdx) => weekDays[colIdx];
 
+  const [weekDragSection, setWeekDragSection] = useState(null);
+  const { MORNING_SLOTS, AFTERNOON_SLOTS } = workSlots;
+
+  const clampToSection = useCallback((colIdx, min) => {
+    if (weekDragSection === "AM") {
+      return Math.min(Math.max(min, MORNING_SLOTS[0]), MORNING_SLOTS[MORNING_SLOTS.length - 1] + SLOT_MINUTES);
+    }
+    if (weekDragSection === "PM") {
+      return Math.min(Math.max(min, AFTERNOON_SLOTS[0]), AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES);
+    }
+    return min;
+  }, [weekDragSection, MORNING_SLOTS, AFTERNOON_SLOTS]);
+
   const {
     activeDragCol, setActiveDragCol,
     dragStart, setDragStart,
@@ -95,7 +108,8 @@ export function WeekView({
     onOpenSlot,
     onMoveTask,
     onResizeTask,
-    getColDate
+    getColDate,
+    clampToSection,
   });
 
   const containerRef = useRef(null);
@@ -262,13 +276,14 @@ export function WeekView({
                                     onMouseDown={(e) => {
                                         if (isBreak) return;
                                         e.preventDefault();
+                                        setWeekDragSection(slot < BREAK_START ? "AM" : "PM");
                                         setDragStart(slot);
                                         setDragHover(slot);
                                         setActiveDragCol(colIdx);
                                     }}
                                     onMouseEnter={() => {
                                         if (isDraggingEmpty && activeDragCol === colIdx) {
-                                            setDragHover(slot);
+                                            if (!isBreak) setDragHover(slot);
                                         } else if (isMoving && moveTaskBlock && activeDragCol === colIdx) {
                                             const delta = slot - moveTaskBlock.start;
                                             setMoveTaskDelta(delta);
