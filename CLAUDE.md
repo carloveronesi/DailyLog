@@ -120,6 +120,11 @@ buildBlocks(dayData)   // raggruppa slot consecutivi identici in blocchi visivi
 slotIndex(m)    // indice di uno slot in DAY_SLOTS
 isSameHourEntry(a, b)  // deep equality per merge blocchi (include notes)
 hasMissingNotes(entry) // true se entry non ha note (client/internal)
+matchesRecurringPattern(task, date) // true se il task ricorrente si applica alla data
+  // Supporta: frequency = "daily" | "weekly" | "biweekly" | "triweekly" | "monthly"
+  // Per weekly: usa task.dowMon0 (0=Lun)
+  // Per biweekly/triweekly: usa task.anchorYmd per calcolare la settimana giusta
+  // Per monthly: usa task.dayOfMonth
 ```
 
 ## Pattern e convenzioni
@@ -134,6 +139,35 @@ hasMissingNotes(entry) // true se entry non ha note (client/internal)
 - `useCalendarDrag` gestisce drag su slot vuoti, move task e resize task nelle viste WeekView/DayView
 - `useSettings()` (da `SettingsContext`) usato nei componenti per leggere `clientColors` e `taskSubtypes` senza prop drilling; il Provider è in App.jsx
 - `useTaskOperations` (da `hooks/useTaskOperations.js`) incapsula tutta la logica di move/resize/delete slot e il toast di blocco
+
+## Editor.jsx — layout a due colonne
+Il modale Editor usa un layout responsive a due colonne (`max-w-2xl lg:max-w-4xl`):
+- **Header**: campo Titolo full-width con `autoFocus`
+- **Colonna sinistra**: `<EntryForm column="left">` (tipo/cliente/subtask + orari) + sezione ricorrenza
+- **Colonna destra**: `<EntryForm column="right">` (collaboratori + note + wentWrong/nextSteps)
+
+`EntryForm` accetta prop `column = "left" | "right" | "all"` per renderizzare solo la sezione richiesta. Il titolo è stato spostato fuori da EntryForm nell'Editor.
+
+## Task ricorrenti
+Modello in settings (`recurringTasks: []`). Ogni task ricorrente può avere:
+- `frequency`: `"daily"` | `"weekly"` (default) | `"biweekly"` | `"triweekly"` | `"monthly"`
+- `dowMon0`: giorno della settimana (0=Lun) per frequenze settimanali
+- `anchorYmd`: data ancora `"YYYY-MM-DD"` per calcolare biweekly/triweekly
+- `dayOfMonth`: giorno del mese per frequenza mensile
+- Contenuto: `AM`, `PM`, o `hours` (slot 30-min) — supporta task non full-day
+- `matchesRecurringPattern(task, date)` in `calendar.js` valuta l'applicabilità
+
+## WeekView e DayView — row height responsive
+Entrambe le viste usano `ResizeObserver` sul contenitore scrollabile per calcolare `rowHeight` dinamicamente, così da mostrare 09:00–18:00 senza scroll. Costanti locali:
+- `DEFAULT_ROW_HEIGHT = 35` — altezza di partenza in px
+- `MIN_ROW_HEIGHT = 28` — minimo; sotto questo valore si attiva `overflow-y: auto`
+- `INNER_PADDING` — spazio fisso sottratto dall'altezza del container prima di dividere per `DAY_SLOTS.length`
+
+## TodoView — gruppi DA FARE / FATTI
+I todo sono divisi in due sezioni in base a `isDone`:
+- **DA FARE**: `todos.filter(t => !t.isDone)` — include il pulsante "Aggiungi Attività"
+- **FATTI**: `todos.filter(t => t.isDone)` — visibile solo se ci sono todo completati, senza pulsante di aggiunta
+Completare un todo lo sposta automaticamente in "FATTI"; de-spuntarlo lo riporta in "DA FARE".
 
 ## Settings (localStorage `dailylog:v1:__settings`)
 ```js

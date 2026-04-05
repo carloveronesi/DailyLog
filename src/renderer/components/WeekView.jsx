@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { SLOT_MINUTES, hourLabel } from "../domain/tasks";
 import { buildBlocks } from "../domain/calendar";
 import { useCalendarDrag } from "../hooks/useCalendarDrag";
@@ -7,7 +7,10 @@ import { ymd } from "../utils/date";
 import { Button, Icon } from "./ui";
 import { useWorkSlots } from "../contexts/SettingsContext";
 
-const ROW_HEIGHT = 35;
+const DEFAULT_ROW_HEIGHT = 35;
+const MIN_ROW_HEIGHT = 28;
+// pt-[40px] for time axis top + pb-8(32) bottom
+const INNER_PADDING = 72;
 const WEEKDAY_NAMES = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì"];
 
 function getWorkweekDays(date) {
@@ -95,6 +98,26 @@ export function WeekView({
     getColDate
   });
 
+  const containerRef = useRef(null);
+  const [rowHeight, setRowHeight] = useState(DEFAULT_ROW_HEIGHT);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const compute = () => {
+      const h = el.clientHeight;
+      if (h <= 0) return;
+      const ideal = (h - INNER_PADDING) / DAY_SLOTS.length;
+      setRowHeight(Math.max(MIN_ROW_HEIGHT, ideal));
+    };
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    compute();
+    return () => ro.disconnect();
+  }, [DAY_SLOTS.length]);
+
+  const needsScroll = rowHeight <= MIN_ROW_HEIGHT;
+
   return (
     <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -130,23 +153,23 @@ export function WeekView({
         </div>
       </div>
 
-      <div className="mt-5 flex-1 min-h-0 overflow-y-auto">
+      <div ref={containerRef} className="mt-5 flex-1 min-h-0" style={{ overflowY: needsScroll ? "auto" : "hidden" }}>
         <div className="grid grid-cols-[50px_1fr] lg:grid-cols-[60px_1fr] gap-3 pb-8">
-          
+
           {/* Time axis */}
           <div className="pt-[40px]">
             <div
               className="relative grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
-              style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${ROW_HEIGHT}px)` }}
+              style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${rowHeight}px)` }}
             >
               {DAY_SLOTS.map((slot) => (
-                <div key={slot} className="flex items-center justify-end pr-2 pt-0 h-[35px] -mt-[18px]">
+                <div key={slot} className="flex items-center justify-end pr-2" style={{ height: `${rowHeight}px`, marginTop: `${-rowHeight / 2}px` }}>
                   {slot % 60 === 0 ? hourLabel(slot) : ""}
                 </div>
               ))}
-              <div 
-                className="absolute left-0 right-0 flex items-center justify-end pr-2 pt-0 h-[35px] -mt-[18px]"
-                style={{ top: `${DAY_SLOTS.length * ROW_HEIGHT}px` }}
+              <div
+                className="absolute left-0 right-0 flex items-center justify-end pr-2"
+                style={{ top: `${DAY_SLOTS.length * rowHeight}px`, height: `${rowHeight}px`, marginTop: `${-rowHeight / 2}px` }}
               >
                 {hourLabel(DAY_SLOTS[DAY_SLOTS.length - 1] + SLOT_MINUTES)}
               </div>
@@ -204,26 +227,26 @@ export function WeekView({
                     {/* Day Grid */}
                     <div
                       className="relative grid flex-1 rounded-xl border border-slate-200/80 bg-white/70 dark:border-slate-700/70 dark:bg-slate-900/40 opacity-95 hover:opacity-100 transition-opacity"
-                      style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${ROW_HEIGHT}px)` }}
+                      style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${rowHeight}px)` }}
                     >
                         {DAY_SLOTS.map((slot, idx) => (
                           <div
                             key={`line-${slot}`}
                             className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
-                            style={{ top: `${idx * ROW_HEIGHT}px` }}
+                            style={{ top: `${idx * rowHeight}px` }}
                           />
                         ))}
                         <div
                           className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
-                          style={{ top: `${DAY_SLOTS.length * ROW_HEIGHT}px` }}
+                          style={{ top: `${DAY_SLOTS.length * rowHeight}px` }}
                         />
 
                         {selection && activeDragCol === colIdx ? (
                           <div
                             className="pointer-events-none absolute left-1 right-1 z-10 rounded-xl border border-sky-400/70 bg-sky-200/30 dark:border-sky-500/60 dark:bg-sky-500/10"
                             style={{
-                              top: `${selection.startIndex * ROW_HEIGHT + 6}px`,
-                              height: `${selection.span * ROW_HEIGHT - 12}px`,
+                              top: `${selection.startIndex * rowHeight + 6}px`,
+                              height: `${selection.span * rowHeight - 12}px`,
                             }}
                           />
                         ) : null}
@@ -278,7 +301,7 @@ export function WeekView({
                               isAnyDragging={isAnyDragging}
                               moveTaskDelta={moveTaskDelta}
                               resizeTaskDelta={resizeTaskDelta}
-                              ROW_HEIGHT={ROW_HEIGHT}
+                              ROW_HEIGHT={rowHeight}
                               variant="week"
                               onMouseDownBlock={(e) => {
                                 if (typeof block.start === "number" && block.end && !e.target.closest(".resize-handle") && !e.target.closest(".delete-btn") && !e.target.closest(".copy-btn")) {

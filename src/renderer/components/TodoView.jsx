@@ -24,10 +24,8 @@ export function TodoView({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newTagInput, setNewTagInput] = useState("");
 
-  // Grouping todos
-  const groups = {
-    "DA FARE": todos.filter(t => t.group === "DA FARE"),
-  };
+  const pending = todos.filter(t => !t.isDone);
+  const done = todos.filter(t => t.isDone);
 
   const selectedTodo = todos.find(t => t.id === selectedTodoId) || null;
 
@@ -101,14 +99,17 @@ export function TodoView({
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Attività</h2>
           </div>
           
-          {Object.entries(groups).map(([groupName, groupTodos]) => (
+          {[
+            { groupName: "DA FARE", groupTodos: pending, showAdd: true },
+            ...(done.length > 0 ? [{ groupName: "FATTI", groupTodos: done, showAdd: false }] : []),
+          ].map(({ groupName, groupTodos, showAdd }) => (
             <div key={groupName} className="mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <Icon name="list-check" className="w-5 h-5 text-slate-400" />
                 <h3 className="font-semibold text-sm tracking-wide text-slate-500 dark:text-slate-400 uppercase">{groupName}</h3>
                 <span className="text-sm text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{groupTodos.length}</span>
               </div>
-              
+
               <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
                 <div className="grid grid-cols-[1fr_auto_auto_40px] lg:grid-cols-[1fr_120px_120px_40px] gap-2 lg:gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   <div>Nome / Progetto</div>
@@ -116,7 +117,7 @@ export function TodoView({
                   <div className="hidden sm:block text-center">Scadenza</div>
                   <div></div>
                 </div>
-                
+
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {groupTodos.map(todo => {
                     const doneSubtasks = (todo.subtasks || []).filter(s => s.isDone).length;
@@ -188,15 +189,17 @@ export function TodoView({
                     );
                   })}
                   
-                  <div className="p-3">
-                    <button 
-                      onClick={handleAddNew}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
-                    >
-                      <Icon name="list-check" className="w-4 h-4" />
-                      Aggiungi Attività
-                    </button>
-                  </div>
+                  {showAdd && (
+                    <div className="p-3">
+                      <button
+                        onClick={handleAddNew}
+                        className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
+                      >
+                        <Icon name="list-check" className="w-4 h-4" />
+                        Aggiungi Attività
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -420,6 +420,19 @@ export function SettingsModal({
                       />
                     </div>
                   </div>
+                  <div className="px-6 py-4 flex items-center justify-between gap-6">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Lista attività (To-do)</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Mostra il pannello to-do nella vista giornaliera</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSettings((prev) => ({ ...prev, showTodo: prev.showTodo === false ? true : false }))}
+                      className={"relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none " + (settings.showTodo === false ? "bg-slate-200 dark:bg-slate-700" : "bg-blue-600")}
+                    >
+                      <span className={"inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform " + (settings.showTodo === false ? "translate-x-1" : "translate-x-6")} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

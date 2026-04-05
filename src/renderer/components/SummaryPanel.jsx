@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getClientColor, HOURS_PER_DAY, SLOT, WORK_SLOTS, getSubtypeLabel } from "../domain/tasks";
 import { useSettings } from "../contexts/SettingsContext";
+import { getItalianHolidays } from "../utils/holidays";
 
 function isClientFilterActive(activeFilter, clientName) {
   return activeFilter?.kind === "client" && activeFilter.client === clientName;
@@ -53,10 +54,15 @@ export function SummaryPanel({
     }
 
     const lastDayOfMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+    const holidays = getItalianHolidays(year);
     let workingDaysInMonth = 0;
     for (let day = 1; day <= lastDayOfMonth; day++) {
-      const dow = new Date(year, monthIndex0, day).getDay();
-      if (dow !== 0 && dow !== 6) workingDaysInMonth += 1;
+      const d = new Date(year, monthIndex0, day);
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) continue;
+      const key = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      if (holidays.has(key)) continue;
+      workingDaysInMonth += 1;
     }
 
     const byDate = data?.byDate || {};

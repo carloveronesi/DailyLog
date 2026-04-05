@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { DayCell } from "./DayCell";
 import { useSettings } from "../contexts/SettingsContext";
 import { ymd } from "../utils/date";
+import { getItalianHolidays } from "../utils/holidays";
 
 function matchesVisibleFilter(entry, visibleFilter) {
     if (!entry || !visibleFilter) return true;
@@ -27,6 +28,7 @@ export function CalendarGrid({
 }) {
     const { settings } = useSettings();
     const clientColors = useMemo(() => settings?.clientColors || {}, [settings?.clientColors]);
+    const holidays = useMemo(() => getItalianHolidays(year), [year]);
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (
@@ -44,6 +46,7 @@ export function CalendarGrid({
                     const isCurrentMonth = d.getMonth() === month && d.getFullYear() === year;
                     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                     const key = ymd(d);
+                    const isHoliday = isCurrentMonth && !isWeekend && holidays.has(key);
                     const rawEntries = monthDataByDate[key] || null;
                     let entries = rawEntries;
                     if (rawEntries && visibleFilter) {
@@ -63,11 +66,12 @@ export function CalendarGrid({
                             date={d}
                             isCurrentMonth={isCurrentMonth}
                             isWeekend={isWeekend}
+                            isHoliday={isHoliday}
                             entries={entries}
                             onDayClick={onDayClick}
                             clientColors={clientColors}
                             onToggleLocation={onToggleLocation}
-                            pasteMode={pasteMode && isCurrentMonth && !isWeekend}
+                            pasteMode={pasteMode && isCurrentMonth && !isWeekend && !isHoliday}
                             onApplyRecurring={onApplyRecurring}
                         />
                     );

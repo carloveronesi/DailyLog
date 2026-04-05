@@ -97,7 +97,7 @@ function buildHourSummary(hours) {
   return Array.from(groups.values()).sort((a, b) => b.count - a.count);
 }
 
-export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, entries, onDayClick, clientColors = {}, onToggleLocation, pasteMode, onApplyRecurring }) {
+export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, isHoliday = false, entries, onDayClick, clientColors = {}, onToggleLocation, pasteMode, onApplyRecurring }) {
   const { MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const { settings } = useSettings();
   const recurringTasks = settings?.recurringTasks || [];
@@ -115,10 +115,11 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
   const isFullDay = !morningHoursActive && !afternoonHoursActive && isSameTaskEntry(am, pm);
 
   const isWeekendDay = isCurrentMonth && isWeekend;
-  const isClickable = isCurrentMonth && !isWeekend && (typeof onDayClick === "function" || pasteMode);
+  const isNonWorkday = isWeekendDay || isHoliday;
+  const isClickable = isCurrentMonth && !isNonWorkday && (typeof onDayClick === "function" || pasteMode);
 
   const hasEntries = !!(am || pm || hasHourly);
-  const isEmptyWorkday = isCurrentMonth && !isWeekend && !hasEntries;
+  const isEmptyWorkday = isCurrentMonth && !isNonWorkday && !hasEntries;
   const recurringTask = isEmptyWorkday ? (recurringTasks.find(t => matchesRecurringPattern(t, date)) || null) : null;
   const recurringEntry = recurringTask
     ? (recurringTask.AM || recurringTask.PM || (recurringTask.hours ? Object.values(recurringTask.hours)[0] : null))
@@ -131,16 +132,18 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
     ? "bg-slate-300/70 border-slate-400 text-slate-600 dark:bg-slate-800/50 dark:border-slate-700/50 dark:text-slate-500"
     : isWeekendDay
       ? "bg-rose-100/70 border-rose-200/90 text-slate-700 dark:bg-rose-900/20 dark:border-rose-800/50 dark:text-slate-300"
-      : pasteMode
-        ? "bg-white/88 border-sky-200 hover:border-sky-400 hover:bg-sky-50/40 dark:bg-slate-800/90 dark:border-sky-700/50 dark:hover:border-sky-500 dark:hover:bg-sky-900/20"
-        : "bg-white/88 border-slate-200/90 hover:shadow-soft hover:-translate-y-[1px] dark:bg-slate-800/90 dark:border-slate-600 dark:hover:shadow-lg dark:hover:shadow-black/20";
+      : isHoliday
+        ? "bg-amber-50/80 border-amber-200/80 text-slate-700 dark:bg-amber-900/15 dark:border-amber-700/40 dark:text-slate-300"
+        : pasteMode
+          ? "bg-white/88 border-sky-200 hover:border-sky-400 hover:bg-sky-50/40 dark:bg-slate-800/90 dark:border-sky-700/50 dark:hover:border-sky-500 dark:hover:bg-sky-900/20"
+          : "bg-white/88 border-slate-200/90 hover:shadow-soft hover:-translate-y-[1px] dark:bg-slate-800/90 dark:border-slate-600 dark:hover:shadow-lg dark:hover:shadow-black/20";
   const todayRing = isToday
     ? "ring-2 ring-sky-300/60 ring-offset-2 ring-offset-white dark:ring-sky-500/40 dark:ring-offset-slate-900"
     : "";
 
   const dayNumCls = !isCurrentMonth
     ? "text-sm font-semibold text-slate-600 dark:text-slate-500"
-    : "text-sm font-semibold " + (isWeekend ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-300");
+    : "text-sm font-semibold " + (isWeekend ? "text-rose-600 dark:text-rose-400" : isHoliday ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-300");
   const dayNumTodayCls = isToday
     ? "text-sm font-semibold text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/30 rounded-full w-6 h-6 flex items-center justify-center"
     : dayNumCls;
@@ -153,7 +156,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
     <div className={base + " " + cursor + " " + bg + " " + todayRing} onClick={isClickable ? () => onDayClick(date) : undefined}>
       <div className="flex items-center justify-between px-0.5">
         <div className={dayNumTodayCls}>{d}</div>
-        {isCurrentMonth && !isWeekend && (
+        {isCurrentMonth && !isNonWorkday && (
           <div className="flex items-center gap-0.5">
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
@@ -170,7 +173,13 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
         )}
       </div>
 
-      {isCurrentMonth && !isWeekend ? (
+      {isCurrentMonth && isHoliday && (
+        <div className="flex flex-1 items-center justify-center">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-500/80 dark:text-amber-400/70">Festività</span>
+        </div>
+      )}
+
+      {isCurrentMonth && !isNonWorkday ? (
         <div className="flex flex-1 flex-col gap-1.5 mt-1.5">
           {isFullDay ? (
             // Full day: single large block

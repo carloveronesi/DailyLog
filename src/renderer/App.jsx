@@ -440,7 +440,7 @@ export default function App() {
                     onPasteDay={() => handlePasteDay(activeDate)}
                     onCopyEntry={handleCopyEntry}
                   />
-                  {isToday && (
+                  {isToday && settings.showTodo !== false && (
                     <TodoView
                       isEmbedded
                       availableProjects={clientNames}
