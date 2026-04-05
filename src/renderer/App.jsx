@@ -506,7 +506,7 @@ export default function App() {
           onDisableAutoBackup={() => setShowBackupConfirm(true)}
         />
 
-        <Modal open={editorOpen} onClose={closeEditor}>
+        <Modal open={editorOpen} onClose={closeEditor} className="max-w-2xl lg:max-w-4xl">
           {selectedDate ? (
             <Editor
               date={selectedDate}
