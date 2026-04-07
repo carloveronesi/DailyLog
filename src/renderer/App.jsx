@@ -8,6 +8,7 @@ import { DayView } from "./components/DayView";
 import { WeekView } from "./components/WeekView";
 import { SearchModal } from "./components/SearchModal";
 import { TodoView } from "./components/TodoView";
+import { ProjectView } from "./components/ProjectView";
 import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
@@ -19,16 +20,18 @@ import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./se
 import { LOCATION_TYPES, SLOT_MINUTES, buildWorkSlots, hourKey } from "./domain/tasks";
 import { matchesRecurringPattern } from "./domain/calendar";
 
-function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false }) {
-  const activeBtnClass = isActive ? "bg-slate-100 dark:bg-slate-800" : "";
-  const iconColor = activeClass ? activeClass : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-700 dark:text-slate-300");
+function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false, accent = false }) {
+  const activeBtnClass = accent
+    ? "bg-sky-500 hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500"
+    : (isActive ? "bg-slate-100 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800" : "hover:bg-slate-100 dark:hover:bg-slate-800");
+  const iconColor = accent ? "text-white" : (activeClass ? activeClass : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-700 dark:text-slate-300"));
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex items-center justify-center w-full p-3 lg:p-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
+      className={`relative flex items-center justify-center w-full p-3 lg:p-4 transition-colors lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
     >
       <Icon name={icon} className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${iconColor}`} />
 
@@ -107,7 +110,7 @@ export default function App() {
 
   // Sincronizza mese calendario con la data attiva nelle viste settimana/giorno
   useEffect(() => {
-    if (viewMode === "month") return;
+    if (viewMode === "month" || viewMode === "projects") return;
     if (activeDate.getFullYear() === year && activeDate.getMonth() === month) return;
     setMonthYear(activeDate.getFullYear(), activeDate.getMonth());
   }, [viewMode, activeDate, year, month, setMonthYear]);
@@ -285,11 +288,13 @@ export default function App() {
   }, [monthDataByDate, upsertDay]);
 
   const isToday = sameYMD(activeDate, new Date());
-  const mainLayoutClass = viewMode === "month"
-    ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
-    : viewMode === "day"
-      ? (isToday ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : "grid grid-cols-1 gap-5")
-      : "grid grid-cols-1 gap-5";
+  const mainLayoutClass = viewMode === "projects"
+    ? "flex flex-col lg:flex-1 lg:min-h-0"
+    : viewMode === "month"
+      ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
+      : viewMode === "day"
+        ? (isToday ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : "grid grid-cols-1 gap-5")
+        : "grid grid-cols-1 gap-5";
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings }}>
@@ -401,6 +406,14 @@ export default function App() {
               label="Vista Mese"
               onClick={() => setViewMode("month")}
               isActive={viewMode === "month"}
+            />
+            <div className="hidden lg:block w-8 h-px bg-slate-200 dark:bg-slate-700 my-1" />
+            <SidebarBtn
+              icon="briefcase"
+              label="Progetti"
+              onClick={() => setViewMode("projects")}
+              accent={viewMode !== "projects"}
+              isActive={viewMode === "projects"}
             />
           </div>
 
@@ -555,6 +568,13 @@ export default function App() {
                   </div>
                 </aside>
               ) : null}
+
+              {viewMode === "projects" && (
+                <ProjectView
+                  clientNames={clientNames}
+                  allPeople={allPeople}
+                />
+              )}
             </main>
           </div>
         </div>
