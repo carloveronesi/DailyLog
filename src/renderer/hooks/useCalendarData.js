@@ -27,10 +27,16 @@ export function useCalendarData(initialYear, initialMonth) {
     // Cache multiple months: { "YYYY-MM": { byDate: {...} } }
     const [monthsData, setMonthsData] = useState({});
 
-    // Undo support
+    // Undo/redo support
     const monthsDataRef = useRef({});
-    const undoEntryRef = useRef(null);
+    const undoStackRef = useRef([]); // [{ dateKey, mKey, targetYear, targetMonth0, previousData, label }]
+    const redoStackRef = useRef([]);
     const [hasUndo, setHasUndo] = useState(false);
+    const [undoLabel, setUndoLabel] = useState(null);
+    const [hasRedo, setHasRedo] = useState(false);
+    const [redoLabel, setRedoLabel] = useState(null);
+    const [undoHistory, setUndoHistory] = useState([]); // etichette per la cronologia UI, dal più recente
+    const [redoHistory, setRedoHistory] = useState([]);
     const [saveCount, setSaveCount] = useState(0);
 
     useEffect(() => {
@@ -141,7 +147,25 @@ export function useCalendarData(initialYear, initialMonth) {
             .map(([clientName]) => clientName);
     }, [monthDataByDate, year, month]);
 
-    function upsertDay(date, entries) {
+    function syncUI() {
+        const us = undoStackRef.current;
+        const rs = redoStackRef.current;
+        setHasUndo(us.length > 0);
+        setUndoLabel(us.length > 0 ? us[us.length - 1].label : null);
+        setHasRedo(rs.length > 0);
+        setRedoLabel(rs.length > 0 ? rs[rs.length - 1].label : null);
+        setUndoHistory([...us].reverse().map(e => e.label));
+        setRedoHistory([...rs].reverse().map(e => e.label));
+    }
+
+    function pushUndo(entry) {
+        const next = [...undoStackRef.current, entry];
+        undoStackRef.current = next.length > 20 ? next.slice(-20) : next;
+        redoStackRef.current = []; // nuova azione azzera il redo
+        syncUI();
+    }
+
+    function upsertDay(date, entries, label = "Modifica") {
         const key = ymd(date);
         const [y, mStr] = key.split("-");
         const targetYear = parseInt(y, 10);
@@ -150,8 +174,7 @@ export function useCalendarData(initialYear, initialMonth) {
 
         // Capture undo snapshot before modifying
         const prevDayData = monthsDataRef.current[mKey]?.byDate?.[key] ?? null;
-        undoEntryRef.current = { dateKey: key, mKey, targetYear, targetMonth0, previousData: prevDayData };
-        setHasUndo(true);
+        pushUndo({ dateKey: key, mKey, targetYear, targetMonth0, previousData: prevDayData, label });
         setSaveCount(c => c + 1);
 
         const hours = entries.hours && Object.keys(entries.hours).length > 0 ? entries.hours : undefined;
@@ -177,7 +200,7 @@ export function useCalendarData(initialYear, initialMonth) {
         });
     }
 
-    function deleteDay(date) {
+    function deleteDay(date, label = "Elimina giorno") {
         const key = ymd(date);
         const [y, mStr] = key.split("-");
         const targetYear = parseInt(y, 10);
@@ -186,8 +209,7 @@ export function useCalendarData(initialYear, initialMonth) {
 
         // Capture undo snapshot before deleting
         const prevDayData = monthsDataRef.current[mKey]?.byDate?.[key] ?? null;
-        undoEntryRef.current = { dateKey: key, mKey, targetYear, targetMonth0, previousData: prevDayData };
-        setHasUndo(true);
+        pushUndo({ dateKey: key, mKey, targetYear, targetMonth0, previousData: prevDayData, label });
         setSaveCount(c => c + 1);
 
         setMonthsData(prev => {
@@ -201,10 +223,30 @@ export function useCalendarData(initialYear, initialMonth) {
     }
 
     function undoLastChange() {
-        const entry = undoEntryRef.current;
-        if (!entry) return;
-        undoEntryRef.current = null;
-        setHasUndo(false);
+        const stack = undoStackRef.current;
+        if (stack.length === 0) return;
+        const entry = stack[stack.length - 1];
+        // Cattura stato corrente per il redo
+        const currentState = monthsDataRef.current[entry.mKey]?.byDate?.[entry.dateKey] ?? null;
+        const redoEntry = { ...entry, previousData: currentState };
+        undoStackRef.current = stack.slice(0, -1);
+        const nextRedo = [...redoStackRef.current, redoEntry];
+        redoStackRef.current = nextRedo.length > 20 ? nextRedo.slice(-20) : nextRedo;
+        syncUI();
+        restoreEntry(entry, setMonthsData);
+    }
+
+    function redoLastChange() {
+        const stack = redoStackRef.current;
+        if (stack.length === 0) return;
+        const entry = stack[stack.length - 1];
+        // Cattura stato corrente per l'undo
+        const currentState = monthsDataRef.current[entry.mKey]?.byDate?.[entry.dateKey] ?? null;
+        const undoEntry = { ...entry, previousData: currentState };
+        redoStackRef.current = stack.slice(0, -1);
+        const nextUndo = [...undoStackRef.current, undoEntry];
+        undoStackRef.current = nextUndo.length > 20 ? nextUndo.slice(-20) : nextUndo;
+        syncUI();
         restoreEntry(entry, setMonthsData);
     }
 
@@ -270,7 +312,13 @@ export function useCalendarData(initialYear, initialMonth) {
         upsertDay,
         deleteDay,
         undoLastChange,
+        redoLastChange,
         hasUndo,
+        undoLabel,
+        hasRedo,
+        redoLabel,
+        undoHistory,
+        redoHistory,
         saveCount,
         reloadFromStorage,
         prevMonth,

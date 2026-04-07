@@ -60,7 +60,7 @@ export function useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS = DEF
       PM: specificDayData.PM || null,
       location: specificDayData.location || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-    });
+    }, "Sposta task");
   }
 
   function onResizeTask(date, { start, end, newStart, newEnd }) {
@@ -88,7 +88,7 @@ export function useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS = DEF
       PM: specificDayData.PM || null,
       location: specificDayData.location || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-    });
+    }, "Ridimensiona task");
   }
 
   function handleSlotDeletion(date, { start, end }) {
@@ -106,7 +106,7 @@ export function useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS = DEF
       PM: existing.PM || null,
       location: existing.location || null,
       hours: Object.keys(nextHours).length > 0 ? nextHours : undefined,
-    });
+    }, "Elimina task");
   }
 
   return { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast };

@@ -53,7 +53,13 @@ export default function App() {
     upsertDay,
     deleteDay,
     undoLastChange,
+    redoLastChange,
     hasUndo,
+    undoLabel,
+    hasRedo,
+    redoLabel,
+    undoHistory,
+    redoHistory,
     saveCount,
     reloadFromStorage,
     prevMonth,
@@ -121,7 +127,7 @@ export default function App() {
 
   function handlePasteDay(date) {
     if (!copiedDay) return;
-    upsertDay(date, { ...copiedDay });
+    upsertDay(date, { ...copiedDay }, "Incolla giorno");
   }
 
   function handleCancelPaste() {
@@ -148,10 +154,22 @@ export default function App() {
     if (!val) return;
     const existing = monthDataByDate[ymd(date)] || {};
     const newHours = { ...(existing.hours || {}) };
-    for (let i = 0; i < val.slotCount; i++) {
+
+    // Conta quanti slot consecutivi liberi ci sono da slotStart in WORK_SLOTS
+    const startIdx = WORK_SLOTS.indexOf(slotStart);
+    let freeCount = 0;
+    for (let i = startIdx; i < WORK_SLOTS.length; i++) {
+      if (i > startIdx && WORK_SLOTS[i] !== WORK_SLOTS[i - 1] + SLOT_MINUTES) break; // pausa pranzo
+      if (newHours[hourKey(WORK_SLOTS[i])]) break; // slot occupato
+      freeCount++;
+    }
+    const slotsToWrite = Math.min(val.slotCount, freeCount);
+    if (slotsToWrite === 0) return;
+
+    for (let i = 0; i < slotsToWrite; i++) {
       newHours[hourKey(slotStart + i * SLOT_MINUTES)] = { ...val.entry };
     }
-    upsertDay(date, { ...existing, hours: newHours });
+    upsertDay(date, { ...existing, hours: newHours }, "Incolla task");
     copiedEntryRef.current = null;
     setCopiedEntry(null);
   }
@@ -162,9 +180,9 @@ export default function App() {
     if (!task) return;
     const existing = monthDataByDate[ymd(date)] || {};
     if (task.hours) {
-      upsertDay(date, { ...existing, hours: { ...(existing.hours || {}), ...task.hours } });
+      upsertDay(date, { ...existing, hours: { ...(existing.hours || {}), ...task.hours } }, "Applica ricorrente");
     } else {
-      upsertDay(date, { AM: task.AM || null, PM: task.PM || null, location: existing.location || null });
+      upsertDay(date, { AM: task.AM || null, PM: task.PM || null, location: existing.location || null }, "Applica ricorrente");
     }
   }
 
@@ -215,6 +233,8 @@ export default function App() {
 
   useEffect(() => () => { if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current); }, []);
 
+  const [showHistory, setShowHistory] = useState(false);
+
   function handleUndo() {
     undoLastChange();
     setSavedToast(false);
@@ -222,6 +242,10 @@ export default function App() {
       clearTimeout(savedToastTimerRef.current);
       savedToastTimerRef.current = null;
     }
+  }
+
+  function handleRedo() {
+    redoLastChange();
   }
 
   // Ctrl+Z shortcut + ESC per annullare paste mode
@@ -232,6 +256,11 @@ export default function App() {
         e.preventDefault();
         handleUndo();
       }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        if (editorOpen || settingsOpen || searchOpen) return;
+        e.preventDefault();
+        handleRedo();
+      }
       if (e.key === "Escape" && (copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
         setCopiedDay(null);
         copiedEntryRef.current = null;
@@ -241,7 +270,7 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorOpen, settingsOpen, searchOpen, hasUndo, copiedDay, copiedEntry]);
+  }, [editorOpen, settingsOpen, searchOpen, hasUndo, hasRedo, copiedDay, copiedEntry]);
 
   const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
@@ -252,7 +281,7 @@ export default function App() {
     else if (current === LOCATION_TYPES.OFFICE) next = LOCATION_TYPES.CLIENT;
     else next = LOCATION_TYPES.REMOTE;
 
-    upsertDay(date, { ...existing, location: next });
+    upsertDay(date, { ...existing, location: next }, "Cambia sede");
   }, [monthDataByDate, upsertDay]);
 
   const isToday = sameYMD(activeDate, new Date());
@@ -286,21 +315,65 @@ export default function App() {
         {savedToast ? (
           <div className={`fixed ${(copiedDay || copiedEntry) ? "bottom-20" : "bottom-6"} left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-emerald-800/50 dark:bg-emerald-950/80`}>
             <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Salvato</span>
-            {hasUndo && (
-              <>
-                <span className="w-px h-4 bg-emerald-200 dark:bg-emerald-700" />
-                <button
-                  type="button"
-                  onClick={handleUndo}
-                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 transition-colors"
-                >
-                  Annulla
-                  <span className="ml-1.5 text-[10px] font-normal text-emerald-400 dark:text-emerald-600">Ctrl+Z</span>
-                </button>
-              </>
-            )}
           </div>
         ) : null}
+        {(hasUndo || hasRedo) && (
+          <div className="fixed bottom-6 right-6 z-[120]">
+            {showHistory && (
+              <div className="mb-2 w-56 rounded-2xl border border-slate-200/80 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700/50 dark:bg-slate-800/95 overflow-hidden">
+                <div className="max-h-60 overflow-y-auto">
+                  {undoHistory.length === 0 && redoHistory.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-slate-400 text-center">Nessuna azione</div>
+                  ) : (
+                    <>
+                      {undoHistory.map((label, i) => (
+                        <div key={`u${i}`} className={`px-4 py-1.5 text-sm truncate ${i === 0 ? "font-semibold text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
+                          {label}
+                        </div>
+                      ))}
+                      <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400 border-y border-slate-100 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-500">
+                        — ora —
+                      </div>
+                      {redoHistory.map((label, i) => (
+                        <div key={`r${i}`} className="px-4 py-1.5 text-sm text-slate-400 dark:text-slate-500 truncate italic">
+                          {label}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="flex items-center rounded-2xl border border-slate-200/80 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700/50 dark:bg-slate-800/95 overflow-hidden">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={!hasUndo}
+                title={undoLabel ? `Annulla: ${undoLabel} (Ctrl+Z)` : "Niente da annullare"}
+                className="p-3 transition-colors hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-slate-700/60"
+              >
+                <Icon name="undo" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHistory(h => !h)}
+                title="Cronologia azioni"
+                className={`p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/60 ${showHistory ? "text-sky-500 dark:text-sky-400" : "text-slate-400 dark:text-slate-500"}`}
+              >
+                <Icon name="history" className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={!hasRedo}
+                title={redoLabel ? `Ripristina: ${redoLabel} (Ctrl+Y)` : "Niente da ripristinare"}
+                className="p-3 transition-colors hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-slate-700/60"
+              >
+                <Icon name="redo" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+              </button>
+            </div>
+          </div>
+        )}
         {/* Sidebar: bottom on mobile, left on desktop */}
         <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
 
@@ -514,11 +587,11 @@ export default function App() {
               initialRange={selectedRange}
               existingEntries={existingEntries}
               onSave={(entries) => {
-                upsertDay(selectedDate, entries);
+                upsertDay(selectedDate, entries, "Modifica giorno");
                 closeEditor();
               }}
               onDeleteDay={() => {
-                deleteDay(selectedDate);
+                deleteDay(selectedDate, "Elimina giorno");
                 closeEditor();
               }}
               topClients={topMonthClients}

@@ -195,6 +195,13 @@ export function Icon({ name, className = "" }) {
         <path d="M21 13v2a4 4 0 0 1-4 4H3" />
       </svg>
     );
+  if (name === "undo")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 7v6h6" />
+        <path d="M3 13C5.5 7.5 11 5 17 7a9 9 0 0 1 4 7" />
+      </svg>
+    );
 
   return null;
 }
