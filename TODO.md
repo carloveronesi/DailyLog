@@ -1,5 +1,4 @@
 # Migliorie
-- trattare i task interni come task clienti, solo con una categoria differente: quindi un colore personalizzato![alt text](image-1.png)
 - possibilità di personalizzare unità minima degli slot: ora sono di mezz'ora, ma si potrebbe mettere di 15 minuti. magari anche inserire manualmente l'orario di inizio + durata
 - gestione settimana lavorativa: per ora è default lunedì e venerdì, ma si potrebbe personalizzare
 

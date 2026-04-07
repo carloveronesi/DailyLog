@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { importAll, listStoredMonths, exportMonths } from "../services/storage";
 import { loadTodos, saveTodos } from "../services/storage/todo";
 import { Button, Icon, Modal, Segmented } from "./ui";
-import { getClientColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, hourLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, hourLabel } from "../domain/tasks";
 
 export function SettingsModal({
   open,
@@ -110,6 +110,24 @@ export function SettingsModal({
         [key]: normalized,
       },
     }));
+  }
+
+  function setInternalSubtypeColor(subtypeId, color) {
+    const normalized = normalizeHexColor(color);
+    if (!subtypeId || !normalized) return;
+    setSettings((prev) => ({
+      ...prev,
+      internalColors: { ...(prev.internalColors || {}), [subtypeId]: normalized },
+    }));
+  }
+
+  function resetInternalSubtypeColor(subtypeId) {
+    if (!subtypeId) return;
+    setSettings((prev) => {
+      const next = { ...(prev.internalColors || {}) };
+      delete next[subtypeId];
+      return { ...prev, internalColors: next };
+    });
   }
 
   function resetClientColor(clientName) {
@@ -287,7 +305,7 @@ export function SettingsModal({
           {[
             { key: "aspetto", label: "Aspetto" },
             { key: "task", label: "Attività" },
-            { key: "clienti", label: "Clienti" },
+            { key: "clienti", label: "Colori" },
             { key: "salvataggio", label: "Salvataggio" },
           ].map(({ key, label }) => (
             <button
@@ -309,70 +327,90 @@ export function SettingsModal({
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
           {activeTab === "clienti" && (
-            <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
-              <div className="px-6 pt-6 pb-4">
-                <div className="text-base font-bold text-slate-900 dark:text-white">Colori clienti</div>
-                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                  Clicca su un colore per personalizzarlo. I colori non assegnati sono generati automaticamente.
+            <div className="space-y-4">
+              {/* Colori clienti */}
+              <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+                <div className="px-6 pt-6 pb-4">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Colori clienti</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    Clicca su un colore per personalizzarlo. I colori non assegnati sono generati automaticamente.
+                  </div>
                 </div>
+                {clientNames.length === 0 ? (
+                  <div className="px-6 pb-6 text-sm text-slate-400 dark:text-slate-500 italic">
+                    Nessun cliente trovato nei log salvati.
+                  </div>
+                ) : (
+                  <div className="space-y-0">
+                    {clientNames.map((clientName, idx) => {
+                      const key = normalizeClientKey(clientName);
+                      const hasCustom = Boolean(normalizeHexColor(settings.clientColors?.[key]));
+                      const rawColor = getClientColor(clientName, settings.clientColors);
+                      const color = normalizeHexColor(rawColor) || rawColor || "#94a3b8";
+                      return (
+                        <div
+                          key={clientName}
+                          className={"flex items-center justify-between px-6 py-3 transition-colors " + (idx < clientNames.length - 1 ? "border-b border-slate-100 dark:border-slate-700/50" : "")}
+                        >
+                          <div className="flex items-center gap-4 group">
+                            <label className="relative cursor-pointer">
+                              <input type="color" className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" value={color} onChange={(e) => setClientColor(clientName, e.target.value)} />
+                              <div className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105" style={{ backgroundColor: color }} />
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{clientName}</span>
+                              {!hasCustom && <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">auto</span>}
+                            </div>
+                          </div>
+                          {hasCustom && (
+                            <button onClick={() => resetClientColor(clientName)} type="button" className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50 transition-all hover:scale-110" title="Ripristina colore automatico">
+                              <Icon name="rotate-ccw" className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {clientNames.length === 0 ? (
-                <div className="px-6 pb-6 text-sm text-slate-400 dark:text-slate-500 italic">
-                  Nessun cliente trovato nei log salvati.
-                </div>
-              ) : (
-                <div className="space-y-0 -mx-6">
-                  {clientNames.map((clientName, idx) => {
-                    const key = normalizeClientKey(clientName);
-                    const hasCustom = Boolean(normalizeHexColor(settings.clientColors?.[key]));
-                    const rawColor = getClientColor(clientName, settings.clientColors);
-                    const color = normalizeHexColor(rawColor) || rawColor || "#94a3b8";
-                    return (
-                      <div
-                        key={clientName}
-                        className={
-                          "flex items-center justify-between px-6 py-3 transition-colors " +
-                          (idx < clientNames.length - 1 ? "border-b border-slate-100 dark:border-slate-700/50" : "")
-                        }
-                      >
-                        <div className="flex items-center gap-4 group">
-                          <label className="relative cursor-pointer">
-                            <input
-                              type="color"
-                              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                              value={color}
-                              onChange={(e) => setClientColor(clientName, e.target.value)}
-                            />
-                            <div
-                              className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105"
-                              style={{ backgroundColor: color }}
-                            />
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                              {clientName}
-                            </span>
-                            {!hasCustom && (
-                              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
-                                auto
-                              </span>
-                            )}
+              {/* Colori subtask interni */}
+              {(settings.taskSubtypes?.["internal"] || []).length > 0 && (
+                <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+                  <div className="px-6 pt-6 pb-4">
+                    <div className="text-base font-bold text-slate-900 dark:text-white">Colori subtask interni</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                      Clicca su un colore per personalizzarlo. I colori non assegnati sono generati automaticamente.
+                    </div>
+                  </div>
+                  <div className="space-y-0">
+                    {(settings.taskSubtypes?.["internal"] || []).map((val, idx, arr) => {
+                      const id = val.id || val;
+                      const label = val.label || val;
+                      const hasCustom = Boolean(normalizeHexColor(settings.internalColors?.[id]));
+                      const rawColor = getInternalColor(id, settings.internalColors);
+                      const color = normalizeHexColor(rawColor) || rawColor || "#94a3b8";
+                      return (
+                        <div key={id} className={"flex items-center justify-between px-6 py-3 transition-colors " + (idx < arr.length - 1 ? "border-b border-slate-100 dark:border-slate-700/50" : "")}>
+                          <div className="flex items-center gap-4 group">
+                            <label className="relative cursor-pointer">
+                              <input type="color" className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" value={color} onChange={(e) => setInternalSubtypeColor(id, e.target.value)} />
+                              <div className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105" style={{ backgroundColor: color }} />
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</span>
+                              {!hasCustom && <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">auto</span>}
+                            </div>
                           </div>
+                          {hasCustom && (
+                            <button onClick={() => resetInternalSubtypeColor(id)} type="button" className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50 transition-all hover:scale-110" title="Ripristina colore automatico">
+                              <Icon name="rotate-ccw" className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
-                        {hasCustom && (
-                          <button
-                            onClick={() => resetClientColor(clientName)}
-                            type="button"
-                            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50 transition-all hover:scale-110"
-                            title="Ripristina colore automatico"
-                          >
-                            <Icon name="rotate-ccw" className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

@@ -192,20 +192,45 @@ export function getClientColor(clientName, clientColors = {}) {
   return CLIENT_COLOR_PALETTE[idx];
 }
 
-export function badgePresentation(entry, clientColors = {}) {
-  if (!entry || entry.type !== "client") {
-    return { className: badgeStyle(entry?.type), style: undefined };
+export function getInternalColor(subtypeId, internalColors = {}) {
+  if (!subtypeId || subtypeId === "generico") return null;
+  const configured = normalizeHexColor(internalColors?.[subtypeId]);
+  if (configured) return configured;
+
+  const idx = hashString(subtypeId) % CLIENT_COLOR_PALETTE.length;
+  return CLIENT_COLOR_PALETTE[idx];
+}
+
+export function badgePresentation(entry, clientColors = {}, internalColors = {}) {
+  if (!entry) return { className: badgeStyle(entry?.type), style: undefined };
+
+  if (entry.type === "client") {
+    const bg = getClientColor(entry.client, clientColors);
+    return {
+      className: "border",
+      style: {
+        backgroundColor: bg,
+        borderColor: withAlpha(bg, 0.9),
+        color: textColorForBackground(bg),
+      },
+    };
   }
 
-  const bg = getClientColor(entry.client, clientColors);
-  return {
-    className: "border",
-    style: {
-      backgroundColor: bg,
-      borderColor: withAlpha(bg, 0.9),
-      color: textColorForBackground(bg),
-    },
-  };
+  if (entry.type === "internal" && entry.subtypeId) {
+    const bg = getInternalColor(entry.subtypeId, internalColors);
+    if (bg) {
+      return {
+        className: "border",
+        style: {
+          backgroundColor: bg,
+          borderColor: withAlpha(bg, 0.9),
+          color: textColorForBackground(bg),
+        },
+      };
+    }
+  }
+
+  return { className: badgeStyle(entry.type), style: undefined };
 }
 
 export function ensureSubtypesFormat(settingsSubtypes) {

@@ -28,8 +28,8 @@ function MissingNotesLed() {
   );
 }
 
-function HourStrip({ entry, clientColors }) {
-  const badge = badgePresentation(entry, clientColors);
+function HourStrip({ entry, clientColors, internalColors }) {
+  const badge = badgePresentation(entry, clientColors, internalColors);
   if (!entry) {
     return (
       <div
@@ -50,8 +50,8 @@ function HourStrip({ entry, clientColors }) {
   );
 }
 
-function HalfBlock({ entry, clientColors, emptyClass }) {
-  const badge = badgePresentation(entry, clientColors);
+function HalfBlock({ entry, clientColors, internalColors, emptyClass }) {
+  const badge = badgePresentation(entry, clientColors, internalColors);
   if (!entry) {
     return (
       <div
@@ -101,6 +101,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
   const { MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const { settings } = useSettings();
   const recurringTasks = settings?.recurringTasks || [];
+  const internalColors = settings?.internalColors || {};
   const dow = dowMon0(date);
   const d = date.getDate();
   const isToday = isCurrentMonth && date.toDateString() === new Date().toDateString();
@@ -184,8 +185,8 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
           {isFullDay ? (
             // Full day: single large block
             <div
-              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform " + badgePresentation(am, clientColors).className}
-              style={badgePresentation(am, clientColors).style}
+              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] shadow-sm transition-transform " + badgePresentation(am, clientColors, internalColors).className}
+              style={badgePresentation(am, clientColors, internalColors).style}
             >
               {hasMissingNotes(am) ? <MissingNotesLed /> : null}
               <div className="w-full text-center truncate text-sm font-bold tracking-tight">
@@ -195,7 +196,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
           ) : hasHourly ? (
             <div className="flex flex-col gap-1">
               {summaryVisible.map((item, idx) => {
-                const badge = badgePresentation(item.entry, clientColors);
+                const badge = badgePresentation(item.entry, clientColors, internalColors);
                 let label = displayLabel(item.entry);
 
                 // If grouped (or even if single, for month view pills), 
@@ -223,8 +224,8 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
             </div>
           ) : (!am && !pm && recurringTask && recurringEntry) ? (
             <div
-              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] border-2 border-dashed opacity-30 hover:opacity-60 transition-opacity cursor-pointer " + badgePresentation(recurringEntry, clientColors).className}
-              style={badgePresentation(recurringEntry, clientColors).style}
+              className={"relative flex-1 rounded-xl flex items-center justify-center px-1.5 py-1 min-h-[44px] border-2 border-dashed opacity-30 hover:opacity-60 transition-opacity cursor-pointer " + badgePresentation(recurringEntry, clientColors, internalColors).className}
+              style={badgePresentation(recurringEntry, clientColors, internalColors).style}
               onClick={(e) => { e.stopPropagation(); onApplyRecurring?.(date); }}
               title="Applica modello ricorrente"
             >
@@ -244,6 +245,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
                         key={h}
                         entry={entry}
                         clientColors={clientColors}
+                        internalColors={internalColors}
                       />
                     );
                   })}
@@ -252,6 +254,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
                 <HalfBlock
                   entry={am}
                   clientColors={clientColors}
+                  internalColors={internalColors}
                 />
               )}
 
@@ -265,6 +268,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
                         key={h}
                         entry={entry}
                         clientColors={clientColors}
+                        internalColors={internalColors}
                       />
                     );
                   })}
@@ -273,6 +277,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
                 <HalfBlock
                   entry={pm}
                   clientColors={clientColors}
+                  internalColors={internalColors}
                 />
               )}
             </>

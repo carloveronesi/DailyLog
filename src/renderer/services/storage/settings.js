@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS = {
   desktopBackupDir: "",
   minimizeToTrayOnMinimize: false,
   clientColors: {},
+  internalColors: {},
   theme: "light",
   defaultView: "day",
   taskSubtypes: {},
@@ -42,6 +43,18 @@ function normalizeClientColors(raw) {
   return out;
 }
 
+function normalizeInternalColors(raw) {
+  if (!raw || typeof raw !== "object") return {};
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const key = (k || "").trim();
+    const color = normalizeHexColor(v);
+    if (!key || !color) continue;
+    out[key] = color;
+  }
+  return out;
+}
+
 export function normalizeSettings(raw) {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_SETTINGS };
   return {
@@ -50,6 +63,7 @@ export function normalizeSettings(raw) {
     minimizeToTrayOnMinimize: Boolean(raw.minimizeToTrayOnMinimize),
     theme: typeof raw.theme === "string" ? raw.theme : "light",
     clientColors: normalizeClientColors(raw.clientColors),
+    internalColors: normalizeInternalColors(raw.internalColors),
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
     taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
     todoTags: Array.isArray(raw.todoTags) ? raw.todoTags : [],

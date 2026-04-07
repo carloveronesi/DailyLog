@@ -121,11 +121,20 @@ export function TaskBlock({
 }) {
   const { settings } = useSettings();
   const clientColors = settings?.clientColors || {};
+  const internalColors = settings?.internalColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
 
   const s = STYLES[variant];
-  const badge = badgePresentation(block.entry, clientColors);
+  const badge = badgePresentation(block.entry, clientColors, internalColors);
   const label = displayLabel(block.entry);
+
+  const tags = [];
+  if (block.entry?.type === "client") {
+    if (block.entry.client) tags.push(block.entry.client);
+    if (block.entry.subtypeId) tags.push(getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes));
+  } else if (block.entry?.subtypeId) {
+    tags.push(getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes));
+  }
 
   return (
     <div
@@ -157,9 +166,13 @@ export function TaskBlock({
       {variant === "week" ? (
         currentSpan === 1 ? (
           <div className="flex flex-col h-full justify-center overflow-hidden">
-            {block.entry.subtypeId && (
-              <div className="w-fit h-4 px-1.5 mb-0.5 rounded bg-black/5 dark:bg-white/10 text-[9px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 truncate">
-                {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+            {tags.length > 0 && (
+              <div className="flex gap-1 mb-0.5 overflow-hidden">
+                {tags.map((tag) => (
+                  <div key={tag} className="w-fit h-4 px-1.5 rounded bg-black/5 dark:bg-white/10 text-[9px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 truncate max-w-[90px]">
+                    {tag}
+                  </div>
+                ))}
               </div>
             )}
             <div className="text-[10px] lg:text-[11px] font-bold leading-[1.1] line-clamp-1 truncate">{block.entry.title || label}</div>
@@ -168,9 +181,13 @@ export function TaskBlock({
           <>
             <div className="flex items-center justify-between gap-1 overflow-hidden">
               <div className="text-[9px] lg:text-[10px] font-semibold uppercase tracking-wider opacity-70 whitespace-nowrap overflow-hidden text-ellipsis">{block.label}</div>
-              {block.entry.subtypeId && (
-                <div className="h-4 px-1.5 rounded bg-black/5 dark:bg-white/10 text-[9px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 shrink-0">
-                  {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+              {tags.length > 0 && (
+                <div className="flex gap-1 shrink-0">
+                  {tags.map((tag) => (
+                    <div key={tag} className="h-4 px-1.5 rounded bg-black/5 dark:bg-white/10 text-[9px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 truncate max-w-[80px]">
+                      {tag}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -181,20 +198,24 @@ export function TaskBlock({
         currentSpan === 1 ? (
           <div className="flex items-center gap-2 overflow-hidden py-1">
             <div className="text-[10px] font-semibold uppercase tracking-wider opacity-70 shrink-0">{block.label}</div>
-            {block.entry.subtypeId && (
-              <div className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 shrink-0">
-                {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+            {tags.map((tag) => (
+              <div key={tag} className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 shrink-0">
+                {tag}
               </div>
-            )}
+            ))}
             <div className="text-sm font-bold truncate">{block.entry.title || label}</div>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between gap-2">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] opacity-70">{block.label}</div>
-              {block.entry.subtypeId && (
-                <div className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300">
-                  {getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes)}
+              {tags.length > 0 && (
+                <div className="flex gap-1">
+                  {tags.map((tag) => (
+                    <div key={tag} className="flex items-center h-5 px-2 rounded-full bg-black/5 dark:bg-white/10 text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300">
+                      {tag}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getClientColor, HOURS_PER_DAY, SLOT, WORK_SLOTS, getSubtypeLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, HOURS_PER_DAY, SLOT, WORK_SLOTS, getSubtypeLabel } from "../domain/tasks";
 import { useSettings } from "../contexts/SettingsContext";
 import { getItalianHolidays } from "../utils/holidays";
 
@@ -40,6 +40,7 @@ export function SummaryPanel({
 }) {
   const { settings } = useSettings();
   const clientColors = settings?.clientColors || {};
+  const internalColors = settings?.internalColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
   const totals = useMemo(() => {
     const byClient = new Map();
@@ -235,10 +236,16 @@ export function SummaryPanel({
                   <div className="ml-[22px] mt-2 mb-1 space-y-1.5 border-l-2 border-slate-100 dark:border-slate-700/50 pl-2">
                     {Object.entries(activity.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
                       const stLabel = st === "generico" ? "Generico" : getSubtypeLabel(activity.key, st, taskSubtypes);
+                      const subtypeColor = activity.key === "internal" ? getInternalColor(st, internalColors) : null;
                       return (
-                        <div key={st} className="flex items-center justify-between">
-                          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{stLabel}</div>
-                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{days.toFixed(1)}</div>
+                        <div key={st} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {subtypeColor && (
+                              <span className="h-2 w-2 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: subtypeColor }} />
+                            )}
+                            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{stLabel}</div>
+                          </div>
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">{days.toFixed(1)}</div>
                         </div>
                       );
                     })}
