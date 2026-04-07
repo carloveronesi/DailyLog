@@ -270,34 +270,65 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
           </div>
         )}
 
-        {/* Stats strip */}
-        {stats && (
-          <div className="mt-4 flex flex-wrap gap-4">
-            <div className="flex items-center gap-1.5">
-              <Icon name="clock" className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-              <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)} ore
-              </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                ({(stats.totalHours / 8).toFixed(1)} gg)
-              </span>
-            </div>
-            {stats.firstDate && (
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Prima attività: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatDate(stats.firstDate)}</span>
-              </div>
-            )}
-            {stats.lastDate && stats.lastDate !== stats.firstDate && (
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Ultima attività: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatDate(stats.lastDate)}</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Body — scrollable */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
+
+        {/* KPIs Section */}
+        {stats && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Ore Totali */}
+            <div className="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-800/50 border border-sky-100/60 dark:border-sky-800/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400">
+                  <Icon name="clock" className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
+                  Ore Totali
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-auto">
+                <span className="text-3xl font-black text-slate-800 dark:text-slate-100">
+                  {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)}
+                </span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                  ({(stats.totalHours / 8).toFixed(1)} gg)
+                </span>
+              </div>
+            </div>
+
+            {/* Prima Attività */}
+            <div className="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800/50 border border-indigo-100/60 dark:border-indigo-800/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                  <Icon name="calendar" className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300">
+                  Prima Attività
+                </span>
+              </div>
+              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-auto">
+                {stats.firstDate ? formatDate(stats.firstDate) : "—"}
+              </span>
+            </div>
+
+            {/* Ultima Attività */}
+            <div className="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-800/50 border border-emerald-100/60 dark:border-emerald-800/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  <Icon name="calendar" className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Ultima Attività
+                </span>
+              </div>
+              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-auto">
+                {stats.lastDate ? formatDate(stats.lastDate) : "—"}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Descrizione */}
         <section>
