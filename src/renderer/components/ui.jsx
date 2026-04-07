@@ -202,6 +202,20 @@ export function Icon({ name, className = "" }) {
         <path d="M3 13C5.5 7.5 11 5 17 7a9 9 0 0 1 4 7" />
       </svg>
     );
+  if (name === "redo")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 7v6h-6" />
+        <path d="M21 13C18.5 7.5 13 5 7 7a9 9 0 0 0-4 7" />
+      </svg>
+    );
+  if (name === "history")
+    return (
+      <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <polyline points="12 7 12 12 15 15" />
+      </svg>
+    );
 
   return null;
 }
