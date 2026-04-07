@@ -6,7 +6,7 @@ import {
   listStoredInternalSubtypes,
   aggregateProjectEntries,
 } from "../services/storage";
-import { getClientColor, getSubtypeLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, getSubtypeLabel } from "../domain/tasks";
 import { Icon } from "./ui";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -137,12 +137,13 @@ function StatusBadge({ status }) {
 
 // ─── ProjectDetail ───────────────────────────────────────────────────────────
 
-function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave }) {
+function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, taskSubtypes }) {
   const { settings } = useSettings();
   const workHours = settings?.workHours;
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState(null);
+  const [sortDesc, setSortDesc] = useState(true);
 
   function startEdit() {
     setForm({
@@ -186,8 +187,14 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       if (!map.has(t.dateKey)) map.set(t.dateKey, []);
       map.get(t.dateKey).push(t);
     }
-    return Array.from(map.entries()).map(([dateKey, items]) => ({ dateKey, items }));
-  }, [stats?.tasks]);
+    const arr = Array.from(map.entries()).map(([dateKey, items]) => ({ dateKey, items }));
+    
+    arr.sort((a, b) => {
+      return sortDesc ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey);
+    });
+
+    return arr;
+  }, [stats?.tasks, sortDesc]);
 
   const displayMeta = isEditing ? form : meta;
   const currentStatus = displayMeta?.status || "active";
@@ -218,7 +225,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       <div className="shrink-0 px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
+            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
             {!isEditing && <StatusBadge status={currentStatus} />}
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -277,11 +284,11 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
         {/* KPIs Section */}
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Ore Totali */}
-            <div className="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-800/50 border border-sky-100/60 dark:border-sky-800/30 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1.5 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400">
+            <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-800/50 border border-sky-100/60 dark:border-sky-800/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400">
                   <Icon name="clock" className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
@@ -289,41 +296,41 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mt-auto">
-                <span className="text-3xl font-black text-slate-800 dark:text-slate-100">
+                <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
                   {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)}
                 </span>
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   ({(stats.totalHours / 8).toFixed(1)} gg)
                 </span>
               </div>
             </div>
 
             {/* Prima Attività */}
-            <div className="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800/50 border border-indigo-100/60 dark:border-indigo-800/30 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1.5 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+            <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800/50 border border-indigo-100/60 dark:border-indigo-800/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
                   <Icon name="calendar" className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300">
                   Prima Attività
                 </span>
               </div>
-              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-auto">
+              <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-auto">
                 {stats.firstDate ? formatDate(stats.firstDate) : "—"}
               </span>
             </div>
 
             {/* Ultima Attività */}
-            <div className="flex flex-col p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-800/50 border border-emerald-100/60 dark:border-emerald-800/30 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-800/50 border border-emerald-100/60 dark:border-emerald-800/30 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                   <Icon name="calendar" className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                   Ultima Attività
                 </span>
               </div>
-              <span className="text-lg font-bold text-slate-800 dark:text-slate-100 mt-auto">
+              <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-auto">
                 {stats.lastDate ? formatDate(stats.lastDate) : "—"}
               </span>
             </div>
@@ -403,25 +410,29 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 value={form.team}
                 onChange={set("team")}
                 rows={3}
-                placeholder={"Un nome per riga…\n" + (allPeople?.length ? allPeople.slice(0, 3).join("\n") : "")}
+                placeholder={"Un nome per riga…\n" + (allPeople?.length ? allPeople.slice(0, 3).map(p => typeof p === 'object' ? p.name : p).join("\n") : "")}
                 className={textareaClass}
               />
               {allPeople?.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {allPeople.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        const current = form.team.split("\n").map((s) => s.trim()).filter(Boolean);
-                        if (current.includes(p)) return;
-                        setForm((f) => ({ ...f, team: [...current, p].join("\n") }));
-                      }}
-                      className="px-2 py-0.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
-                    >
-                      + {p}
-                    </button>
-                  ))}
+                  {allPeople.map((p, idx) => {
+                    const personName = typeof p === 'object' ? p.name : p;
+                    if (!personName) return null;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          const current = form.team.split("\n").map((s) => s.trim()).filter(Boolean);
+                          if (current.includes(personName)) return;
+                          setForm((f) => ({ ...f, team: [...current, personName].join("\n") }));
+                        }}
+                        className="px-2 py-0.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                      >
+                        + {personName}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -450,7 +461,19 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
         {/* Task log */}
         <section>
-          <SectionTitle icon="history" label={`Attività registrate (${stats?.tasks?.length ?? 0})`} />
+          <div className="flex items-center justify-between mb-1 -mt-1">
+            <SectionTitle icon="history" label={`Attività registrate (${stats?.tasks?.length ?? 0})`} />
+            {stats?.tasks?.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setSortDesc(d => !d)}
+                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mb-2"
+              >
+                <Icon name={sortDesc ? "arrow-down" : "arrow-up"} className="w-3.5 h-3.5" />
+                {sortDesc ? "Recenti prima" : "Meno recenti prima"}
+              </button>
+            )}
+          </div>
           {!stats?.tasks?.length ? (
             <p className="text-sm text-slate-400 dark:text-slate-500 italic mt-1">
               Nessun task registrato per questo progetto.
@@ -465,27 +488,13 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                   </div>
                   <div className="space-y-1">
                     {items.map((t, idx) => (
-                      <div
+                      <TaskRowItem 
                         key={idx}
-                        className="flex items-start gap-3 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50"
-                      >
-                        <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 shrink-0 mt-0.5 w-28 truncate">
-                          {slotLabel(t.slotDisplay, workHours)}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-                            {t.entry?.title || <span className="italic text-slate-400">Senza titolo</span>}
-                          </div>
-                          {t.entry?.notes && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
-                              {t.entry.notes}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
-                          {t.hours % 1 === 0 ? t.hours : t.hours.toFixed(1)}h
-                        </span>
-                      </div>
+                        t={t}
+                        workHours={workHours}
+                        formatTimeSlot={slotLabel}
+                        taskSubtypes={taskSubtypes}
+                      />
                     ))}
                   </div>
                 </div>
@@ -494,6 +503,80 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
+  const [expanded, setExpanded] = useState(false);
+  const entry = t.entry || {};
+  
+  const hasDetails = !!(entry.notes || entry.wentWrong || entry.nextSteps);
+  const subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes) : null;
+
+  return (
+    <div className="flex flex-col px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 transition-colors hover:bg-slate-100/50 dark:hover:bg-slate-800/80">
+      <div className="flex items-start gap-3">
+        <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 shrink-0 mt-0.5 w-28 truncate">
+          {formatTimeSlot(t.slotDisplay, workHours)}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-full">
+              {entry.title || <span className="italic text-slate-400">Senza titolo</span>}
+            </span>
+            {subtypeLabel && subtypeLabel !== "Generico" && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 shrink-0">
+                {subtypeLabel}
+              </span>
+            )}
+          </div>
+          {!expanded && entry.notes && (
+             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+               {entry.notes}
+             </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            {t.hours % 1 === 0 ? t.hours : t.hours.toFixed(1)}h
+          </span>
+          {hasDetails && (
+            <button 
+              type="button" 
+              onClick={() => setExpanded(e => !e)}
+              className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              title="Mostra dettagli (note, next steps...)"
+            >
+              <Icon name={expanded ? "chev-up" : "chev-down"} className="w-4 h-4" />
+            </button>
+          )}
+          {!hasDetails && <div className="w-5.5" />} {/* Placeholder for alignment */}
+        </div>
+      </div>
+      
+      {expanded && hasDetails && (
+        <div className="mt-3 pl-[124px] pr-8 pb-1 space-y-3">
+          {entry.notes && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Descrizione / Note</div>
+              <div className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{entry.notes}</div>
+            </div>
+          )}
+          {entry.wentWrong && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-rose-500 mb-0.5">Criticità / Cosa è andato storto</div>
+              <div className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{entry.wentWrong}</div>
+            </div>
+          )}
+          {entry.nextSteps && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 mb-0.5">Next Steps</div>
+              <div className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{entry.nextSteps}</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -642,11 +725,11 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
                 Interni
               </div>
               <div className="space-y-0.5">
-                {internalProjects.map(({ projectId, label }) => (
+                {internalProjects.map(({ projectId, label, id }) => (
                   <ProjectItem
                     key={projectId}
                     label={label}
-                    color={null}
+                    color={getInternalColor(id, settings?.internalColors)}
                     isSelected={selectedId === projectId}
                     onClick={() => setSelectedId(projectId)}
                   />
@@ -675,6 +758,7 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
             stats={stats}
             allPeople={allPeople}
             onSave={handleSave}
+            taskSubtypes={taskSubtypes}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
