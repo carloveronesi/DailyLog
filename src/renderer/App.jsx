@@ -587,7 +587,20 @@ export default function App() {
               initialRange={selectedRange}
               existingEntries={existingEntries}
               onSave={(entries) => {
-                upsertDay(selectedDate, entries, "Modifica giorno");
+                const prev = monthDataByDate[ymd(selectedDate)];
+                const prevSlots = Object.keys(prev?.hours || {}).length;
+                const newSlots = Object.keys(entries.hours || {}).length;
+                const prevHalf = !!(prev?.AM || prev?.PM);
+                const newHalf = !!(entries.AM || entries.PM);
+                let saveLabel = "Modifica task";
+                if (!prev || (!prev.AM && !prev.PM && prevSlots === 0)) {
+                  saveLabel = "Crea task";
+                } else if (newSlots > prevSlots || (!prevHalf && newHalf)) {
+                  saveLabel = "Aggiungi task";
+                } else if (newSlots < prevSlots || (prevHalf && !newHalf)) {
+                  saveLabel = "Rimuovi task";
+                }
+                upsertDay(selectedDate, entries, saveLabel);
                 closeEditor();
               }}
               onDeleteDay={() => {
