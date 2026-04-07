@@ -250,16 +250,57 @@ export function ensureSubtypesFormat(settingsSubtypes) {
   return migrated;
 }
 
-export function getSubtypeLabel(type, subtypeId, taskSubtypes) {
+export function getSubtypeLabel(type, subtypeId, taskSubtypes, clientName = null) {
   if (!subtypeId) return "Generico";
   const list = taskSubtypes?.[type] || [];
-  const found = list.find((st) => st.id === subtypeId);
-  return found ? found.label : "Generico";
+  let found = list.find((st) => (st.id || st) === subtypeId);
+  if (found) return found.label || found;
+
+  if (type === "client" && clientName) {
+    try {
+      const raw = localStorage.getItem("dailylog__projects");
+      if (raw) {
+        const obj = JSON.parse(raw);
+        const pid = "client::" + clientName.trim().toLocaleLowerCase("it-IT");
+        const pSubtasks = obj[pid]?.subtasks || [];
+        found = pSubtasks.find((st) => st.id === subtypeId);
+        if (found) return found.label;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return "Generico";
+}
+
+export function getInternalSubtaskLabel(projectName, subtaskId) {
+  if (!subtaskId) return "Generico";
+  try {
+    const raw = localStorage.getItem("dailylog__projects");
+    if (raw) {
+      const obj = JSON.parse(raw);
+      const pid = "internal::" + projectName.trim().toLocaleLowerCase("it-IT");
+      const pSubtasks = obj[pid]?.subtasks || [];
+      const found = pSubtasks.find((st) => st.id === subtaskId);
+      if (found) return found.label;
+    }
+  } catch {
+    // ignore
+  }
+  return subtaskId;
 }
 
 export function displayLabel(entry, taskSubtypes = {}) {
   if (!entry) return "";
-  const subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes) : "";
+  let subtypeLabel = "";
+  if (entry.type === "client") {
+    subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes, entry.client) : "";
+  } else if (entry.type === "internal") {
+    if (entry.internalSubtask) {
+      subtypeLabel = getInternalSubtaskLabel(entry.subtypeId, entry.internalSubtask);
+    }
+  }
   const t = (entry.title || "").trim();
 
   const formatLabel = (defaultLabel) => {

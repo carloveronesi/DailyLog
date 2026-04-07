@@ -7,7 +7,7 @@ import {
   aggregateProjectEntries,
 } from "../services/storage";
 import { getClientColor, getInternalColor, getSubtypeLabel } from "../domain/tasks";
-import { Icon } from "./ui";
+import { Icon, Button } from "./ui";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -93,27 +93,51 @@ function groupConsecutiveSlots(tasks) {
 
 // ─── Sidebar item ───────────────────────────────────────────────────────────
 
-function ProjectItem({ label, color, isSelected, onClick }) {
+function ProjectItem({ label, color, isSelected, onClick, subTabs }) {
+  return (
+    <div className="flex flex-col mb-0.5">
+      <button
+        type="button"
+        onClick={onClick}
+        className={
+          "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors " +
+          (isSelected
+            ? "bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300"
+            : "hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300")
+        }
+      >
+        {color ? (
+          <span
+            className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/15"
+            style={{ backgroundColor: color }}
+          />
+        ) : (
+          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600 border border-black/10 dark:border-white/15" />
+        )}
+        <span className="text-sm font-medium truncate">{label}</span>
+      </button>
+      {isSelected && subTabs && (
+        <div className="pl-7 pr-2 py-1 space-y-0.5 mt-0.5">
+          {subTabs}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubTabItem({ label, icon, isSelected, onClick }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={
-        "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors " +
-        (isSelected
-          ? "bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300"
-          : "hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300")
-      }
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+        isSelected
+          ? "text-sky-700 bg-sky-100/60 dark:text-sky-300 dark:bg-sky-900/30"
+          : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-slate-700/50"
+      }`}
     >
-      {color ? (
-        <span
-          className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/15"
-          style={{ backgroundColor: color }}
-        />
-      ) : (
-        <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-slate-300 dark:bg-slate-600 border border-black/10 dark:border-white/15" />
-      )}
-      <span className="text-sm font-medium truncate">{label}</span>
+      <Icon name={icon} className="w-3.5 h-3.5" />
+      {label}
     </button>
   );
 }
@@ -137,13 +161,73 @@ function StatusBadge({ status }) {
 
 // ─── ProjectDetail ───────────────────────────────────────────────────────────
 
-function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, taskSubtypes }) {
+function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, taskSubtypes, currentTab }) {
   const { settings } = useSettings();
   const workHours = settings?.workHours;
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState(null);
   const [sortDesc, setSortDesc] = useState(true);
+
+  // Subtasks state
+  const [newSubtask, setNewSubtask] = useState("");
+  const [editingSubtask, setEditingSubtask] = useState(null);
+  
+  const mergedSubtasks = useMemo(() => {
+    const map = new Map();
+    // 1. Configured overrides
+    (meta?.subtasks || []).forEach(st => {
+      map.set(st.id, { ...st, isCustom: true });
+    });
+    // 2. From history
+    if (stats?.tasks) {
+      stats.tasks.forEach(t => {
+        const type = t.entry.type || (isClient ? "client" : "internal");
+        const id = type === "internal" ? (t.entry.internalSubtask || "") : (t.entry.subtypeId || "");
+        if (!map.has(id)) {
+          map.set(id, { 
+            id, 
+            label: id === "" ? "Generico" : (getSubtypeLabel(type, id, taskSubtypes, isClient ? projectName : t.entry.subtypeId) || id), 
+            isCustom: false 
+          });
+        }
+      });
+    }
+    return Array.from(map.values());
+  }, [meta?.subtasks, stats?.tasks, taskSubtypes, isClient, projectName]);
+
+  const handleAddSubtask = () => {
+     const val = newSubtask.trim();
+     if (!val) return;
+     const newId = val.toLowerCase().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, "");
+     if (!newId) return;
+     const existingMeta = meta?.subtasks || [];
+     if (existingMeta.some(s => s.id === newId) || mergedSubtasks.some(s => s.label.toLowerCase() === val.toLowerCase())) return;
+     onSave?.(projectId, { ...meta, subtasks: [...existingMeta, { id: newId, label: val }] });
+     setNewSubtask("");
+  };
+
+  const handleRemoveSubtask = (id) => {
+     const existingMeta = meta?.subtasks || [];
+     onSave?.(projectId, { ...meta, subtasks: existingMeta.filter(s => s.id !== id) });
+  };
+
+  const handleRenameSubtask = () => {
+    if (!editingSubtask) return;
+    const val = editingSubtask.label.trim();
+    if (val) {
+      const existingMeta = meta?.subtasks || [];
+      const idx = existingMeta.findIndex(s => s.id === editingSubtask.id);
+      let newSubtasks = [...existingMeta];
+      if (idx >= 0) {
+        newSubtasks[idx] = { ...newSubtasks[idx], label: val };
+      } else {
+        newSubtasks.push({ id: editingSubtask.id, label: val });
+      }
+      onSave?.(projectId, { ...meta, subtasks: newSubtasks });
+    }
+    setEditingSubtask(null);
+  };
 
   function startEdit() {
     setForm({
@@ -283,7 +367,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
 
         {/* KPIs Section */}
-        {stats && (
+        {stats && currentTab !== "activities" && currentTab !== "subtasks" && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Ore Totali */}
             <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-800/50 border border-sky-100/60 dark:border-sky-800/30 shadow-sm">
@@ -337,8 +421,11 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
           </div>
         )}
 
-        {/* Descrizione */}
-        <section>
+        {/* Info Blocks */}
+        {currentTab !== "activities" && currentTab !== "subtasks" && (
+          <div className="space-y-6">
+            {/* Descrizione */}
+            <section>
           <SectionTitle icon="clipboard" label="Descrizione" />
           {isEditing ? (
             <textarea
@@ -458,9 +545,78 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
             )}
           </section>
         )}
+        </div>
+        )}
+
+        {/* Gestione Sub-Task */}
+        {currentTab === "subtasks" && (
+          <section className="space-y-6">
+            <div className="space-y-1">
+              <SectionTitle icon="list-check" label="Sotto-Task Specifici del Progetto" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Aggiungi attività ricorrenti specifiche per questo progetto, compariranno nei suggerimenti quando registri un task per questa entità.
+              </p>
+            </div>
+            
+            <div className="flex gap-2 w-full max-w-lg">
+              <input
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
+                placeholder="Es. Sviluppo Frontend, Creazione UI..."
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
+              />
+              <Button
+                className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 py-2 shrink-0"
+                onClick={handleAddSubtask}
+              >
+                Aggiungi
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-2 max-w-lg">
+              {mergedSubtasks.length === 0 ? (
+                 <p className="text-sm text-slate-400 italic">Nessun sotto-task configurato o utilizzato per questo progetto.</p>
+              ) : (
+                mergedSubtasks.map((st) => {
+                  const isBeingEdited = editingSubtask?.id === st.id;
+                  return (
+                    <div key={st.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 transition-colors">
+                       {isBeingEdited ? (
+                         <input
+                           autoFocus
+                           className="flex-1 min-w-0 bg-transparent border-b border-slate-300 dark:border-slate-600 outline-none text-sm font-semibold text-sky-700 dark:text-sky-400 mr-4 pb-0.5"
+                           value={editingSubtask.label}
+                           onChange={(e) => setEditingSubtask({ ...editingSubtask, label: e.target.value })}
+                           onKeyDown={(e) => {
+                             if (e.key === "Enter") handleRenameSubtask();
+                             if (e.key === "Escape") setEditingSubtask(null);
+                           }}
+                           onBlur={handleRenameSubtask}
+                         />
+                       ) : (
+                         <span
+                           className="flex-1 min-w-0 text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors truncate"
+                           title="Clicca per rinominare"
+                           onClick={() => setEditingSubtask({ id: st.id, label: st.label })}
+                         >
+                           {st.label}
+                         </span>
+                       )}
+                       <button onClick={() => st.isCustom && handleRemoveSubtask(st.id)} className={`p-1.5 rounded-full transition-colors shrink-0 ${st.isCustom ? "text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700" : "text-slate-300 dark:text-slate-600 opacity-50 cursor-not-allowed"}`} title={st.isCustom ? "Elimina override" : "Non puoi eliminare un subtask presente nello storico. Puoi solo rinominarlo."} disabled={!st.isCustom}>
+                         <Icon name="trash" className="w-3.5 h-3.5" />
+                       </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Task log */}
-        <section>
+        {currentTab !== "details" && currentTab !== "subtasks" && (
+          <section>
           <div className="flex items-center justify-between mb-1 -mt-1">
             <SectionTitle icon="history" label={`Attività registrate (${stats?.tasks?.length ?? 0})`} />
             {stats?.tasks?.length > 1 && (
@@ -501,7 +657,8 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
               ))}
             </div>
           )}
-        </section>
+          </section>
+        )}
       </div>
     </div>
   );
@@ -634,6 +791,23 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
 
   const [projects, setProjects] = useState(() => loadProjects());
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedTab, setSelectedTab] = useState("overview");
+
+  const handleSelectProject = (pid) => {
+    if (selectedId !== pid) {
+      setSelectedId(pid);
+      setSelectedTab("overview");
+    }
+  };
+
+  const renderSubTabs = () => (
+    <>
+      <SubTabItem label="Overview" icon="briefcase" isSelected={selectedTab === "overview"} onClick={() => setSelectedTab("overview")} />
+      <SubTabItem label="Dettagli progetto" icon="clipboard" isSelected={selectedTab === "details"} onClick={() => setSelectedTab("details")} />
+      <SubTabItem label="Sub-Task" icon="list-check" isSelected={selectedTab === "subtasks"} onClick={() => setSelectedTab("subtasks")} />
+      <SubTabItem label="Attività registrate" icon="history" isSelected={selectedTab === "activities"} onClick={() => setSelectedTab("activities")} />
+    </>
+  );
 
   // Internal subtypes found in actual entries
   const internalSubtypeIds = useMemo(() => listStoredInternalSubtypes(), []);
@@ -710,7 +884,8 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
                       label={name}
                       color={getClientColor(name, clientColors)}
                       isSelected={selectedId === pid}
-                      onClick={() => setSelectedId(pid)}
+                      onClick={() => handleSelectProject(pid)}
+                      subTabs={renderSubTabs()}
                     />
                   );
                 })}
@@ -731,7 +906,8 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
                     label={label}
                     color={getInternalColor(id, settings?.internalColors)}
                     isSelected={selectedId === projectId}
-                    onClick={() => setSelectedId(projectId)}
+                    onClick={() => handleSelectProject(projectId)}
+                    subTabs={renderSubTabs()}
                   />
                 ))}
               </div>
@@ -759,6 +935,7 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
             allPeople={allPeople}
             onSave={handleSave}
             taskSubtypes={taskSubtypes}
+            currentTab={selectedTab}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">

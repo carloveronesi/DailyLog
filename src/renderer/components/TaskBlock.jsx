@@ -1,4 +1,4 @@
-import { SLOT_MINUTES, badgePresentation, displayLabel, getSubtypeLabel } from "../domain/tasks";
+import { SLOT_MINUTES, badgePresentation, displayLabel, getSubtypeLabel, getInternalSubtaskLabel } from "../domain/tasks";
 import { hasMissingNotes, slotIndex, DAY_SLOTS } from "../domain/calendar";
 import { useSettings } from "../contexts/SettingsContext";
 import { Icon } from "./ui";
@@ -131,7 +131,10 @@ export function TaskBlock({
   const tags = [];
   if (block.entry?.type === "client") {
     if (block.entry.client) tags.push(block.entry.client);
+    if (block.entry.subtypeId) tags.push(getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes, block.entry.client));
+  } else if (block.entry?.type === "internal") {
     if (block.entry.subtypeId) tags.push(getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes));
+    if (block.entry.internalSubtask) tags.push(getInternalSubtaskLabel(block.entry.subtypeId, block.entry.internalSubtask));
   } else if (block.entry?.subtypeId) {
     tags.push(getSubtypeLabel(block.entry.type, block.entry.subtypeId, taskSubtypes));
   }

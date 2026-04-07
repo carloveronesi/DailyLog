@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SLOT_MINUTES, TASK_TYPES } from "../domain/tasks";
 import { Icon } from "./ui";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { Combobox } from "./Combobox";
+import { loadProjects } from "../services/storage";
 
 export function EntryForm({
   entry,
@@ -54,7 +55,32 @@ export function EntryForm({
     setField("collaborators", (entry.collaborators || []).filter(c => c !== name));
   };
 
-  const currentSubtypes = taskSubtypes[entry.type] || [];
+  const [projects] = useState(() => loadProjects());
+
+  const projectSpecificSubtasks = useMemo(() => {
+    if (entry.type === "client" && entry.client) {
+      const pid = "client::" + entry.client.trim().toLocaleLowerCase("it-IT");
+      return projects[pid]?.subtasks || [];
+    }
+    if (entry.type === "internal" && entry.subtypeId) {
+      const pid = "internal::" + entry.subtypeId.trim().toLocaleLowerCase("it-IT");
+      return projects[pid]?.subtasks || [];
+    }
+    return [];
+  }, [entry.type, entry.client, entry.subtypeId, projects]);
+
+  const currentSubtypes = useMemo(() => {
+    const globalList = taskSubtypes[entry.type] || [];
+    // merge
+    const merged = [...globalList];
+    for (const st of projectSpecificSubtasks) {
+      if (!merged.some(m => (m.id || m) === st.id)) {
+        merged.push(st);
+      }
+    }
+    return merged;
+  }, [taskSubtypes, entry.type, projectSpecificSubtasks]);
+
   const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]));
 
   function generateSubtypeId(label) {
@@ -67,6 +93,7 @@ export function EntryForm({
     if (!newId) return;
     const exists = currentSubtypes.some(st => st.id === newId || st.label.toLowerCase() === val.toLowerCase());
     if (!exists) {
+      // Se non esiste, lo salva nei globali automaticamente
       setSettings(prev => {
         const st = prev.taskSubtypes || {};
         const list = st[entry.type] || [];
@@ -126,6 +153,28 @@ export function EntryForm({
           allowCustom={true}
         />
       </div>
+
+      {entry.type === "internal" && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Subtask
+          </label>
+          <Combobox
+            value={entry.internalSubtask || ""}
+            onChange={(val) => {
+              if (!val) { setField("internalSubtask", null); return; }
+              const newId = generateSubtypeId(val);
+              setField("internalSubtask", newId);
+            }}
+            options={[
+              { id: "", label: "Generico" },
+              ...projectSpecificSubtasks
+            ]}
+            placeholder="Seleziona subtask"
+            allowCustom={true}
+          />
+        </div>
+      )}
     </div>
   );
 
