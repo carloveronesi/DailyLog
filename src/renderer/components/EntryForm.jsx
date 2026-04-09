@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { SLOT_MINUTES, TASK_TYPES } from "../domain/tasks";
+import { SLOT_MINUTES, TASK_TYPES, normalizeClientKey } from "../domain/tasks";
 import { Icon } from "./ui";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { Combobox } from "./Combobox";
@@ -69,7 +69,7 @@ export function EntryForm({
     setField("clientContacts", (entry.clientContacts || []).filter(c => c !== name));
   };
 
-  const projects = useMemo(() => loadProjects(), [allClients]);
+  const projects = useMemo(() => loadProjects(), []);
 
   // Aggrega tutti i clientContacts da tutti i progetti come suggerimenti
   const allClientContacts = useMemo(() => {
@@ -79,7 +79,7 @@ export function EntryForm({
     });
     // Se è un task cliente, metti i contatti del progetto corrente in cima
     if (entry.type === "client" && entry.client) {
-      const pid = "client::" + entry.client.trim().toLocaleLowerCase("it-IT");
+      const pid = "client::" + normalizeClientKey(entry.client);
       const projectContacts = projects[pid]?.clientContacts || [];
       const others = Array.from(set).filter(c => !projectContacts.includes(c)).sort();
       return [...projectContacts, ...others];
@@ -89,7 +89,7 @@ export function EntryForm({
 
   const projectSpecificSubtasks = useMemo(() => {
     if (entry.type === "client" && entry.client) {
-      const pid = "client::" + entry.client.trim().toLocaleLowerCase("it-IT");
+      const pid = "client::" + normalizeClientKey(entry.client);
       return projects[pid]?.subtasks || [];
     }
     if (entry.type === "internal" && entry.subtypeId) {
@@ -113,7 +113,7 @@ export function EntryForm({
 
   const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]))
     .filter(name => {
-      const pid = "client::" + (name || "").trim().toLocaleLowerCase("it-IT");
+      const pid = "client::" + normalizeClientKey(name);
       return (projects[pid]?.status || "active") !== "archived";
     });
 

@@ -6,13 +6,13 @@ import {
   listStoredInternalSubtypes,
   aggregateProjectEntries,
 } from "../services/storage";
-import { getClientColor, getInternalColor, getSubtypeLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, getSubtypeLabel, normalizeClientKey } from "../domain/tasks";
 import { Icon, Button } from "./ui";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function projectIdForClient(clientName) {
-  return "client::" + (clientName || "").trim().toLocaleLowerCase("it-IT");
+  return "client::" + normalizeClientKey(clientName);
 }
 
 function projectIdForInternal(subtypeId) {
@@ -246,11 +246,12 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
   function handleSave() {
     onSave(projectId, {
-      cliente: form.cliente,
-      description: form.description,
-      objectives: form.objectives,
-      startDate: form.startDate,
-      endDate: form.endDate,
+      ...meta,
+      cliente: form.cliente.trim(),
+      description: form.description.trim(),
+      objectives: form.objectives.trim(),
+      startDate: form.startDate.trim(),
+      endDate: form.endDate.trim(),
       status: form.status,
       team: form.team.split("\n").map((s) => s.trim()).filter(Boolean),
       clientContacts: form.clientContacts.split("\n").map((s) => s.trim()).filter(Boolean),
