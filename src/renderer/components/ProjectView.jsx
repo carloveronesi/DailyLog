@@ -148,6 +148,7 @@ const STATUS_CONFIG = {
   active: { label: "Attivo", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" },
   completed: { label: "Completato", className: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400" },
   paused: { label: "In pausa", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
+  archived: { label: "Archiviato", className: "bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400" },
 };
 
 function StatusBadge({ status }) {
@@ -161,7 +162,7 @@ function StatusBadge({ status }) {
 
 // ─── ProjectDetail ───────────────────────────────────────────────────────────
 
-function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, taskSubtypes, currentTab }) {
+function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, onArchive, taskSubtypes, currentTab }) {
   const { settings } = useSettings();
   const workHours = settings?.workHours;
 
@@ -331,14 +332,29 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 </button>
               </>
             ) : (
-              <button
-                type="button"
-                onClick={startEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                <Icon name="pencil" className="w-3.5 h-3.5" />
-                Modifica
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => onArchive(projectId, meta)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl border transition-colors ${
+                    currentStatus === "archived"
+                      ? "border-emerald-200 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                      : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  }`}
+                  title={currentStatus === "archived" ? "Ripristina progetto" : "Archivia progetto"}
+                >
+                  <Icon name={currentStatus === "archived" ? "inbox" : "archive"} className="w-3.5 h-3.5" />
+                  {currentStatus === "archived" ? "Ripristina" : "Archivia"}
+                </button>
+                <button
+                  type="button"
+                  onClick={startEdit}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <Icon name="pencil" className="w-3.5 h-3.5" />
+                  Modifica
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -357,6 +373,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
               <option value="active">Attivo</option>
               <option value="completed">Completato</option>
               <option value="paused">In pausa</option>
+              <option value="archived">Archiviato</option>
             </select>
           </div>
         )}
@@ -668,7 +685,7 @@ function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
   const [expanded, setExpanded] = useState(false);
   const entry = t.entry || {};
   
-  const hasDetails = !!(entry.notes || entry.wentWrong || entry.nextSteps);
+  const hasDetails = !!(entry.notes || entry.wentWrong || entry.nextSteps || entry.collaborators?.length || entry.clientContacts?.length);
   const subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes) : null;
 
   return (
@@ -714,6 +731,26 @@ function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
       
       {expanded && hasDetails && (
         <div className="mt-3 pl-[124px] pr-8 pb-1 space-y-3">
+          {entry.collaborators?.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Collaboratori</div>
+              <div className="flex flex-wrap gap-1.5">
+                {entry.collaborators.map(c => (
+                  <span key={c} className="px-2 py-0.5 text-[11px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {entry.clientContacts?.length > 0 && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-sky-500 mb-1">Persone Cliente</div>
+              <div className="flex flex-wrap gap-1.5">
+                {entry.clientContacts.map(c => (
+                  <span key={c} className="px-2 py-0.5 text-[11px] font-semibold rounded-lg bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300">{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
           {entry.notes && (
             <div>
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Descrizione / Note</div>
@@ -783,7 +820,7 @@ const dateText = (val) =>
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function ProjectView({ clientNames = [], allPeople = [] }) {
+export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange }) {
   const { settings } = useSettings();
   const clientColors = settings?.clientColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -792,6 +829,7 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
   const [projects, setProjects] = useState(() => loadProjects());
   const [selectedId, setSelectedId] = useState(null);
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [showArchived, setShowArchived] = useState(false);
 
   const handleSelectProject = (pid) => {
     if (selectedId !== pid) {
@@ -812,6 +850,14 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
   // Internal subtypes found in actual entries
   const internalSubtypeIds = useMemo(() => listStoredInternalSubtypes(), []);
 
+  // Filtra clienti e interni in base allo stato archiviato
+  const filteredClientNames = useMemo(() =>
+    clientNames.filter(name => {
+      const pid = projectIdForClient(name);
+      const isArchived = (projects[pid]?.status || "active") === "archived";
+      return showArchived ? isArchived : !isArchived;
+    }), [clientNames, projects, showArchived]);
+
   // Merge: subtypes from settings + subtypes used in entries
   const internalProjects = useMemo(() => {
     const defined = (taskSubtypes?.internal || []).map((st) => st.id);
@@ -824,6 +870,12 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
       }))
       .sort((a, b) => a.label.localeCompare(b.label, "it"));
   }, [internalSubtypeIds, taskSubtypes]);
+
+  const filteredInternalProjects = useMemo(() =>
+    internalProjects.filter(({ projectId }) => {
+      const isArchived = (projects[projectId]?.status || "active") === "archived";
+      return showArchived ? isArchived : !isArchived;
+    }), [internalProjects, projects, showArchived]);
 
   // Aggregated stats for selected project
   const stats = useMemo(() => {
@@ -855,7 +907,21 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
     const updated = { ...projects, [projectId]: meta };
     saveProjects(updated);
     setProjects(updated);
-  }, [projects]);
+    onProjectsChange?.();
+  }, [projects, onProjectsChange]);
+
+  const handleArchive = useCallback((projectId, meta) => {
+    const isCurrentlyArchived = (meta?.status || "active") === "archived";
+    const newStatus = isCurrentlyArchived ? "active" : "archived";
+    const updated = { ...projects, [projectId]: { ...meta, status: newStatus } };
+    saveProjects(updated);
+    setProjects(updated);
+    onProjectsChange?.();
+    // Se stiamo archiviando e non siamo in vista archiviati, deseleziona
+    if (!isCurrentlyArchived && !showArchived) {
+      setSelectedId(null);
+    }
+  }, [projects, showArchived, onProjectsChange]);
 
   return (
     <div className="flex h-full min-h-0 rounded-3xl border border-slate-200/90 dark:border-slate-700/50 bg-white/85 dark:bg-slate-800/80 backdrop-blur shadow-soft dark:shadow-soft-dark overflow-hidden">
@@ -864,19 +930,19 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
       <div className="w-56 lg:w-64 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40">
         <div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            Progetti
+            {showArchived ? "Archiviati" : "Progetti"}
           </h2>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-4">
 
           {/* Clienti */}
-          {clientNames.length > 0 && (
+          {filteredClientNames.length > 0 && (
             <div>
               <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 Clienti
               </div>
               <div className="space-y-0.5">
-                {clientNames.map((name) => {
+                {filteredClientNames.map((name) => {
                   const pid = projectIdForClient(name);
                   return (
                     <ProjectItem
@@ -894,13 +960,13 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
           )}
 
           {/* Interni */}
-          {internalProjects.length > 0 && (
+          {filteredInternalProjects.length > 0 && (
             <div>
               <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 Interni
               </div>
               <div className="space-y-0.5">
-                {internalProjects.map(({ projectId, label, id }) => (
+                {filteredInternalProjects.map(({ projectId, label, id }) => (
                   <ProjectItem
                     key={projectId}
                     label={label}
@@ -914,11 +980,27 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
             </div>
           )}
 
-          {clientNames.length === 0 && internalProjects.length === 0 && (
+          {filteredClientNames.length === 0 && filteredInternalProjects.length === 0 && (
             <p className="px-3 text-sm text-slate-400 dark:text-slate-500 italic">
-              Nessun progetto trovato.
+              {showArchived ? "Nessun progetto archiviato." : "Nessun progetto trovato."}
             </p>
           )}
+        </div>
+
+        {/* Sidebar footer: toggle archiviati */}
+        <div className="shrink-0 border-t border-slate-200 dark:border-slate-700 p-2">
+          <button
+            type="button"
+            onClick={() => { setProjects(loadProjects()); setShowArchived(v => !v); setSelectedId(null); }}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition-colors ${
+              showArchived
+                ? "bg-slate-200/80 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300"
+                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+            }`}
+          >
+            <Icon name={showArchived ? "inbox" : "archive"} className="w-3.5 h-3.5" />
+            {showArchived ? "Mostra attivi" : "Archiviati"}
+          </button>
         </div>
       </div>
 
@@ -934,6 +1016,7 @@ export function ProjectView({ clientNames = [], allPeople = [] }) {
             stats={stats}
             allPeople={allPeople}
             onSave={handleSave}
+            onArchive={handleArchive}
             taskSubtypes={taskSubtypes}
             currentTab={selectedTab}
           />

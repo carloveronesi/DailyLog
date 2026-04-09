@@ -114,6 +114,7 @@ export function defaultEntry() {
     title: "",
     client: "",
     collaborators: [],
+    clientContacts: [],
     notes: "",
     wentWrong: "",
     nextSteps: "",

@@ -16,7 +16,7 @@ import { useTaskOperations } from "./hooks/useTaskOperations";
 import { useUIState } from "./hooks/useUIState";
 import { SettingsContext } from "./contexts/SettingsContext";
 import { ymd, sameYMD, dowMon0 } from "./utils/date";
-import { exportAll, listStoredClients, listStoredPeople, savePeople } from "./services/storage";
+import { exportAll, listStoredClients, listStoredPeople, savePeople, loadProjects } from "./services/storage";
 import { LOCATION_TYPES, SLOT_MINUTES, buildWorkSlots, hourKey } from "./domain/tasks";
 import { matchesRecurringPattern } from "./domain/calendar";
 
@@ -212,7 +212,16 @@ export default function App() {
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   // listStoredClients scans all months in localStorage, not just the current one —
   // re-derive whenever current month data changes (covers both saves and post-import reload).
-  const clientNames = useMemo(() => listStoredClients(), [data]);
+  // projectsVersion bumps when ProjectView saves/archives, so archived clients disappear immediately.
+  const [projectsVersion, setProjectsVersion] = useState(0);
+  const clientNames = useMemo(() => {
+    const all = listStoredClients();
+    const projects = loadProjects();
+    return all.filter(name => {
+      const pid = "client::" + (name || "").trim().toLocaleLowerCase("it-IT");
+      return (projects[pid]?.status || "active") !== "archived";
+    });
+  }, [data, projectsVersion]);
 
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;
@@ -573,6 +582,7 @@ export default function App() {
                 <ProjectView
                   clientNames={clientNames}
                   allPeople={allPeople}
+                  onProjectsChange={() => setProjectsVersion(v => v + 1)}
                 />
               )}
             </main>

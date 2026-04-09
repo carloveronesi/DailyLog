@@ -30,6 +30,7 @@ export function EntryForm({
   const taskSubtypes = settings?.taskSubtypes || {};
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const [personInput, setPersonInput] = useState("");
+  const [clientContactInput, setClientContactInput] = useState("");
 
   const addCollaborator = (name) => {
     const cleanName = name.trim();
@@ -55,7 +56,36 @@ export function EntryForm({
     setField("collaborators", (entry.collaborators || []).filter(c => c !== name));
   };
 
-  const [projects] = useState(() => loadProjects());
+  const addClientContact = (name) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    const current = entry.clientContacts || [];
+    if (current.includes(cleanName)) return;
+    setField("clientContacts", [...current, cleanName]);
+    setClientContactInput("");
+  };
+
+  const removeClientContact = (name) => {
+    setField("clientContacts", (entry.clientContacts || []).filter(c => c !== name));
+  };
+
+  const projects = useMemo(() => loadProjects(), [allClients]);
+
+  // Aggrega tutti i clientContacts da tutti i progetti come suggerimenti
+  const allClientContacts = useMemo(() => {
+    const set = new Set();
+    Object.values(projects).forEach(p => {
+      (p.clientContacts || []).forEach(c => set.add(c));
+    });
+    // Se è un task cliente, metti i contatti del progetto corrente in cima
+    if (entry.type === "client" && entry.client) {
+      const pid = "client::" + entry.client.trim().toLocaleLowerCase("it-IT");
+      const projectContacts = projects[pid]?.clientContacts || [];
+      const others = Array.from(set).filter(c => !projectContacts.includes(c)).sort();
+      return [...projectContacts, ...others];
+    }
+    return Array.from(set).sort();
+  }, [projects, entry.type, entry.client]);
 
   const projectSpecificSubtasks = useMemo(() => {
     if (entry.type === "client" && entry.client) {
@@ -81,7 +111,11 @@ export function EntryForm({
     return merged;
   }, [taskSubtypes, entry.type, projectSpecificSubtasks]);
 
-  const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]));
+  const allSuggestedClients = Array.from(new Set([...topClients, ...allClients]))
+    .filter(name => {
+      const pid = "client::" + (name || "").trim().toLocaleLowerCase("it-IT");
+      return (projects[pid]?.status || "active") !== "archived";
+    });
 
   function generateSubtypeId(label) {
     return label.toLowerCase().trim().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, "");
@@ -148,7 +182,11 @@ export function EntryForm({
           options={[
             { id: "", label: "Generico" },
             ...currentSubtypes.map(st => typeof st === "string" ? { id: st, label: st } : st)
-          ]}
+          ].filter(st => {
+            if (entry.type !== "internal") return true;
+            const pid = "internal::" + (st.id || "");
+            return (projects[pid]?.status || "active") !== "archived";
+          })}
           placeholder={entry.type === "internal" ? "Seleziona attività..." : "Seleziona subtask"}
           allowCustom={true}
         />
@@ -264,6 +302,30 @@ export function EntryForm({
     </div>
   );
 
+  const clientContactsSection = (
+    <div className="space-y-2">
+      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Persone Cliente 🤝</label>
+      <div className="flex flex-wrap gap-2 items-center p-3 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-700">
+        {(entry.clientContacts || []).map((c) => (
+          <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
+            {c}
+            <button onClick={() => removeClientContact(c)} className="text-slate-400 hover:text-rose-500 transition-colors">
+              <Icon name="x" className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        <Combobox
+          className="flex-1 min-w-[160px]"
+          value={clientContactInput}
+          onChange={(val) => { if (val) addClientContact(val); setClientContactInput(""); }}
+          options={allClientContacts.filter(c => !(entry.clientContacts || []).includes(c))}
+          placeholder="Aggiungi referente cliente..."
+          allowCustom={true}
+        />
+      </div>
+    </div>
+  );
+
   const noteSection = (
     <div className="flex flex-col gap-1.5 flex-1 min-h-0">
       <label className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
@@ -314,6 +376,7 @@ export function EntryForm({
     return (
       <>
         {collaboratoriSection}
+        {clientContactsSection}
         {noteSection}
         {wentWrongNextStepsSection}
       </>
@@ -326,6 +389,7 @@ export function EntryForm({
       {tipoSection}
       {orariSection}
       {collaboratoriSection}
+      {clientContactsSection}
       {noteSection}
       {wentWrongNextStepsSection}
     </div>

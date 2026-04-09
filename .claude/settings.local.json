@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(node --input-type=module --experimental-vm-modules)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }
