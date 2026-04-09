@@ -212,16 +212,11 @@ export default function App() {
   const existingEntries = selectedKey ? monthDataByDate[selectedKey] : null;
   // listStoredClients scans all months in localStorage, not just the current one —
   // re-derive whenever current month data changes (covers both saves and post-import reload).
-  // projectsVersion bumps when ProjectView saves/archives, so archived clients disappear immediately.
+  // projectsVersion bumps when ProjectView saves/archives, so EntryForm reloads projects immediately.
   const [projectsVersion, setProjectsVersion] = useState(0);
-  const clientNames = useMemo(() => {
-    const all = listStoredClients();
-    const projects = loadProjects();
-    return all.filter(name => {
-      const pid = "client::" + (name || "").trim().toLocaleLowerCase("it-IT");
-      return (projects[pid]?.status || "active") !== "archived";
-    });
-  }, [data, projectsVersion]);
+  // clientNames include tutti i clienti (archiviati e no): il filtro archiviati
+  // è gestito da EntryForm (dropdown editor) e da ProjectView (sidebar).
+  const clientNames = useMemo(() => listStoredClients(), [data, projectsVersion]);
 
   const dayKey = ymd(activeDate);
   const dayData = monthDataByDate[dayKey] || null;

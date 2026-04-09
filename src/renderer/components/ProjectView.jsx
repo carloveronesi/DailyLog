@@ -232,6 +232,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
   function startEdit() {
     setForm({
+      cliente: meta?.cliente || "",
       description: meta?.description || "",
       objectives: meta?.objectives || "",
       startDate: meta?.startDate || "",
@@ -245,6 +246,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
   function handleSave() {
     onSave(projectId, {
+      cliente: form.cliente,
       description: form.description,
       objectives: form.objectives,
       startDate: form.startDate,
@@ -309,9 +311,25 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       {/* Header */}
       <div className="shrink-0 px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
-            {!isEditing && <StatusBadge status={currentStatus} />}
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
+              {!isEditing && <StatusBadge status={currentStatus} />}
+            </div>
+            {!isEditing && meta?.cliente && (
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                {meta.cliente}
+              </span>
+            )}
+            {isEditing && (
+              <input
+                type="text"
+                value={form.cliente}
+                onChange={set("cliente")}
+                placeholder="Azienda cliente (opzionale)…"
+                className="mt-1.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+              />
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {isEditing ? (
@@ -850,13 +868,30 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
   // Internal subtypes found in actual entries
   const internalSubtypeIds = useMemo(() => listStoredInternalSubtypes(), []);
 
-  // Filtra clienti e interni in base allo stato archiviato
+  // Filtra clienti in base allo stato archiviato
   const filteredClientNames = useMemo(() =>
     clientNames.filter(name => {
       const pid = projectIdForClient(name);
       const isArchived = (projects[pid]?.status || "active") === "archived";
       return showArchived ? isArchived : !isArchived;
     }), [clientNames, projects, showArchived]);
+
+  // Raggruppa progetti cliente per campo "cliente" del metadata
+  const clientProjectGroups = useMemo(() => {
+    const groups = new Map();
+    filteredClientNames.forEach(name => {
+      const pid = projectIdForClient(name);
+      const gruppo = projects[pid]?.cliente || "";
+      if (!groups.has(gruppo)) groups.set(gruppo, []);
+      groups.get(gruppo).push(name);
+    });
+    // Gruppi con cliente alfabeticamente, non assegnati in fondo
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      if (!a && b) return 1;
+      if (a && !b) return -1;
+      return a.localeCompare(b, "it");
+    });
+  }, [filteredClientNames, projects]);
 
   // Merge: subtypes from settings + subtypes used in entries
   const internalProjects = useMemo(() => {
@@ -935,27 +970,31 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-4">
 
-          {/* Clienti */}
+          {/* Progetti cliente raggruppati per cliente */}
           {filteredClientNames.length > 0 && (
-            <div>
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Clienti
-              </div>
-              <div className="space-y-0.5">
-                {filteredClientNames.map((name) => {
-                  const pid = projectIdForClient(name);
-                  return (
-                    <ProjectItem
-                      key={pid}
-                      label={name}
-                      color={getClientColor(name, clientColors)}
-                      isSelected={selectedId === pid}
-                      onClick={() => handleSelectProject(pid)}
-                      subTabs={renderSubTabs()}
-                    />
-                  );
-                })}
-              </div>
+            <div className="space-y-3">
+              {clientProjectGroups.map(([gruppo, names]) => (
+                <div key={gruppo || "__ungrouped"}>
+                  <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    {gruppo || "Progetti"}
+                  </div>
+                  <div className="space-y-0.5">
+                    {names.map((name) => {
+                      const pid = projectIdForClient(name);
+                      return (
+                        <ProjectItem
+                          key={pid}
+                          label={name}
+                          color={getClientColor(name, clientColors)}
+                          isSelected={selectedId === pid}
+                          onClick={() => handleSelectProject(pid)}
+                          subTabs={renderSubTabs()}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
