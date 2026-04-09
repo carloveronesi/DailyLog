@@ -10,6 +10,9 @@ export function collectExportData() {
     const k = localStorage.key(i);
     if (k && k.startsWith(STORAGE_PREFIX)) out[k] = localStorage.getItem(k);
   }
+  // Todos (chiave separata dal prefisso principale)
+  const todosVal = localStorage.getItem("dailylog_todos");
+  if (todosVal !== null) out["dailylog_todos"] = todosVal;
   return out;
 }
 
@@ -29,11 +32,20 @@ export function listStoredMonths() {
 export function exportMonths(monthYMs) {
   if (!monthYMs || monthYMs.length === 0) return;
   const out = {};
+  // Dati mensili selezionati
   for (const ym of monthYMs) {
     const k = STORAGE_PREFIX + ym;
     const val = localStorage.getItem(k);
     if (val !== null) out[k] = val;
   }
+  // Metadati globali (progetti, settings, persone)
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(STORAGE_PREFIX) && k.includes("__")) out[k] = localStorage.getItem(k);
+  }
+  // Todos (chiave separata)
+  const todosVal = localStorage.getItem("dailylog_todos");
+  if (todosVal !== null) out["dailylog_todos"] = todosVal;
   const dateTag = monthYMs.length === 1
     ? monthYMs[0]
     : `${monthYMs[0]}_${monthYMs[monthYMs.length - 1]}`;
@@ -68,7 +80,7 @@ export async function importAll(file) {
   const keys = Object.keys(obj);
   let count = 0;
   for (const k of keys) {
-    if (k.startsWith(STORAGE_PREFIX) && typeof obj[k] === "string") {
+    if ((k.startsWith(STORAGE_PREFIX) || k === "dailylog_todos") && typeof obj[k] === "string") {
       localStorage.setItem(k, obj[k]);
       count++;
     }
