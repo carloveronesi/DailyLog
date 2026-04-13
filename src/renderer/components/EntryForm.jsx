@@ -5,6 +5,7 @@ import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { Combobox } from "./Combobox";
 import { loadProjects } from "../services/storage";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 export function EntryForm({
   entry,
@@ -352,17 +353,13 @@ export function EntryForm({
   const noteSection = (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
-      <div className="relative">
-        <textarea
-          className={"min-h-[120px] w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "notes" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
-          value={entry.notes}
-          onChange={(e) => setField("notes", e.target.value)}
-          placeholder={listeningField === "notes" ? "Sto ascoltando..." : "Descrivi le attività concluse..."}
-        />
-        {isSpeechSupported && (
-          <div className="absolute bottom-2 right-2">{micBtn("notes")}</div>
-        )}
-      </div>
+      <MarkdownEditor
+        value={entry.notes}
+        onChange={(val) => setField("notes", val)}
+        placeholder={listeningField === "notes" ? "Sto ascoltando..." : "Descrivi le attività concluse..."}
+        isListening={listeningField === "notes"}
+        micButton={isSpeechSupported ? micBtn("notes") : null}
+      />
     </div>
   );
 
