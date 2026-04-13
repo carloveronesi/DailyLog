@@ -187,7 +187,7 @@ export function EntryForm({
             value={entry.client || ""}
             onChange={(val) => setField("client", val)}
             options={allSuggestedClients}
-            placeholder="Nome cliente"
+            placeholder="Seleziona cliente"
             allowCustom={true}
           />
         </div>
@@ -282,18 +282,7 @@ export function EntryForm({
               {hourLabel(rangeStartMin)} - {hourLabel(rangeEndMin)} ({rangeDuration}h)
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2">
-            <div className="relative flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
-              <div
-                className="absolute top-0 h-full rounded-full bg-slate-900 dark:bg-blue-500"
-                style={{
-                  left: `${((rangeStartMin - MORNING_SLOTS[0]) / (AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES - MORNING_SLOTS[0])) * 100}%`,
-                  width: `${((rangeEndMin - rangeStartMin) / (AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES - MORNING_SLOTS[0])) * 100}%`,
-                }}
-              />
-            </div>
-            {autoAdjusted && <div className="text-[11px] font-semibold text-amber-600">Fine aggiornata</div>}
-          </div>
+          {autoAdjusted && <div className="mt-2 text-[11px] font-semibold text-amber-600">Fine aggiornata</div>}
         </>
       )}
     </div>
@@ -302,7 +291,10 @@ export function EntryForm({
   // ── Right column ───────────────────────────────────────────────────────────
   const collaboratoriSection = (
     <div className="space-y-2">
-      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Collaboratori 👥</label>
+      <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <Icon name="users" className="w-3.5 h-3.5" />
+        Collaboratori
+      </label>
       <div className="flex flex-wrap gap-2 items-center p-3 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-700">
         {(entry.collaborators || []).map((c) => (
           <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
@@ -326,7 +318,10 @@ export function EntryForm({
 
   const clientContactsSection = (
     <div className="space-y-2">
-      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Persone Cliente 🤝</label>
+      <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <Icon name="building" className="w-3.5 h-3.5" />
+        Persone Cliente
+      </label>
       <div className="flex flex-wrap gap-2 items-center p-3 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-700">
         {(entry.clientContacts || []).map((c) => (
           <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-sm">
@@ -364,7 +359,7 @@ export function EntryForm({
   );
 
   const wentWrongNextStepsSection = (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cosa è andato male</label>

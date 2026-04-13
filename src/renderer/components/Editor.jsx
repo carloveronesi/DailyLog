@@ -410,7 +410,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           className="w-full bg-transparent text-xl font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
           value={activeEntry.title}
           onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
-          placeholder="Titolo"
+          placeholder="Inserisci il titolo del task..."
           autoFocus
         />
       </div>
