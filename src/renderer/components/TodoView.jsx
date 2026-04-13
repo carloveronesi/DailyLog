@@ -23,6 +23,8 @@ export function TodoView({
   const [selectedTodoId, setSelectedTodoId] = useState(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newTagInput, setNewTagInput] = useState("");
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newTodoTitle, setNewTodoTitle] = useState("");
 
   const pending = todos.filter(t => !t.isDone);
   const done = todos.filter(t => t.isDone);
@@ -30,7 +32,20 @@ export function TodoView({
   const selectedTodo = todos.find(t => t.id === selectedTodoId) || null;
 
   function handleAddNew() {
-    addTodo({});
+    setIsAddingNew(true);
+    setNewTodoTitle("");
+  }
+
+  function handleSaveNew() {
+    if (!newTodoTitle.trim()) return;
+    addTodo({ title: newTodoTitle.trim() });
+    setIsAddingNew(false);
+    setNewTodoTitle("");
+  }
+
+  function handleCancelNew() {
+    setIsAddingNew(false);
+    setNewTodoTitle("");
   }
 
   function handleAddSubtask() {
@@ -191,13 +206,43 @@ export function TodoView({
                   
                   {showAdd && (
                     <div className="p-3">
-                      <button
-                        onClick={handleAddNew}
-                        className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
-                      >
-                        <Icon name="list-check" className="w-4 h-4" />
-                        Aggiungi Attività
-                      </button>
+                      {isAddingNew ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={newTodoTitle}
+                            onChange={(e) => setNewTodoTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveNew();
+                              if (e.key === "Escape") handleCancelNew();
+                            }}
+                            placeholder="Titolo attività..."
+                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-sky-400"
+                          />
+                          <button
+                            onClick={handleSaveNew}
+                            disabled={!newTodoTitle.trim()}
+                            className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                          >
+                            Salva
+                          </button>
+                          <button
+                            onClick={handleCancelNew}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition"
+                          >
+                            <Icon name="x" className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleAddNew}
+                          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
+                        >
+                          <Icon name="list-check" className="w-4 h-4" />
+                          Aggiungi Attività
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
