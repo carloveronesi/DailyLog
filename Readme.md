@@ -1,90 +1,221 @@
-﻿<p align="center">
+<p align="center">
   <img src="public/icons/icon-192.png" alt="DailyLog logo" width="128" />
 </p>
 
-## DailyLog Webapp (PWA)
+<h1 align="center">DailyLog</h1>
 
-Local web app for tracking daily work with a monthly calendar view.
+<p align="center">
+  PWA locale per il tracciamento giornaliero delle attività lavorative.<br/>
+  Nessun backend, nessun account, tutti i dati restano nel browser.
+</p>
 
-### Purpose
+---
 
-- Track daily activities and tasks.
-- Count workdays per client at the end of the month.
-- Keep operational notes (blockers, next steps, activity log).
+## Funzionalità
 
-### Key Features
+### Viste calendario
+- **Vista mensile** — griglia 7 colonne (lun–dom) con weekend evidenziati; click su una cella apre l'editor per quel giorno
+- **Vista settimanale** — colonne per ogni giorno della settimana con slot da 30 minuti; supporta drag & drop per spostare e ridimensionare i task
+- **Vista giornaliera** — timeline verticale con slot da 30 minuti; drag & drop e resize inline
 
-- Monthly calendar (Mon-Sun) with highlighted weekends.
-- Each day has two time slots: `AM` and `PM`.
-- Daily editor with tasks valued at `0.5` or `1` day.
-- Task types: `internal`, `client`, `vacation`, `event`.
-- Monthly summary (totals and clients).
-- Local-first persistence using `localStorage`.
-- Export/Import JSON for all `dailylog:v1:*` keys.
-- Installable PWA mode with `manifest` + `service worker`.
+### Task e slot
+- Ogni giorno può avere:
+  - Slot **AM** / **PM** (mezza giornata): mattina 09:00–12:30, pomeriggio 14:00–17:30
+  - Slot da **30 minuti** (granularità fine, coesistono con AM/PM)
+  - Blocco **giornata intera** (quando AM = PM)
+- Tipi di task: `client`, `internal`, `vacation`, `event`
+- Sottotipi personalizzabili per `client` e `internal` (configurabili nelle impostazioni)
+- Campo **location** per ogni giorno: ufficio, remoto, cliente
+- Campi per task: titolo, note, cosa è andato storto, prossimi passi, collaboratori, contatti cliente
+- **Task ricorrenti** — definibili nelle impostazioni con frequenza giornaliera, settimanale, bisettimanale, trisettimanale o mensile; applicabili con un click su singolo giorno o "Riempi mese"
 
-### Project Structure
+### Editor giornaliero
+- Layout a due colonne: tipo/cliente/subtask/orari a sinistra, collaboratori/note/feedback a destra
+- Autocompletamento clienti e persone dal database locale
+- Sezione ricorrenza con anteprima dei giorni coinvolti
 
-- `index.html` -> web entry point
-- `src/renderer/main.jsx` -> React bootstrap
-- `src/renderer/App.jsx` -> main application
-- `src/renderer/components/*`
-- `src/renderer/services/*`
-- `src/renderer/domain/*`
-- `src/renderer/utils/*`
-- `public/manifest.webmanifest`
-- `public/sw.js`
-- `dailylog.html` -> legacy entry point (redirects to `index.html`)
+### Copia & incolla
+- **Copia giorno** — copia l'intera configurazione di un giorno e incollala su un altro
+- **Copia task/slot** — copia un singolo entry (con durata) e incollalo in qualsiasi slot libero
 
-### Requirements
+### Pannello riepilogo
+- Totali per cliente e per tipo per il mese corrente
+- Click o hover sulle voci filtra le celle del calendario per evidenziare i giorni corrispondenti
 
-- Node.js 20+
-- npm
+### Vista Progetti
+- Aggregazione automatica di tutte le voci del calendario per cliente e per sottotipo interno
+- Dettagli editabili per ogni progetto: stato, cliente, responsabile, persone coinvolte
+- Lista cronologica delle attività registrate per ciascun progetto
+- Export CSV dei dati progetto
 
-### Local Development
+### Todo list
+- Sezioni **DA FARE** / **FATTI** con completamento automatico
+- Sottotask per ogni todo
+- Tag personalizzabili (configurabili nelle impostazioni)
+- Data di scadenza opzionale
+- Associazione a un progetto
 
-1. Install dependencies:
+### Ricerca
+- Ricerca full-text su tutti i mesi salvati
+- Filtri per tipo, cliente, intervallo di date
+
+### Undo / Redo
+- Cronologia delle modifiche con etichetta descrittiva per ogni operazione
+- Navigabile avanti e indietro
+
+### Impostazioni
+- **Aspetto**: tema chiaro / scuro, colori personalizzati per cliente e per sottotipo interno
+- **Orari di lavoro**: configurazione degli slot mattina e pomeriggio
+- **Sottotipi task**: aggiunta, rinomina, rimozione per tipo `client` e `internal`
+- **Tag todo**: gestione dei tag globali per la todo list
+- **Persone**: rubrica delle persone frequenti (collaboratori, contatti cliente)
+- **Salvataggio**: export/import JSON con preview e selezione intervallo mesi; backup automatico su file (via File System Access API o bridge Electron)
+- **Task ricorrenti**: definizione e gestione dei template ricorrenti
+
+### PWA
+- Installabile su desktop e mobile tramite Chrome/Edge
+- Service worker per funzionamento offline
+- `manifest.webmanifest` con icone e colori tema
+
+---
+
+## Stack tecnico
+
+| Livello | Tecnologia |
+|---|---|
+| UI | React 18 + JSX |
+| Build | Vite 6 |
+| Stile | Tailwind CSS (classi inline, nessun file CSS separato) |
+| Storage primario | `localStorage` — chiave `dailylog:v1:<YYYY-MM>` |
+| Storage backup handle | IndexedDB (solo file handle per backup automatico) |
+| Deploy | GitHub Pages (CI via GitHub Actions) |
+| Nessun backend | — |
+| Nessun TypeScript | — |
+| Nessun test automatizzato | — |
+
+---
+
+## Struttura del progetto
+
+```
+src/renderer/
+├── App.jsx                    # root: stato globale, layout, routing viste
+├── contexts/
+│   └── SettingsContext.jsx    # React context per le impostazioni
+├── components/
+│   ├── CalendarGrid.jsx       # griglia mensile
+│   ├── DayCell.jsx            # singola cella giorno
+│   ├── WeekView.jsx           # vista settimanale con drag & drop
+│   ├── DayView.jsx            # vista giornaliera con drag & drop
+│   ├── Editor.jsx             # modal editor per un giorno
+│   ├── EntryForm.jsx          # form entry (usato da Editor)
+│   ├── Header.jsx             # navigazione mese
+│   ├── SearchModal.jsx        # ricerca full-text
+│   ├── SettingsModal.jsx      # impostazioni + import/export
+│   ├── SummaryPanel.jsx       # riepilogo totali
+│   ├── TodoView.jsx           # todo list con sottotask e tag
+│   ├── ProjectView.jsx        # vista progetti aggregata
+│   ├── TaskBlock.jsx          # blocco task nelle viste settimana/giorno
+│   ├── Combobox.jsx           # input con autocomplete
+│   ├── ErrorBoundary.jsx      # error boundary React
+│   └── ui.jsx                 # componenti base: Button, Icon, Modal, Segmented
+├── domain/
+│   ├── tasks.js               # costanti e helper puri (slot, colori, tipi)
+│   └── calendar.js            # helper per viste (buildBlocks, matchesRecurringPattern)
+├── hooks/
+│   ├── useCalendarData.js     # stato calendario, upsertDay, undo/redo
+│   ├── useBackupSync.js       # backup file automatico
+│   ├── useCalendarDrag.js     # drag & drop
+│   ├── useTaskOperations.js   # move, resize, delete slot
+│   ├── useTodos.js            # stato todo list
+│   └── useUIState.js          # stato UI (modal aperti, vista attiva, filtri)
+├── services/storage/
+│   ├── index.js               # re-export
+│   ├── core.js                # load/save mese, import/export JSON
+│   ├── calendar.js            # listStoredClients, operazioni calendario
+│   ├── backup.js              # IndexedDB per file handle backup
+│   ├── search.js              # searchAllLogs full-text
+│   ├── settings.js            # loadSettings / saveSettings
+│   ├── todo.js                # loadTodos / saveTodos
+│   └── projects.js            # loadProjects / saveProjects
+└── utils/
+    └── date.js                # helper date (ymd, ymKey, monthNameIT, ...)
+```
+
+---
+
+## Data model
+
+**Chiave localStorage:** `dailylog:v1:<YYYY-MM>` → `{ byDate: { "YYYY-MM-DD": DayData } }`
+
+```js
+// DayData
+{
+  AM: Entry | null,       // task mezza giornata mattina
+  PM: Entry | null,       // task mezza giornata pomeriggio
+  location: "remote" | "office" | "client" | null,
+  hours: {                // slot 30-min (coesistono con AM/PM)
+    "09:00": Entry,
+    "09:30": Entry,
+    "14:00": Entry,
+    // ...
+  }
+}
+
+// Entry
+{
+  type: "internal" | "client" | "vacation" | "event",
+  subtypeId: string | null,
+  title: string,
+  client: string,          // usato se type === "client"
+  collaborators: string[],
+  clientContacts: string[],
+  notes: string,
+  wentWrong: string,
+  nextSteps: string,
+}
+```
+
+Altre chiavi localStorage:
+- `dailylog_todos` — array todo
+- `dailylog:v1:__settings` — impostazioni applicazione
+
+---
+
+## Sviluppo locale
+
+**Requisiti:** Node.js 20+
 
 ```bash
 npm install
+npm run dev        # dev server su http://localhost:5173
+npm run build      # build produzione in dist/
+npm run preview    # anteprima build produzione
 ```
 
-2. Start development server:
+---
 
-```bash
-npm run dev
-```
+## Deploy su GitHub Pages
 
-3. Open `http://localhost:5173`.
+Il repository include `.github/workflows/deploy-pages.yml` che fa build e pubblica su GitHub Pages ad ogni push su `main`.
 
-### Build and Preview
+Setup una tantum:
+1. `Settings > Pages` → `Source: GitHub Actions`
+2. Push su `main` — la CI compila `dist/` e pubblica automaticamente
 
-```bash
-npm run build
-npm run preview
-```
+URL finale: `https://<username>.github.io/<repo>/`
 
-### Deploy to GitHub Pages
+---
 
-The repository includes a workflow:
+## Installazione come app
 
-- `.github/workflows/deploy-pages.yml`
+Su Chrome o Edge, con l'app aperta su HTTPS (o localhost), usa **Installa app** nella barra degli indirizzi.
 
-One-time setup on GitHub:
+---
 
-1. Open `Settings > Pages`.
-2. In `Build and deployment`, select `Source: GitHub Actions`.
-3. Push to `main` (or `master`): the workflow builds `dist/` and publishes to Pages.
+## Dati e privacy
 
-Typical final URL:
-
-- `https://<username>.github.io/<repo>/`
-
-### Install as Web App
-
-After deploying to HTTPS (or on `localhost`), use `Install app` in Chrome/Edge.
-
-### Data Notes
-
-- Data stays in the browser/device (localStorage).
-- Use `Export`/`Import` JSON for backup and migration.
+- Tutti i dati risiedono nel browser locale (`localStorage`)
+- Nessuna telemetria, nessun server, nessun account
+- Backup tramite export JSON; ripristino tramite import
+- L'export selettivo per intervallo di mesi è disponibile nelle impostazioni
