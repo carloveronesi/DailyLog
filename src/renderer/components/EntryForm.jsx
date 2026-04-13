@@ -32,6 +32,7 @@ export function EntryForm({
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const [personInput, setPersonInput] = useState("");
   const [clientContactInput, setClientContactInput] = useState("");
+  const [retroOpen, setRetroOpen] = useState(false);
 
   const { listeningField, isSpeechSupported, toggle: toggleSpeech } = useSpeechRecognition();
   const appendText = (fieldName, text) => {
@@ -282,7 +283,12 @@ export function EntryForm({
               {hourLabel(rangeStartMin)} - {hourLabel(rangeEndMin)} ({rangeDuration}h)
             </div>
           </div>
-          {autoAdjusted && <div className="mt-2 text-[11px] font-semibold text-amber-600">Fine aggiornata</div>}
+          {autoAdjusted && (
+            <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <Icon name="check" className="w-3 h-3" />
+              Fine aggiornata
+            </div>
+          )}
         </>
       )}
     </div>
@@ -344,14 +350,14 @@ export function EntryForm({
   );
 
   const noteSection = (
-    <div className="flex flex-col gap-1.5 flex-1 min-h-0">
-      <label className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
-      <div className="relative flex-1 min-h-0">
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
+      <div className="relative">
         <textarea
-          className={"flex-1 min-h-[80px] w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "notes" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
+          className={"min-h-[120px] w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "notes" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
           value={entry.notes}
           onChange={(e) => setField("notes", e.target.value)}
-          placeholder={listeningField === "notes" ? "Sto ascoltando..." : "Dettagli..."}
+          placeholder={listeningField === "notes" ? "Sto ascoltando..." : "Descrivi le attività concluse..."}
         />
         {isSpeechSupported && (
           <div className="absolute bottom-2 right-2">{micBtn("notes")}</div>
@@ -360,38 +366,54 @@ export function EntryForm({
     </div>
   );
 
+  const hasRetroContent = !!(entry.wentWrong?.trim() || entry.nextSteps?.trim());
   const wentWrongNextStepsSection = (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cosa è andato male</label>
-        <div className="relative">
-          <textarea
-            className={"w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "wentWrong" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
-            rows={3}
-            value={entry.wentWrong}
-            onChange={(e) => setField("wentWrong", e.target.value)}
-            placeholder={listeningField === "wentWrong" ? "Sto ascoltando..." : "Blocchi, criticità..."}
-          />
-          {isSpeechSupported && (
-            <div className="absolute bottom-2 right-2">{micBtn("wentWrong")}</div>
-          )}
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setRetroOpen(v => !v)}
+        className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors w-fit"
+      >
+        <Icon name={retroOpen || hasRetroContent ? "chev-down" : "chev-right"} className="w-3.5 h-3.5" />
+        Retrospettiva
+        {hasRetroContent && !retroOpen && (
+          <span className="normal-case font-normal tracking-normal text-slate-400 dark:text-slate-500 italic">— compilata</span>
+        )}
+      </button>
+      {(retroOpen || hasRetroContent) && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cosa è andato male</label>
+            <div className="relative">
+              <textarea
+                className={"w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "wentWrong" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
+                rows={3}
+                value={entry.wentWrong}
+                onChange={(e) => setField("wentWrong", e.target.value)}
+                placeholder={listeningField === "wentWrong" ? "Sto ascoltando..." : "Blocchi, criticità..."}
+              />
+              {isSpeechSupported && (
+                <div className="absolute bottom-2 right-2">{micBtn("wentWrong")}</div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Next steps</label>
+            <div className="relative">
+              <textarea
+                className={"w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "nextSteps" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
+                rows={3}
+                value={entry.nextSteps}
+                onChange={(e) => setField("nextSteps", e.target.value)}
+                placeholder={listeningField === "nextSteps" ? "Sto ascoltando..." : "Prossime azioni..."}
+              />
+              {isSpeechSupported && (
+                <div className="absolute bottom-2 right-2">{micBtn("nextSteps")}</div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Next steps</label>
-        <div className="relative">
-          <textarea
-            className={"w-full rounded-xl border bg-white px-3 py-2.5 pb-8 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "nextSteps" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
-            rows={3}
-            value={entry.nextSteps}
-            onChange={(e) => setField("nextSteps", e.target.value)}
-            placeholder={listeningField === "nextSteps" ? "Sto ascoltando..." : "Prossime azioni..."}
-          />
-          {isSpeechSupported && (
-            <div className="absolute bottom-2 right-2">{micBtn("nextSteps")}</div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 

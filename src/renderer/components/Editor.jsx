@@ -260,6 +260,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   // Recurring task logic
   const dow = dowMon0(date);
   const recurringTasks = settings?.recurringTasks || [];
+  const [recurringOpen, setRecurringOpen] = useState(false);
   const [recurringFeedback, setRecurringFeedback] = useState(false);
   const [recurringFreq, setRecurringFreq] = useState("weekly");
   const [recurringDow, setRecurringDow] = useState(dow);
@@ -341,77 +342,90 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
   const recurringSection = (
     <div className={`rounded-2xl border px-4 py-3 flex flex-col gap-2.5 transition-colors ${recurringFeedback ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700/50 dark:bg-slate-800/50'}`}>
+      {/* Header — sempre visibile */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setRecurringOpen(v => !v)}
+          className="flex items-center gap-2 min-w-0"
+        >
           <Icon name="repeat" className={`w-4 h-4 shrink-0 transition-colors ${recurringFeedback ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'}`} />
           <span className={`text-xs font-semibold transition-colors ${recurringFeedback ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-700 dark:text-slate-300'}`}>
             {recurringFeedback ? 'Modello salvato!' : 'Ripeti'}
           </span>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {existingRecurring ? (
-            <>
-              <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Aggiorna</button>
-              <button type="button" onClick={handleRemoveRecurring} className="text-xs font-semibold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">Rimuovi</button>
-            </>
-          ) : (
-            <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Salva modello</button>
+          {existingRecurring && !recurringOpen && !recurringFeedback && (
+            <span className="text-xs font-normal text-slate-400 dark:text-slate-500 italic truncate">— {existingRecurringLabel}</span>
           )}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={recurringFreq}
-          onChange={e => setRecurringFreq(e.target.value)}
-          className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
-        >
-          <option value="daily">Ogni giorno (lun-ven)</option>
-          <option value="weekly">Ogni settimana</option>
-          <option value="biweekly">Ogni 2 settimane</option>
-          <option value="triweekly">Ogni 3 settimane</option>
-          <option value="monthly">Ogni mese</option>
-        </select>
-        {(recurringFreq === "weekly" || recurringFreq === "biweekly" || recurringFreq === "triweekly") && (
-          <select
-            value={recurringDow}
-            onChange={e => setRecurringDow(Number(e.target.value))}
-            className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
-          >
-            {[["Lunedì",0],["Martedì",1],["Mercoledì",2],["Giovedì",3],["Venerdì",4]].map(([lbl, v]) => (
-              <option key={v} value={v}>{lbl}</option>
-            ))}
-          </select>
-        )}
-        {recurringFreq === "monthly" && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 dark:text-slate-400">giorno</span>
-            <input
-              type="number" min={1} max={28}
-              value={recurringDom}
-              onChange={e => setRecurringDom(Math.max(1, Math.min(28, Number(e.target.value))))}
-              className="text-xs w-14 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-            />
+          <Icon name={recurringOpen ? "chev-up" : "chev-down"} className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+        </button>
+        {recurringOpen && (
+          <div className="flex items-center gap-3 shrink-0">
+            {existingRecurring ? (
+              <>
+                <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Aggiorna</button>
+                <button type="button" onClick={handleRemoveRecurring} className="text-xs font-semibold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">Rimuovi</button>
+              </>
+            ) : (
+              <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Salva modello</button>
+            )}
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-slate-500 dark:text-slate-400">Fino al</span>
-        <input
-          type="date"
-          value={recurringEndYmd}
-          onChange={e => setRecurringEndYmd(e.target.value)}
-          min={ymd(date)}
-          className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-        />
-        {recurringEndYmd && (
-          <button type="button" onClick={() => setRecurringEndYmd("")} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Rimuovi</button>
-        )}
-        {!recurringEndYmd && (
-          <span className="text-xs text-slate-400 dark:text-slate-500 italic">nessuna scadenza</span>
-        )}
-      </div>
-      {existingRecurring && !recurringFeedback && (
-        <div className="text-xs text-slate-400 dark:text-slate-500 truncate">Modello attivo: {existingRecurringLabel}</div>
+      {/* Corpo collassabile */}
+      {recurringOpen && (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={recurringFreq}
+              onChange={e => setRecurringFreq(e.target.value)}
+              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              <option value="daily">Ogni giorno (lun-ven)</option>
+              <option value="weekly">Ogni settimana</option>
+              <option value="biweekly">Ogni 2 settimane</option>
+              <option value="triweekly">Ogni 3 settimane</option>
+              <option value="monthly">Ogni mese</option>
+            </select>
+            {(recurringFreq === "weekly" || recurringFreq === "biweekly" || recurringFreq === "triweekly") && (
+              <select
+                value={recurringDow}
+                onChange={e => setRecurringDow(Number(e.target.value))}
+                className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
+              >
+                {[["Lunedì",0],["Martedì",1],["Mercoledì",2],["Giovedì",3],["Venerdì",4]].map(([lbl, v]) => (
+                  <option key={v} value={v}>{lbl}</option>
+                ))}
+              </select>
+            )}
+            {recurringFreq === "monthly" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500 dark:text-slate-400">giorno</span>
+                <input
+                  type="number" min={1} max={28}
+                  value={recurringDom}
+                  onChange={e => setRecurringDom(Math.max(1, Math.min(28, Number(e.target.value))))}
+                  className="text-xs w-14 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Fino al</span>
+            <input
+              type="date"
+              value={recurringEndYmd}
+              onChange={e => setRecurringEndYmd(e.target.value)}
+              min={ymd(date)}
+              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            />
+            {recurringEndYmd && (
+              <button type="button" onClick={() => setRecurringEndYmd("")} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Rimuovi</button>
+            )}
+            {!recurringEndYmd && (
+              <span className="text-xs text-slate-400 dark:text-slate-500 italic">nessuna scadenza</span>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -468,6 +482,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           >
             Salva
           </Button>
+          <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg">
+            {rangeDuration}h
+          </span>
           {saveError && (
             <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>
           )}
