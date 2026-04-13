@@ -4,6 +4,7 @@ import { Icon } from "./ui";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { Combobox } from "./Combobox";
 import { loadProjects } from "../services/storage";
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 
 export function EntryForm({
   entry,
@@ -31,6 +32,27 @@ export function EntryForm({
   const setField = (k, v) => onChange({ ...entry, [k]: v });
   const [personInput, setPersonInput] = useState("");
   const [clientContactInput, setClientContactInput] = useState("");
+
+  const { listeningField, isSpeechSupported, toggle: toggleSpeech } = useSpeechRecognition();
+  const appendText = (fieldName, text) => {
+    const current = entry[fieldName] || "";
+    const sep = current && !current.endsWith(" ") && !current.endsWith("\n") ? " " : "";
+    setField(fieldName, current + sep + text);
+  };
+  const micBtn = (fieldName) => {
+    if (!isSpeechSupported) return null;
+    const active = listeningField === fieldName;
+    return (
+      <button
+        type="button"
+        title={active ? "Ferma dettatura" : "Dettatura vocale"}
+        onClick={() => toggleSpeech(fieldName, (text) => appendText(fieldName, text))}
+        className={"p-1 rounded-lg transition-colors " + (active ? "text-red-500 animate-pulse" : "text-slate-400 hover:text-sky-500")}
+      >
+        <Icon name="mic" className="w-4 h-4" />
+      </button>
+    );
+  };
 
   const addCollaborator = (name) => {
     const cleanName = name.trim();
@@ -328,12 +350,15 @@ export function EntryForm({
 
   const noteSection = (
     <div className="flex flex-col gap-1.5 flex-1 min-h-0">
-      <label className="shrink-0 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
+      <div className="shrink-0 flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Note</label>
+        {micBtn("notes")}
+      </div>
       <textarea
-        className="flex-1 min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+        className={"flex-1 min-h-[80px] w-full rounded-xl border bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "notes" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
         value={entry.notes}
         onChange={(e) => setField("notes", e.target.value)}
-        placeholder="Dettagli..."
+        placeholder={listeningField === "notes" ? "Sto ascoltando..." : "Dettagli..."}
       />
     </div>
   );
@@ -341,23 +366,29 @@ export function EntryForm({
   const wentWrongNextStepsSection = (
     <div className="grid grid-cols-2 gap-3">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cosa è andato male</label>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cosa è andato male</label>
+          {micBtn("wentWrong")}
+        </div>
         <textarea
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+          className={"w-full rounded-xl border bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "wentWrong" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
           rows={3}
           value={entry.wentWrong}
           onChange={(e) => setField("wentWrong", e.target.value)}
-          placeholder="Blocchi, criticità..."
+          placeholder={listeningField === "wentWrong" ? "Sto ascoltando..." : "Blocchi, criticità..."}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Next steps</label>
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Next steps</label>
+          {micBtn("nextSteps")}
+        </div>
         <textarea
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 outline-none transition"
+          className={"w-full rounded-xl border bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:text-white resize-none focus:ring-2 focus:ring-sky-500/20 outline-none transition " + (listeningField === "nextSteps" ? "border-red-400 focus:border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 focus:border-sky-400")}
           rows={3}
           value={entry.nextSteps}
           onChange={(e) => setField("nextSteps", e.target.value)}
-          placeholder="Prossime azioni..."
+          placeholder={listeningField === "nextSteps" ? "Sto ascoltando..." : "Prossime azioni..."}
         />
       </div>
     </div>
