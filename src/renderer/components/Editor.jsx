@@ -264,6 +264,16 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [recurringFreq, setRecurringFreq] = useState("weekly");
   const [recurringDow, setRecurringDow] = useState(dow);
   const [recurringDom, setRecurringDom] = useState(date.getDate());
+  const [recurringEndYmd, setRecurringEndYmd] = useState(() => {
+    const tasks = settings?.recurringTasks || [];
+    const existing = tasks.find(t => {
+      const freq = t.frequency || "weekly";
+      if (freq === "daily") return true;
+      if (freq === "monthly") return t.dayOfMonth === date.getDate();
+      return (t.dowMon0 ?? 0) === dowMon0(date);
+    });
+    return existing?.endYmd || "";
+  });
 
   // Trova il task ricorrente che corrisponde alla configurazione attuale
   const existingRecurring = recurringTasks.find(t => {
@@ -311,6 +321,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
       dowMon0: recurringFreq !== "daily" && recurringFreq !== "monthly" ? recurringDow : null,
       dayOfMonth: recurringFreq === "monthly" ? recurringDom : null,
       anchorYmd: needsAnchor ? ymd(date) : null,
+      endYmd: recurringEndYmd || null,
       ...content,
     };
     setSettings(prev => ({
@@ -328,7 +339,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     }));
   }
 
-  const recurringSection = hasMeaning(activeEntry) ? (
+  const recurringSection = (
     <div className={`rounded-2xl border px-4 py-3 flex flex-col gap-2.5 transition-colors ${recurringFeedback ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700/50 dark:bg-slate-800/50'}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -383,11 +394,27 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           </div>
         )}
       </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500 dark:text-slate-400">Fino al</span>
+        <input
+          type="date"
+          value={recurringEndYmd}
+          onChange={e => setRecurringEndYmd(e.target.value)}
+          min={ymd(date)}
+          className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+        />
+        {recurringEndYmd && (
+          <button type="button" onClick={() => setRecurringEndYmd("")} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Rimuovi</button>
+        )}
+        {!recurringEndYmd && (
+          <span className="text-xs text-slate-400 dark:text-slate-500 italic">nessuna scadenza</span>
+        )}
+      </div>
       {existingRecurring && !recurringFeedback && (
         <div className="text-xs text-slate-400 dark:text-slate-500 truncate">Modello attivo: {existingRecurringLabel}</div>
       )}
     </div>
-  ) : null;
+  );
 
   const entryFormProps = {
     entry: activeEntry,

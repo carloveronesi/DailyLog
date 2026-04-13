@@ -170,6 +170,13 @@ export function slotIndex(slotMin, daySlots = DAY_SLOTS) {
  * anchorYmd: "YYYY-MM-DD" (usato per biweekly/triweekly come data di riferimento)
  */
 export function matchesRecurringPattern(task, date) {
+  if (task.endYmd) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    if (`${y}-${m}-${d}` > task.endYmd) return false;
+  }
+
   const freq = task.frequency || "weekly";
   const dow = (date.getDay() + 6) % 7;
 
