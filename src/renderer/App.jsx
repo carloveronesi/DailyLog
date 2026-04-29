@@ -25,17 +25,22 @@ function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive
     ? "bg-sky-500 hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500"
     : (isActive ? "bg-slate-100 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800" : "hover:bg-slate-100 dark:hover:bg-slate-800");
   const iconColor = accent ? "text-white" : (activeClass ? activeClass : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-700 dark:text-slate-300"));
+  const labelColor = accent ? "text-white" : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-600 dark:text-slate-400");
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex items-center justify-center w-full p-3 lg:p-4 transition-colors lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
+      className={`relative flex flex-col lg:flex-row items-center justify-center w-full py-2 px-1 lg:p-4 transition-colors lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
     >
       <Icon name={icon} className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${iconColor}`} />
+      {/* Mobile label under icon */}
+      <span className={`lg:hidden text-[9px] font-bold uppercase tracking-wider mt-0.5 leading-none ${labelColor}`}>
+        {label.split(" ")[0]}
+      </span>
 
-      {/* Floating Tooltip */}
+      {/* Floating Tooltip (desktop only) */}
       <span className="hidden lg:block absolute left-full ml-3 whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-all transform translate-x-1 group-hover/btn:translate-x-0 font-bold text-[11px] uppercase tracking-widest text-white bg-slate-900/90 dark:bg-slate-700/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl z-[100] pointer-events-none before:content-[''] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2 before:border-4 before:border-transparent before:border-r-slate-900/90 dark:before:border-r-slate-700/95">
         {label}
       </span>
@@ -524,6 +529,7 @@ export default function App() {
                     onPrevDay={goPrevDay}
                     onNextDay={goNextDay}
                     onToday={goTodayDay}
+                    onGoToMonth={() => setViewMode("month")}
                     onToggleLocation={handleToggleLocation}
                     onCopyDay={() => handleCopyDay(activeDate)}
                     pasteMode={!!copiedDay}

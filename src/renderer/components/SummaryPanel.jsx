@@ -151,7 +151,14 @@ export function SummaryPanel({
       <div className="mt-4">
         <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Clienti</div>
         {totals.clients.length === 0 ? (
-          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna giornata cliente registrata.</div>
+          <div className="mt-3 flex flex-col items-center gap-1.5 py-4 text-center">
+            <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+            </svg>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nessuna giornata cliente</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Registra le tue attività nel calendario</p>
+          </div>
         ) : (
           <div className="mt-2 space-y-2">
             {totals.clients.map((c) => (
@@ -202,7 +209,13 @@ export function SummaryPanel({
       <div className="mt-4">
         <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Altre attività</div>
         {totals.otherActivities.length === 0 ? (
-          <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">Nessuna altra attività registrata.</div>
+          <div className="mt-3 flex flex-col items-center gap-1.5 py-3 text-center">
+            <svg className="w-7 h-7 text-slate-300 dark:text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+            </svg>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Nessuna altra attività questo mese</p>
+          </div>
         ) : (
           <div className="mt-2 space-y-2">
             {totals.otherActivities.map((activity) => (

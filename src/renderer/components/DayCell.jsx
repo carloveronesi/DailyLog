@@ -164,7 +164,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
               className={`flex items-center justify-center rounded-lg p-1 transition-all ${
                 entries?.location && entries.location !== "remote"
                   ? "text-sky-500 bg-sky-50 dark:bg-sky-500/10 dark:text-sky-400 opacity-100"
-                  : "text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                  : "text-slate-300 dark:text-slate-600 opacity-60 hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-700/50"
               }`}
               title={entries?.location === "office" ? "In Ufficio" : entries?.location === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
             >

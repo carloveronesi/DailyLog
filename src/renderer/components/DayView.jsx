@@ -23,6 +23,7 @@ export function DayView({
   onPrevDay,
   onNextDay,
   onToday,
+  onGoToMonth,
   onToggleLocation,
   onCopyDay,
   pasteMode,
@@ -119,6 +120,17 @@ export function DayView({
         </div>
 
         <div className="flex items-center gap-2">
+          {onGoToMonth && (
+            <Button
+              className="bg-white/95 border border-slate-200 text-slate-600 hover:bg-white hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-semibold"
+              onClick={onGoToMonth}
+              type="button"
+              title="Torna alla vista mese"
+            >
+              <Icon name="chev-left" className="w-4 h-4" />
+              Mese
+            </Button>
+          )}
           {pasteMode ? (
             <Button
               className="bg-sky-500 border border-sky-600 text-white hover:bg-sky-600 dark:bg-sky-600 dark:border-sky-700 dark:hover:bg-sky-500 flex items-center gap-1.5"
