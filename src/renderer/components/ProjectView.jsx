@@ -418,9 +418,9 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       {/* Body — scrollable */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
 
-        {/* OVERVIEW TAB */}
-        {currentTab === "overview" && (
-          <div className="space-y-6">
+        {/* OVERVIEW TAB (Combined with Details) */}
+        {(currentTab === "overview" || isEditing) && (
+          <div className="space-y-8">
             {stats && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Ore Totali */}
@@ -508,151 +508,113 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
               </section>
             )}
 
-            {/* Breve descrizione in Overview */}
-            {meta?.description && !isEditing && (
-              <section>
-                <SectionTitle icon="clipboard" label="Descrizione" />
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-3">
-                  {meta.description}
-                </p>
-              </section>
-            )}
+            {/* Dettagli Progetto (ex-tab Details) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+              <div className="space-y-6">
+                {/* Descrizione */}
+                <section>
+                  <SectionTitle icon="clipboard" label="Descrizione" />
+                  {isEditing ? (
+                    <textarea value={form.description} onChange={set("description")} rows={4} placeholder="Aggiungi una descrizione del progetto…" className={textareaClass} />
+                  ) : (
+                    <p className={emptyOrText(meta?.description)}>{meta?.description || "Nessuna descrizione"}</p>
+                  )}
+                </section>
+
+                {/* Obiettivi */}
+                <section>
+                  <SectionTitle icon="target" label="Obiettivi" />
+                  {isEditing ? (
+                    <textarea value={form.objectives} onChange={set("objectives")} rows={4} placeholder="Descrivi gli obiettivi del progetto…" className={textareaClass} />
+                  ) : (
+                    <p className={emptyOrText(meta?.objectives)}>{meta?.objectives || "Nessun obiettivo definito"}</p>
+                  )}
+                </section>
+              </div>
+
+              <div className="space-y-6">
+                {/* Tempistiche e Budget */}
+                <section>
+                  <SectionTitle icon="calendar" label="Tempistiche e Budget" />
+                  {isEditing ? (
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Inizio</span>
+                        <input type="date" value={form.startDate} onChange={set("startDate")} className={inputClass} />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Fine prevista</span>
+                        <input type="date" value={form.endDate} onChange={set("endDate")} className={inputClass} />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-6 mt-1">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Inizio</div>
+                        <div className={dateText(meta?.startDate)}>{formatDate(meta?.startDate) || "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Fine prevista</div>
+                        <div className={dateText(meta?.endDate)}>{formatDate(meta?.endDate) || "—"}</div>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                {/* Team interno */}
+                <section>
+                  <SectionTitle icon="users" label="Team" />
+                  {isEditing ? (
+                    <div>
+                      <textarea
+                        value={form.team}
+                        onChange={set("team")}
+                        rows={3}
+                        placeholder={"Un nome per riga…\n" + (allPeople?.length ? allPeople.slice(0, 3).map(p => typeof p === 'object' ? p.name : p).join("\n") : "")}
+                        className={textareaClass}
+                      />
+                      {allPeople?.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {allPeople.map((p, idx) => {
+                            const personName = typeof p === 'object' ? p.name : p;
+                            if (!personName) return null;
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  const current = form.team.split("\n").map((s) => s.trim()).filter(Boolean);
+                                  if (current.includes(personName)) return;
+                                  setForm((f) => ({ ...f, team: [...current, personName].join("\n") }));
+                                }}
+                                className="px-2 py-0.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                              >
+                                + {personName}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <ChipList items={meta?.team} emptyText="Nessun membro del team" />
+                  )}
+                </section>
+
+                {/* Contatti cliente (solo per progetti cliente) */}
+                {isClient && (
+                  <section>
+                    <SectionTitle icon="users" label="Referenti cliente" />
+                    {isEditing ? (
+                      <textarea value={form.clientContacts} onChange={set("clientContacts")} rows={2} placeholder="Un nome per riga…" className={textareaClass} />
+                    ) : (
+                      <ChipList items={meta?.clientContacts} emptyText="Nessun referente cliente" />
+                    )}
+                  </section>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-
-        {/* DETTAGLI TAB */}
-        {(currentTab === "details" || isEditing) && (
-          <div className="space-y-6">
-            {/* Descrizione */}
-            <section>
-          <SectionTitle icon="clipboard" label="Descrizione" />
-          {isEditing ? (
-            <textarea
-              value={form.description}
-              onChange={set("description")}
-              rows={3}
-              placeholder="Aggiungi una descrizione del progetto…"
-              className={textareaClass}
-            />
-          ) : (
-            <p className={emptyOrText(meta?.description)}>
-              {meta?.description || "Nessuna descrizione"}
-            </p>
-          )}
-        </section>
-
-        {/* Obiettivi */}
-        <section>
-          <SectionTitle icon="target" label="Obiettivi" />
-          {isEditing ? (
-            <textarea
-              value={form.objectives}
-              onChange={set("objectives")}
-              rows={3}
-              placeholder="Descrivi gli obiettivi del progetto…"
-              className={textareaClass}
-            />
-          ) : (
-            <p className={emptyOrText(meta?.objectives)}>
-              {meta?.objectives || "Nessun obiettivo definito"}
-            </p>
-          )}
-        </section>
-
-        {/* Tempistiche e Budget */}
-        <section>
-          <SectionTitle icon="calendar" label="Tempistiche e Budget" />
-          {isEditing ? (
-            <div className="flex flex-wrap gap-4 mt-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Inizio</span>
-                <input type="date" value={form.startDate} onChange={set("startDate")} className={inputClass} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Fine prevista</span>
-                <input type="date" value={form.endDate} onChange={set("endDate")} className={inputClass} />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Stima ore (Budget)</span>
-                <input type="number" min="0" step="0.5" value={form.estimatedHours} onChange={set("estimatedHours")} className={inputClass} placeholder="Es. 40" />
-              </label>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-6 mt-1">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Inizio</div>
-                <div className={dateText(meta?.startDate)}>{formatDate(meta?.startDate) || "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Fine prevista</div>
-                <div className={dateText(meta?.endDate)}>{formatDate(meta?.endDate) || "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Budget ore</div>
-                <div className={dateText(meta?.estimatedHours)}>{meta?.estimatedHours ? `${meta.estimatedHours}h` : "—"}</div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* Team interno */}
-        <section>
-          <SectionTitle icon="users" label="Team" />
-          {isEditing ? (
-            <div>
-              <textarea
-                value={form.team}
-                onChange={set("team")}
-                rows={3}
-                placeholder={"Un nome per riga…\n" + (allPeople?.length ? allPeople.slice(0, 3).map(p => typeof p === 'object' ? p.name : p).join("\n") : "")}
-                className={textareaClass}
-              />
-              {allPeople?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {allPeople.map((p, idx) => {
-                    const personName = typeof p === 'object' ? p.name : p;
-                    if (!personName) return null;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          const current = form.team.split("\n").map((s) => s.trim()).filter(Boolean);
-                          if (current.includes(personName)) return;
-                          setForm((f) => ({ ...f, team: [...current, personName].join("\n") }));
-                        }}
-                        className="px-2 py-0.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
-                      >
-                        + {personName}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <ChipList items={meta?.team} emptyText="Nessun membro del team" />
-          )}
-        </section>
-
-        {/* Contatti cliente (solo per progetti cliente) */}
-        {isClient && (
-          <section>
-            <SectionTitle icon="users" label="Referenti cliente" />
-            {isEditing ? (
-              <textarea
-                value={form.clientContacts}
-                onChange={set("clientContacts")}
-                rows={2}
-                placeholder="Un nome per riga…"
-                className={textareaClass}
-              />
-            ) : (
-              <ChipList items={meta?.clientContacts} emptyText="Nessun referente cliente" />
-            )}
-          </section>
-        )}
-        </div>
         )}
 
         {/* Gestione Sub-Task */}
@@ -931,7 +893,6 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
   const renderSubTabs = () => (
     <>
       <SubTabItem label="Overview" icon="briefcase" isSelected={selectedTab === "overview"} onClick={() => setSelectedTab("overview")} />
-      <SubTabItem label="Dettagli progetto" icon="clipboard" isSelected={selectedTab === "details"} onClick={() => setSelectedTab("details")} />
       <SubTabItem label="Sub-Task" icon="list-check" isSelected={selectedTab === "subtasks"} onClick={() => setSelectedTab("subtasks")} />
       <SubTabItem label="Attività registrate" icon="history" isSelected={selectedTab === "activities"} onClick={() => setSelectedTab("activities")} />
     </>
