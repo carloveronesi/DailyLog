@@ -237,6 +237,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       objectives: meta?.objectives || "",
       startDate: meta?.startDate || "",
       endDate: meta?.endDate || "",
+      estimatedHours: meta?.estimatedHours || "",
       status: meta?.status || "active",
       team: (meta?.team || []).join("\n"),
       clientContacts: (meta?.clientContacts || []).join("\n"),
@@ -252,6 +253,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       objectives: form.objectives.trim(),
       startDate: form.startDate.trim(),
       endDate: form.endDate.trim(),
+      estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : "",
       status: form.status,
       team: form.team.split("\n").map((s) => s.trim()).filter(Boolean),
       clientContacts: form.clientContacts.split("\n").map((s) => s.trim()).filter(Boolean),
@@ -287,6 +289,14 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
   const displayMeta = isEditing ? form : meta;
   const currentStatus = displayMeta?.status || "active";
 
+  const isOverdue = useMemo(() => {
+    if (currentStatus !== "active" || !displayMeta?.endDate) return false;
+    // Imposta l'ora a 00:00:00 per un confronto preciso sulla data
+    const end = new Date(displayMeta.endDate);
+    end.setHours(23, 59, 59, 999);
+    return end < new Date();
+  }, [currentStatus, displayMeta?.endDate]);
+
   const slotLabel = (slot, wh) => {
     if (slot === "Mattina" && wh) {
       const sh = Math.floor(wh.morningStart / 60);
@@ -313,9 +323,15 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       <div className="shrink-0 px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
               {!isEditing && <StatusBadge status={currentStatus} />}
+              {!isEditing && isOverdue && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                  <Icon name="alert-triangle" className="w-3 h-3" />
+                  In Ritardo
+                </span>
+              )}
             </div>
             {!isEditing && meta?.cliente && (
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
@@ -402,63 +418,110 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       {/* Body — scrollable */}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-8">
 
-        {/* KPIs Section */}
-        {stats && currentTab !== "activities" && currentTab !== "subtasks" && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Ore Totali */}
-            <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-800/50 border border-sky-100/60 dark:border-sky-800/30 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400">
-                  <Icon name="clock" className="w-4 h-4" />
+        {/* OVERVIEW TAB */}
+        {currentTab === "overview" && (
+          <div className="space-y-6">
+            {stats && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Ore Totali */}
+                <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-sky-50 to-white dark:from-sky-900/20 dark:to-slate-800/50 border border-sky-100/60 dark:border-sky-800/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400">
+                      <Icon name="clock" className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
+                      Ore Totali
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mt-auto">
+                    <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
+                      {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      ({(stats.totalHours / 8).toFixed(1)} gg)
+                    </span>
+                  </div>
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
-                  Ore Totali
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2 mt-auto">
-                <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
-                  {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)}
-                </span>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  ({(stats.totalHours / 8).toFixed(1)} gg)
-                </span>
-              </div>
-            </div>
 
-            {/* Prima Attività */}
-            <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800/50 border border-indigo-100/60 dark:border-indigo-800/30 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-                  <Icon name="calendar" className="w-4 h-4" />
+                {/* Prima Attività */}
+                <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800/50 border border-indigo-100/60 dark:border-indigo-800/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                      <Icon name="calendar" className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300">
+                      Prima Attività
+                    </span>
+                  </div>
+                  <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-auto">
+                    {stats.firstDate ? formatDate(stats.firstDate) : "—"}
+                  </span>
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-800 dark:text-indigo-300">
-                  Prima Attività
-                </span>
-              </div>
-              <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-auto">
-                {stats.firstDate ? formatDate(stats.firstDate) : "—"}
-              </span>
-            </div>
 
-            {/* Ultima Attività */}
-            <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-800/50 border border-emerald-100/60 dark:border-emerald-800/30 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                  <Icon name="calendar" className="w-4 h-4" />
+                {/* Ultima Attività */}
+                <div className="flex flex-col p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-800/50 border border-emerald-100/60 dark:border-emerald-800/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                      <Icon name="calendar" className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                      Ultima Attività
+                    </span>
+                  </div>
+                  <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-auto">
+                    {stats.lastDate ? formatDate(stats.lastDate) : "—"}
+                  </span>
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Ultima Attività
-                </span>
               </div>
-              <span className="text-base font-bold text-slate-800 dark:text-slate-100 mt-auto">
-                {stats.lastDate ? formatDate(stats.lastDate) : "—"}
-              </span>
-            </div>
+            )}
+
+            {/* Budget Ore */}
+            {(meta?.estimatedHours > 0 || isEditing) && (
+              <section className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+                <SectionTitle icon="pie-chart" label="Avanzamento e Budget" />
+                {!isEditing && stats ? (
+                  <div className="mt-3">
+                    <div className="flex justify-between items-end mb-1.5">
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {stats.totalHours.toFixed(1)} <span className="text-slate-400 font-normal">/ {meta.estimatedHours} ore</span>
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        {Math.min(100, Math.round((stats.totalHours / meta.estimatedHours) * 100))}%
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${stats.totalHours > meta.estimatedHours ? "bg-rose-500" : "bg-emerald-500"}`}
+                        style={{ width: `${Math.min(100, (stats.totalHours / meta.estimatedHours) * 100)}%` }}
+                      />
+                    </div>
+                    {stats.totalHours > meta.estimatedHours && (
+                      <p className="mt-2 text-xs text-rose-500 font-medium">Hai superato il budget stimato di {(stats.totalHours - meta.estimatedHours).toFixed(1)} ore.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">Ore stimate (Budget)</label>
+                    <input type="number" min="0" step="0.5" value={form?.estimatedHours} onChange={set("estimatedHours")} className={inputClass + " w-32 ml-3"} placeholder="Es. 40" />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Breve descrizione in Overview */}
+            {meta?.description && !isEditing && (
+              <section>
+                <SectionTitle icon="clipboard" label="Descrizione" />
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-3">
+                  {meta.description}
+                </p>
+              </section>
+            )}
           </div>
         )}
 
-        {/* Info Blocks */}
-        {currentTab !== "activities" && currentTab !== "subtasks" && (
+        {/* DETTAGLI TAB */}
+        {(currentTab === "details" || isEditing) && (
           <div className="space-y-6">
             {/* Descrizione */}
             <section>
@@ -496,9 +559,9 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
           )}
         </section>
 
-        {/* Tempistiche */}
+        {/* Tempistiche e Budget */}
         <section>
-          <SectionTitle icon="calendar" label="Tempistiche" />
+          <SectionTitle icon="calendar" label="Tempistiche e Budget" />
           {isEditing ? (
             <div className="flex flex-wrap gap-4 mt-2">
               <label className="flex flex-col gap-1">
@@ -508,6 +571,10 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Fine prevista</span>
                 <input type="date" value={form.endDate} onChange={set("endDate")} className={inputClass} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Stima ore (Budget)</span>
+                <input type="number" min="0" step="0.5" value={form.estimatedHours} onChange={set("estimatedHours")} className={inputClass} placeholder="Es. 40" />
               </label>
             </div>
           ) : (
@@ -519,6 +586,10 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Fine prevista</div>
                 <div className={dateText(meta?.endDate)}>{formatDate(meta?.endDate) || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Budget ore</div>
+                <div className={dateText(meta?.estimatedHours)}>{meta?.estimatedHours ? `${meta.estimatedHours}h` : "—"}</div>
               </div>
             </div>
           )}
@@ -651,7 +722,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
         )}
 
         {/* Task log */}
-        {currentTab !== "details" && currentTab !== "subtasks" && (
+        {currentTab === "activities" && (
           <section>
           <div className="flex items-center justify-between mb-1 -mt-1">
             <SectionTitle icon="history" label={`Attività registrate (${stats?.tasks?.length ?? 0})`} />
@@ -1061,16 +1132,123 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
             currentTab={selectedTab}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <div className="w-16 h-16 rounded-2xl bg-sky-50 dark:bg-sky-900/20 flex items-center justify-center mb-4">
-              <Icon name="briefcase" className="w-8 h-8 text-sky-400 dark:text-sky-500" />
-            </div>
-            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300">
-              Seleziona un progetto
-            </h3>
-            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500 max-w-xs">
-              Scegli un progetto dalla lista per vedere il riepilogo e gestire le informazioni.
-            </p>
+          <ProjectDashboard 
+            projects={projects}
+            clientNames={clientNames}
+            internalProjects={internalProjects}
+            onSelectProject={handleSelectProject}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Project Dashboard (Empty State) ──────────────────────────────────────
+
+function ProjectDashboard({ projects, clientNames, internalProjects, onSelectProject }) {
+  // Raccogli tutti i progetti attivi
+  const activeProjects = useMemo(() => {
+    const list = [];
+    
+    // Progetti Clienti
+    clientNames.forEach(name => {
+      const pid = projectIdForClient(name);
+      const meta = projects[pid] || {};
+      if (meta.status !== "archived") {
+        list.push({ pid, name, type: "client", meta });
+      }
+    });
+
+    // Progetti Interni
+    internalProjects.forEach(({ projectId, label }) => {
+      const meta = projects[projectId] || {};
+      if (meta.status !== "archived") {
+        list.push({ pid: projectId, name: label, type: "internal", meta });
+      }
+    });
+
+    // Ordina per scadenza (overdue primi, poi prossimi alla scadenza, poi gli altri alfabeticamente)
+    return list.sort((a, b) => {
+      const aEnd = a.meta.endDate ? new Date(a.meta.endDate).getTime() : Infinity;
+      const bEnd = b.meta.endDate ? new Date(b.meta.endDate).getTime() : Infinity;
+      if (aEnd !== bEnd) return aEnd - bEnd;
+      return a.name.localeCompare(b.name, "it");
+    });
+  }, [projects, clientNames, internalProjects]);
+
+  return (
+    <div className="flex-1 overflow-y-auto px-8 py-8 bg-slate-50/50 dark:bg-slate-900/20">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">Dashboard Progetti</h1>
+        <p className="text-slate-500 dark:text-slate-400 mb-8">
+          Panoramica dei progetti attualmente attivi. Seleziona un progetto per vederne i dettagli.
+        </p>
+
+        {activeProjects.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
+             <Icon name="briefcase" className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
+             <p className="text-lg font-semibold text-slate-600 dark:text-slate-400">Nessun progetto attivo</p>
+             <p className="text-sm text-slate-400 mt-1">I progetti registrati compariranno qui.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeProjects.map(({ pid, name, type, meta }) => {
+              const isOverdue = meta.status === "active" && meta.endDate && new Date(meta.endDate) < new Date();
+              
+              return (
+                <button
+                  key={pid}
+                  onClick={() => onSelectProject(pid)}
+                  className="flex flex-col text-left p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-sky-300 dark:hover:border-sky-600 hover:shadow-md transition-all group relative overflow-hidden"
+                >
+                  <div className="flex justify-between items-start w-full mb-3">
+                    <div className="flex flex-col min-w-0 pr-2">
+                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                         {type === "client" ? (meta.cliente || "Cliente") : "Interno"}
+                       </span>
+                       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate w-full group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                         {name}
+                       </h3>
+                    </div>
+                    {meta.status !== "active" ? (
+                      <StatusBadge status={meta.status} />
+                    ) : isOverdue ? (
+                      <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                        <Icon name="alert-triangle" className="w-3 h-3" />
+                        Scaduto
+                      </span>
+                    ) : (
+                      <StatusBadge status="active" />
+                    )}
+                  </div>
+                  
+                  {meta.description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
+                      {meta.description}
+                    </p>
+                  )}
+                  
+                  <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50 flex flex-wrap gap-x-4 gap-y-2 w-full">
+                    {meta.endDate && (
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <Icon name="calendar" className="w-3.5 h-3.5 text-slate-400" />
+                        {formatDate(meta.endDate)}
+                      </div>
+                    )}
+                    {meta.estimatedHours && (
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <Icon name="clock" className="w-3.5 h-3.5 text-slate-400" />
+                        {meta.estimatedHours}h stimate
+                      </div>
+                    )}
+                    {!meta.endDate && !meta.estimatedHours && (
+                      <div className="text-xs text-slate-400 italic">Nessuna data di fine / budget</div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
