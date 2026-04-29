@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSettings } from "../contexts/SettingsContext";
 import {
   loadProjects,
@@ -130,11 +130,10 @@ function SubTabItem({ label, icon, isSelected, onClick }) {
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-        isSelected
+      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isSelected
           ? "text-sky-700 bg-sky-100/60 dark:text-sky-300 dark:bg-sky-900/30"
           : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:bg-slate-700/50"
-      }`}
+        }`}
     >
       <Icon name={icon} className="w-3.5 h-3.5" />
       {label}
@@ -162,7 +161,7 @@ function StatusBadge({ status }) {
 
 // ─── ProjectDetail ───────────────────────────────────────────────────────────
 
-function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, onArchive, taskSubtypes, currentTab }) {
+function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, onArchive, taskSubtypes, currentTab, startInEditMode }) {
   const { settings } = useSettings();
   const workHours = settings?.workHours;
 
@@ -173,7 +172,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
   // Subtasks state
   const [newSubtask, setNewSubtask] = useState("");
   const [editingSubtask, setEditingSubtask] = useState(null);
-  
+
   const mergedSubtasks = useMemo(() => {
     const map = new Map();
     // 1. Configured overrides
@@ -186,10 +185,10 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
         const type = t.entry.type || (isClient ? "client" : "internal");
         const id = type === "internal" ? (t.entry.internalSubtask || "") : (t.entry.subtypeId || "");
         if (!map.has(id)) {
-          map.set(id, { 
-            id, 
-            label: id === "" ? "Generico" : (getSubtypeLabel(type, id, taskSubtypes, isClient ? projectName : t.entry.subtypeId) || id), 
-            isCustom: false 
+          map.set(id, {
+            id,
+            label: id === "" ? "Generico" : (getSubtypeLabel(type, id, taskSubtypes, isClient ? projectName : t.entry.subtypeId) || id),
+            isCustom: false
           });
         }
       });
@@ -198,19 +197,19 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
   }, [meta?.subtasks, stats?.tasks, taskSubtypes, isClient, projectName]);
 
   const handleAddSubtask = () => {
-     const val = newSubtask.trim();
-     if (!val) return;
-     const newId = val.toLowerCase().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, "");
-     if (!newId) return;
-     const existingMeta = meta?.subtasks || [];
-     if (existingMeta.some(s => s.id === newId) || mergedSubtasks.some(s => s.label.toLowerCase() === val.toLowerCase())) return;
-     onSave?.(projectId, { ...meta, subtasks: [...existingMeta, { id: newId, label: val }] });
-     setNewSubtask("");
+    const val = newSubtask.trim();
+    if (!val) return;
+    const newId = val.toLowerCase().replace(/[\s\W]+/g, "-").replace(/^-+|-+$/g, "");
+    if (!newId) return;
+    const existingMeta = meta?.subtasks || [];
+    if (existingMeta.some(s => s.id === newId) || mergedSubtasks.some(s => s.label.toLowerCase() === val.toLowerCase())) return;
+    onSave?.(projectId, { ...meta, subtasks: [...existingMeta, { id: newId, label: val }] });
+    setNewSubtask("");
   };
 
   const handleRemoveSubtask = (id) => {
-     const existingMeta = meta?.subtasks || [];
-     onSave?.(projectId, { ...meta, subtasks: existingMeta.filter(s => s.id !== id) });
+    const existingMeta = meta?.subtasks || [];
+    onSave?.(projectId, { ...meta, subtasks: existingMeta.filter(s => s.id !== id) });
   };
 
   const handleRenameSubtask = () => {
@@ -245,6 +244,12 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
     setIsEditing(true);
   }
 
+  useEffect(() => {
+    if (startInEditMode) {
+      startEdit();
+    }
+  }, []);
+
   function handleSave() {
     onSave(projectId, {
       ...meta,
@@ -278,7 +283,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       map.get(t.dateKey).push(t);
     }
     const arr = Array.from(map.entries()).map(([dateKey, items]) => ({ dateKey, items }));
-    
+
     arr.sort((a, b) => {
       return sortDesc ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey);
     });
@@ -371,11 +376,10 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 <button
                   type="button"
                   onClick={() => onArchive(projectId, meta)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl border transition-colors ${
-                    currentStatus === "archived"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl border transition-colors ${currentStatus === "archived"
                       ? "border-emerald-200 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                       : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                  }`}
+                    }`}
                   title={currentStatus === "archived" ? "Ripristina progetto" : "Archivia progetto"}
                 >
                   <Icon name={currentStatus === "archived" ? "inbox" : "archive"} className="w-3.5 h-3.5" />
@@ -490,7 +494,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                       </span>
                     </div>
                     <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full rounded-full transition-all duration-500 ${stats.totalHours > meta.estimatedHours ? "bg-rose-500" : "bg-emerald-500"}`}
                         style={{ width: `${Math.min(100, (stats.totalHours / meta.estimatedHours) * 100)}%` }}
                       />
@@ -626,7 +630,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 Aggiungi attività ricorrenti specifiche per questo progetto, compariranno nei suggerimenti quando registri un task per questa entità.
               </p>
             </div>
-            
+
             <div className="flex gap-2 w-full max-w-lg">
               <input
                 className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
@@ -645,36 +649,36 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
             <div className="flex flex-col gap-2 max-w-lg">
               {mergedSubtasks.length === 0 ? (
-                 <p className="text-sm text-slate-400 italic">Nessun sotto-task configurato o utilizzato per questo progetto.</p>
+                <p className="text-sm text-slate-400 italic">Nessun sotto-task configurato o utilizzato per questo progetto.</p>
               ) : (
                 mergedSubtasks.map((st) => {
                   const isBeingEdited = editingSubtask?.id === st.id;
                   return (
                     <div key={st.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 transition-colors">
-                       {isBeingEdited ? (
-                         <input
-                           autoFocus
-                           className="flex-1 min-w-0 bg-transparent border-b border-slate-300 dark:border-slate-600 outline-none text-sm font-semibold text-sky-700 dark:text-sky-400 mr-4 pb-0.5"
-                           value={editingSubtask.label}
-                           onChange={(e) => setEditingSubtask({ ...editingSubtask, label: e.target.value })}
-                           onKeyDown={(e) => {
-                             if (e.key === "Enter") handleRenameSubtask();
-                             if (e.key === "Escape") setEditingSubtask(null);
-                           }}
-                           onBlur={handleRenameSubtask}
-                         />
-                       ) : (
-                         <span
-                           className="flex-1 min-w-0 text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors truncate"
-                           title="Clicca per rinominare"
-                           onClick={() => setEditingSubtask({ id: st.id, label: st.label })}
-                         >
-                           {st.label}
-                         </span>
-                       )}
-                       <button onClick={() => st.isCustom && handleRemoveSubtask(st.id)} className={`p-1.5 rounded-full transition-colors shrink-0 ${st.isCustom ? "text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700" : "text-slate-300 dark:text-slate-600 opacity-50 cursor-not-allowed"}`} title={st.isCustom ? "Elimina override" : "Non puoi eliminare un subtask presente nello storico. Puoi solo rinominarlo."} disabled={!st.isCustom}>
-                         <Icon name="trash" className="w-3.5 h-3.5" />
-                       </button>
+                      {isBeingEdited ? (
+                        <input
+                          autoFocus
+                          className="flex-1 min-w-0 bg-transparent border-b border-slate-300 dark:border-slate-600 outline-none text-sm font-semibold text-sky-700 dark:text-sky-400 mr-4 pb-0.5"
+                          value={editingSubtask.label}
+                          onChange={(e) => setEditingSubtask({ ...editingSubtask, label: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleRenameSubtask();
+                            if (e.key === "Escape") setEditingSubtask(null);
+                          }}
+                          onBlur={handleRenameSubtask}
+                        />
+                      ) : (
+                        <span
+                          className="flex-1 min-w-0 text-sm font-semibold text-slate-800 dark:text-slate-200 cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors truncate"
+                          title="Clicca per rinominare"
+                          onClick={() => setEditingSubtask({ id: st.id, label: st.label })}
+                        >
+                          {st.label}
+                        </span>
+                      )}
+                      <button onClick={() => st.isCustom && handleRemoveSubtask(st.id)} className={`p-1.5 rounded-full transition-colors shrink-0 ${st.isCustom ? "text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700" : "text-slate-300 dark:text-slate-600 opacity-50 cursor-not-allowed"}`} title={st.isCustom ? "Elimina override" : "Non puoi eliminare un subtask presente nello storico. Puoi solo rinominarlo."} disabled={!st.isCustom}>
+                        <Icon name="trash" className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   );
                 })
@@ -686,46 +690,46 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
         {/* Task log */}
         {currentTab === "activities" && (
           <section>
-          <div className="flex items-center justify-between mb-1 -mt-1">
-            <SectionTitle icon="history" label={`Attività registrate (${stats?.tasks?.length ?? 0})`} />
-            {stats?.tasks?.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setSortDesc(d => !d)}
-                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mb-2"
-              >
-                <Icon name={sortDesc ? "arrow-down" : "arrow-up"} className="w-3.5 h-3.5" />
-                {sortDesc ? "Recenti prima" : "Meno recenti prima"}
-              </button>
-            )}
-          </div>
-          {!stats?.tasks?.length ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500 italic mt-1">
-              Nessun task registrato per questo progetto.
-            </p>
-          ) : (
-            <div className="mt-2 space-y-4">
-              {tasksByDate.map(({ dateKey, items }) => (
-                <div key={dateKey}>
-                  {/* Date header */}
-                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                    {formatDate(dateKey)}
-                  </div>
-                  <div className="space-y-1">
-                    {items.map((t, idx) => (
-                      <TaskRowItem 
-                        key={idx}
-                        t={t}
-                        workHours={workHours}
-                        formatTimeSlot={slotLabel}
-                        taskSubtypes={taskSubtypes}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-1 -mt-1">
+              <SectionTitle icon="history" label={`Attività registrate (${stats?.tasks?.length ?? 0})`} />
+              {stats?.tasks?.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setSortDesc(d => !d)}
+                  className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mb-2"
+                >
+                  <Icon name={sortDesc ? "arrow-down" : "arrow-up"} className="w-3.5 h-3.5" />
+                  {sortDesc ? "Recenti prima" : "Meno recenti prima"}
+                </button>
+              )}
             </div>
-          )}
+            {!stats?.tasks?.length ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500 italic mt-1">
+                Nessun task registrato per questo progetto.
+              </p>
+            ) : (
+              <div className="mt-2 space-y-4">
+                {tasksByDate.map(({ dateKey, items }) => (
+                  <div key={dateKey}>
+                    {/* Date header */}
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                      {formatDate(dateKey)}
+                    </div>
+                    <div className="space-y-1">
+                      {items.map((t, idx) => (
+                        <TaskRowItem
+                          key={idx}
+                          t={t}
+                          workHours={workHours}
+                          formatTimeSlot={slotLabel}
+                          taskSubtypes={taskSubtypes}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
       </div>
@@ -736,7 +740,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
   const [expanded, setExpanded] = useState(false);
   const entry = t.entry || {};
-  
+
   const hasDetails = !!(entry.notes || entry.wentWrong || entry.nextSteps || entry.collaborators?.length || entry.clientContacts?.length);
   const subtypeLabel = entry.subtypeId ? getSubtypeLabel(entry.type, entry.subtypeId, taskSubtypes) : null;
 
@@ -758,9 +762,9 @@ function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
             )}
           </div>
           {!expanded && entry.notes && (
-             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-               {entry.notes}
-             </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
+              {entry.notes}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -768,8 +772,8 @@ function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
             {t.hours % 1 === 0 ? t.hours : t.hours.toFixed(1)}h
           </span>
           {hasDetails && (
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setExpanded(e => !e)}
               className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
               title="Mostra dettagli (note, next steps...)"
@@ -780,7 +784,7 @@ function TaskRowItem({ t, workHours, formatTimeSlot, taskSubtypes }) {
           {!hasDetails && <div className="w-5.5" />} {/* Placeholder for alignment */}
         </div>
       </div>
-      
+
       {expanded && hasDetails && (
         <div className="mt-3 pl-[124px] pr-8 pb-1 space-y-3">
           {entry.collaborators?.length > 0 && (
@@ -882,12 +886,37 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
   const [selectedId, setSelectedId] = useState(null);
   const [selectedTab, setSelectedTab] = useState("overview");
   const [showArchived, setShowArchived] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [editingProjectId, setEditingProjectId] = useState(null);
 
   const handleSelectProject = (pid) => {
     if (selectedId !== pid) {
       setSelectedId(pid);
       setSelectedTab("overview");
     }
+  };
+
+  const confirmCreateProject = () => {
+    const name = newProjectName;
+    if (!name || !name.trim()) {
+      setIsCreatingProject(false);
+      setNewProjectName("");
+      return;
+    }
+    const trimName = name.trim();
+    const pid = projectIdForClient(trimName);
+
+    if (!projects[pid]) {
+      const updated = { ...projects, [pid]: { status: "active", cliente: "", description: "", isManuallyCreated: true } };
+      saveProjects(updated);
+      setProjects(updated);
+      onProjectsChange?.();
+      setEditingProjectId(pid);
+    }
+    handleSelectProject(pid);
+    setIsCreatingProject(false);
+    setNewProjectName("");
   };
 
   const renderSubTabs = () => (
@@ -901,13 +930,29 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
   // Internal subtypes found in actual entries
   const internalSubtypeIds = useMemo(() => listStoredInternalSubtypes(), []);
 
+  // Merge clientNames from entries + any explicitly created empty project
+  const allClientNames = useMemo(() => {
+    const set = new Set(clientNames.map(c => c.toLowerCase()));
+    const result = [...clientNames];
+    for (const pid of Object.keys(projects)) {
+      if (pid.startsWith("client::") && projects[pid]?.isManuallyCreated) {
+        const name = pid.slice(8);
+        if (!set.has(name.toLowerCase())) {
+          result.push(name);
+          set.add(name.toLowerCase());
+        }
+      }
+    }
+    return result.sort((a, b) => a.localeCompare(b, "it"));
+  }, [clientNames, projects]);
+
   // Filtra clienti in base allo stato archiviato
   const filteredClientNames = useMemo(() =>
-    clientNames.filter(name => {
+    allClientNames.filter(name => {
       const pid = projectIdForClient(name);
       const isArchived = (projects[pid]?.status || "active") === "archived";
       return showArchived ? isArchived : !isArchived;
-    }), [clientNames, projects, showArchived]);
+    }), [allClientNames, projects, showArchived]);
 
   // Raggruppa progetti cliente per campo "cliente" del metadata
   const clientProjectGroups = useMemo(() => {
@@ -996,11 +1041,40 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
 
       {/* ── Left sidebar ── */}
       <div className="w-56 lg:w-64 shrink-0 flex flex-col border-r border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40">
-        <div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+        <div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
           <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             {showArchived ? "Archiviati" : "Progetti"}
           </h2>
+          <button
+            type="button"
+            onClick={() => { setIsCreatingProject(true); setNewProjectName(""); }}
+            className="p-1.5 rounded-lg bg-sky-100 text-sky-600 hover:bg-sky-200 dark:bg-sky-900/40 dark:text-sky-400 dark:hover:bg-sky-800/60 transition-colors"
+            title="Nuovo Progetto"
+          >
+            <Icon name="plus" className="w-4 h-4" />
+          </button>
         </div>
+
+        {isCreatingProject && (
+          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-sky-50 dark:bg-sky-900/20">
+            <input
+              autoFocus
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmCreateProject();
+                if (e.key === "Escape") {
+                  setIsCreatingProject(false);
+                  setNewProjectName("");
+                }
+              }}
+              onBlur={confirmCreateProject}
+              placeholder="Nome progetto..."
+              className="w-full rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 dark:border-sky-800/50 dark:bg-slate-900 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            />
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-2 space-y-4">
 
           {/* Progetti cliente raggruppati per cliente */}
@@ -1064,11 +1138,10 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
           <button
             type="button"
             onClick={() => { setProjects(loadProjects()); setShowArchived(v => !v); setSelectedId(null); }}
-            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition-colors ${
-              showArchived
+            className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition-colors ${showArchived
                 ? "bg-slate-200/80 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300"
                 : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-            }`}
+              }`}
           >
             <Icon name={showArchived ? "inbox" : "archive"} className="w-3.5 h-3.5" />
             {showArchived ? "Mostra attivi" : "Archiviati"}
@@ -1091,9 +1164,10 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
             onArchive={handleArchive}
             taskSubtypes={taskSubtypes}
             currentTab={selectedTab}
+            startInEditMode={editingProjectId === selectedId}
           />
         ) : (
-          <ProjectDashboard 
+          <ProjectDashboard
             projects={projects}
             clientNames={clientNames}
             internalProjects={internalProjects}
@@ -1111,7 +1185,7 @@ function ProjectDashboard({ projects, clientNames, internalProjects, onSelectPro
   // Raccogli tutti i progetti attivi
   const activeProjects = useMemo(() => {
     const list = [];
-    
+
     // Progetti Clienti
     clientNames.forEach(name => {
       const pid = projectIdForClient(name);
@@ -1148,15 +1222,15 @@ function ProjectDashboard({ projects, clientNames, internalProjects, onSelectPro
 
         {activeProjects.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl">
-             <Icon name="briefcase" className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
-             <p className="text-lg font-semibold text-slate-600 dark:text-slate-400">Nessun progetto attivo</p>
-             <p className="text-sm text-slate-400 mt-1">I progetti registrati compariranno qui.</p>
+            <Icon name="briefcase" className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
+            <p className="text-lg font-semibold text-slate-600 dark:text-slate-400">Nessun progetto attivo</p>
+            <p className="text-sm text-slate-400 mt-1">I progetti registrati compariranno qui.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeProjects.map(({ pid, name, type, meta }) => {
               const isOverdue = meta.status === "active" && meta.endDate && new Date(meta.endDate) < new Date();
-              
+
               return (
                 <button
                   key={pid}
@@ -1165,12 +1239,12 @@ function ProjectDashboard({ projects, clientNames, internalProjects, onSelectPro
                 >
                   <div className="flex justify-between items-start w-full mb-3">
                     <div className="flex flex-col min-w-0 pr-2">
-                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                         {type === "client" ? (meta.cliente || "Cliente") : "Interno"}
-                       </span>
-                       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate w-full group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                         {name}
-                       </h3>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                        {type === "client" ? (meta.cliente || "Cliente") : "Interno"}
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 truncate w-full group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                        {name}
+                      </h3>
                     </div>
                     {meta.status !== "active" ? (
                       <StatusBadge status={meta.status} />
@@ -1183,13 +1257,13 @@ function ProjectDashboard({ projects, clientNames, internalProjects, onSelectPro
                       <StatusBadge status="active" />
                     )}
                   </div>
-                  
+
                   {meta.description && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
                       {meta.description}
                     </p>
                   )}
-                  
+
                   <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50 flex flex-wrap gap-x-4 gap-y-2 w-full">
                     {meta.endDate && (
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">

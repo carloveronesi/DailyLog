@@ -398,6 +398,17 @@ export default function App() {
 
           {/* Middle */}
           <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center w-full lg:mt-auto lg:mb-auto space-x-2 lg:space-x-0 lg:space-y-1 px-4 lg:px-0">
+            {viewMode !== "projects" && (
+              <>
+                <SidebarBtn
+                  icon="plus"
+                  label="Nuovo Task"
+                  onClick={() => openEditor(activeDate, null)}
+                  accent={true}
+                />
+                <div className="hidden lg:block w-8 h-px bg-slate-200 dark:bg-slate-700 my-1" />
+              </>
+            )}
             <SidebarBtn
               icon="day"
               label="Vista Giorno"
