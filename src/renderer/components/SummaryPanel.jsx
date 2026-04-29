@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { getClientColor, getInternalColor, HOURS_PER_DAY, SLOT, WORK_SLOTS, getSubtypeLabel } from "../domain/tasks";
-import { useSettings } from "../contexts/SettingsContext";
+import { getClientColor, getInternalColor, SLOT, getSubtypeLabel } from "../domain/tasks";
+import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { getItalianHolidays } from "../utils/holidays";
 
 function isClientFilterActive(activeFilter, clientName) {
@@ -39,6 +39,7 @@ export function SummaryPanel({
   onFixedFilterChange,
 }) {
   const { settings } = useSettings();
+  const { WORK_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const internalColors = settings?.internalColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -123,7 +124,7 @@ export function SummaryPanel({
     ].filter((activity) => activity.data.total > 0);
 
     return { clients, internal: internal.total, vacation: vacation.total, event: event.total, worked, workingDaysInMonth, otherActivities };
-  }, [data, year, monthIndex0]);
+  }, [data, year, monthIndex0, WORK_SLOTS]);
 
   return (
     <div

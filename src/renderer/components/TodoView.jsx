@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Icon, Button, Modal } from "./ui";
 import { useTodos } from "../hooks/useTodos";
 
@@ -26,8 +26,8 @@ export function TodoView({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
-  const pending = todos.filter(t => !t.isDone);
-  const done = todos.filter(t => t.isDone);
+  const pending = useMemo(() => todos.filter(t => !t.isDone), [todos]);
+  const done = useMemo(() => todos.filter(t => t.isDone), [todos]);
 
   const selectedTodo = todos.find(t => t.id === selectedTodoId) || null;
 

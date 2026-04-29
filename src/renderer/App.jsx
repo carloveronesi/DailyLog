@@ -14,10 +14,10 @@ import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { useTaskOperations } from "./hooks/useTaskOperations";
 import { useUIState } from "./hooks/useUIState";
-import { SettingsContext } from "./contexts/SettingsContext";
+import { SettingsContext, useWorkSlots } from "./contexts/SettingsContext";
 import { ymd, sameYMD, dowMon0 } from "./utils/date";
 import { exportAll, listStoredClients, listStoredPeople, savePeople, loadProjects } from "./services/storage";
-import { LOCATION_TYPES, SLOT_MINUTES, buildWorkSlots, hourKey } from "./domain/tasks";
+import { LOCATION_TYPES, SLOT_MINUTES, hourKey } from "./domain/tasks";
 import { matchesRecurringPattern } from "./domain/calendar";
 
 function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false, accent = false }) {
@@ -90,7 +90,7 @@ export default function App() {
 
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
-  const { WORK_SLOTS } = buildWorkSlots(settings.workHours);
+  const { WORK_SLOTS } = useWorkSlots();
   const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
 
   const {
@@ -183,7 +183,7 @@ export default function App() {
     if (!task) return;
     const existing = monthDataByDate[ymd(date)] || {};
     if (task.hours) {
-      upsertDay(date, { ...existing, hours: { ...(existing.hours || {}), ...task.hours } }, "Applica ricorrente");
+      upsertDay(date, { AM: null, PM: null, location: existing.location || null, hours: { ...(existing.hours || {}), ...task.hours } }, "Applica ricorrente");
     } else {
       upsertDay(date, { AM: task.AM || null, PM: task.PM || null, location: existing.location || null }, "Applica ricorrente");
     }
