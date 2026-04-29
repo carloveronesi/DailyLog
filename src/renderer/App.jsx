@@ -90,7 +90,7 @@ export default function App() {
 
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
-  const { WORK_SLOTS } = useWorkSlots();
+  const { WORK_SLOTS } = useWorkSlots(settings);
   const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
 
   const {

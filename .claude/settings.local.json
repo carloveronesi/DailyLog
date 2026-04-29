@@ -5,7 +5,9 @@
       "Bash(node --input-type=module --experimental-vm-modules)",
       "Bash(node:*)",
       "Bash(npx vite:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
