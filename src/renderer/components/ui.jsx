@@ -293,7 +293,7 @@ export function Icon({ name, className = "" }) {
   return null;
 }
 
-export function Modal({ open, title, children, onClose, className = "max-w-2xl" }) {
+export function Modal({ open, title, children, onClose, className = "max-w-2xl", fullscreen = false }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
@@ -304,6 +304,24 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl" 
   }, [open, onClose]);
 
   if (!open) return null;
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 lg:left-16 z-50 flex flex-col bg-white dark:bg-slate-900">
+        <button
+          className="absolute top-4 right-4 z-10 rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+          onClick={onClose}
+          aria-label="Chiudi"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+        <div className="flex flex-col min-h-0 flex-1 p-5">{children}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
