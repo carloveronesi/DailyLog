@@ -28,7 +28,8 @@ export function CalendarGrid({
 }) {
     const { settings } = useSettings();
     const clientColors = useMemo(() => settings?.clientColors || {}, [settings?.clientColors]);
-    const holidays = useMemo(() => getItalianHolidays(year), [year]);
+    const patronDay = settings?.patronDay ?? "12-07";
+    const holidays = useMemo(() => getItalianHolidays(year, patronDay), [year, patronDay]);
     const weekDays = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
     return (

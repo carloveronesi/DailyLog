@@ -36,7 +36,7 @@ function addDays(date, n) {
   return d;
 }
 
-export function getItalianHolidays(year) {
+export function getItalianHolidays(year, patronDay = "12-07") {
   const easter = easterDate(year);
   const easterMonday = addDays(easter, 1);
 
@@ -53,5 +53,7 @@ export function getItalianHolidays(year) {
     `${year}-12-26`, // Santo Stefano
   ];
 
-  return new Set([...fixed, fmt(easter), fmt(easterMonday)]);
+  const all = [...fixed, fmt(easter), fmt(easterMonday)];
+  if (patronDay) all.push(`${year}-${patronDay}`);
+  return new Set(all);
 }
