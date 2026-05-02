@@ -299,8 +299,11 @@ export function SettingsModal({
   }
 
   return (
-    <Modal open={open} title="Impostazioni" onClose={onClose}>
-      <div className="flex flex-col h-[600px] max-h-[70vh]">
+    <Modal open={open} onClose={onClose} fullscreen>
+      <div className="flex flex-col flex-1 min-h-0 w-full">
+        <div className="shrink-0 mb-4">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Impostazioni</h1>
+        </div>
         <div className="flex items-center justify-around border-b border-slate-200 dark:border-slate-700/50 mb-6 shrink-0">
           {[
             { key: "aspetto", label: "Aspetto" },
@@ -530,6 +533,40 @@ export function SettingsModal({
                           {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
                         </select>
                       </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Giorno del patrono */}
+              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className="space-y-1">
+                  <div className="text-base font-bold text-slate-900 dark:text-white">Giorno del patrono</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Festività locale della sede. Risulta non lavorativo nel calendario.</div>
+                </div>
+                {(() => {
+                  const raw = settings.patronDay ?? "12-07";
+                  const [mm, dd] = raw.split("-").map(Number);
+                  const selectCls = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                  const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+                  const daysInMonth = [31,29,31,30,31,30,31,31,30,31,30,31];
+                  const maxDay = daysInMonth[(mm || 12) - 1] || 31;
+                  function update(newMm, newDd) {
+                    const m = String(newMm).padStart(2, "0");
+                    const d = String(Math.min(newDd, daysInMonth[newMm - 1] || 31)).padStart(2, "0");
+                    setSettings(prev => ({ ...prev, patronDay: `${m}-${d}` }));
+                  }
+                  return (
+                    <div className="flex items-center gap-3">
+                      <select className={selectCls} value={mm || 12} onChange={(e) => update(Number(e.target.value), dd || 7)}>
+                        {MONTHS_IT.map((name, i) => <option key={i+1} value={i+1}>{name}</option>)}
+                      </select>
+                      <select className={selectCls} value={dd || 7} onChange={(e) => update(mm || 12, Number(e.target.value))}>
+                        {Array.from({ length: maxDay }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                      {(settings.patronDay == null || settings.patronDay === "12-07") && (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">Sant&apos;Ambrogio (Milano)</span>
+                      )}
                     </div>
                   );
                 })()}
@@ -923,15 +960,6 @@ export function SettingsModal({
           )}
         </div>
 
-        <div className="flex justify-end pt-4 mt-2 shrink-0">
-          <Button
-            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-[14px] px-8 py-3 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-none"
-            onClick={onClose}
-            type="button"
-          >
-            Chiudi
-          </Button>
-        </div>
       </div>
 
       <Modal
