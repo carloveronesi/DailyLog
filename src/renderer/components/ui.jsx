@@ -307,7 +307,7 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl",
 
   if (fullscreen) {
     return (
-      <div className="fixed inset-0 lg:left-16 z-50 flex flex-col bg-white dark:bg-slate-900">
+      <div className="fixed inset-0 lg:left-20 z-50 flex flex-col bg-white dark:bg-slate-900">
         <button
           className="absolute top-4 right-4 z-10 rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
           onClick={onClose}

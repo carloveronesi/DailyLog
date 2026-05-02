@@ -23,6 +23,7 @@ export function DayView({
   onPrevDay,
   onNextDay,
   onToday,
+  onNewTask,
   onGoToMonth,
   onToggleLocation,
   onCopyDay,
@@ -173,6 +174,15 @@ export function DayView({
           >
             Oggi
           </Button>
+          {onNewTask && (
+            <Button
+              className="bg-sky-500 text-white hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 font-semibold"
+              onClick={onNewTask}
+              type="button"
+            >
+              + Nuovo
+            </Button>
+          )}
         </div>
       </div>
 

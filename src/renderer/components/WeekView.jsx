@@ -37,6 +37,7 @@ export function WeekView({
   goPrevWeek,
   goNextWeek,
   goToday,
+  onNewTask,
   onMoveTask,
   onResizeTask,
   onDeleteSlot,
@@ -164,6 +165,15 @@ export function WeekView({
           >
             Oggi
           </Button>
+          {onNewTask && (
+            <Button
+              className="bg-sky-500 text-white hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 font-semibold"
+              onClick={onNewTask}
+              type="button"
+            >
+              + Nuovo
+            </Button>
+          )}
         </div>
       </div>
 

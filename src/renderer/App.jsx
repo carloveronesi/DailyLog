@@ -32,17 +32,11 @@ function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex flex-col lg:flex-row items-center justify-center w-full py-2 px-1 lg:p-4 transition-colors lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
+      className={`relative flex flex-col items-center justify-center w-full py-2 px-1 lg:py-3 transition-colors lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
     >
       <Icon name={icon} className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${iconColor}`} />
-      {/* Mobile label under icon */}
-      <span className={`lg:hidden text-[9px] font-bold uppercase tracking-wider mt-0.5 leading-none ${labelColor}`}>
+      <span className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 leading-none ${labelColor}`}>
         {label.split(" ")[0]}
-      </span>
-
-      {/* Floating Tooltip (desktop only) */}
-      <span className="hidden lg:block absolute left-full ml-3 whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-all transform translate-x-1 group-hover/btn:translate-x-0 font-bold text-[11px] uppercase tracking-widest text-white bg-slate-900/90 dark:bg-slate-700/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl z-[100] pointer-events-none before:content-[''] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2 before:border-4 before:border-transparent before:border-r-slate-900/90 dark:before:border-r-slate-700/95">
-        {label}
       </span>
     </button>
   );
@@ -389,7 +383,7 @@ export default function App() {
           </div>
         )}
         {/* Sidebar: bottom on mobile, left on desktop */}
-        <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-16 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
+        <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-20 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
 
           {/* Top */}
           <div className="flex lg:flex-col items-center w-full lg:pt-4 space-x-2 lg:space-x-0 lg:space-y-1">
@@ -398,17 +392,6 @@ export default function App() {
 
           {/* Middle */}
           <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center w-full lg:mt-auto lg:mb-auto space-x-2 lg:space-x-0 lg:space-y-1 px-4 lg:px-0">
-            {viewMode !== "projects" && (
-              <>
-                <SidebarBtn
-                  icon="plus"
-                  label="Nuovo Task"
-                  onClick={() => openEditor(activeDate, null)}
-                  accent={true}
-                />
-                <div className="hidden lg:block w-8 h-px bg-slate-200 dark:bg-slate-700 my-1" />
-              </>
-            )}
             <SidebarBtn
               icon="day"
               label="Vista Giorno"
@@ -515,6 +498,7 @@ export default function App() {
                     });
                   }}
                   goToday={goTodayDay}
+                  onNewTask={() => openEditor(activeDate, null)}
                   onToggleLocation={handleToggleLocation}
                   onCopyDay={handleCopyDay}
                   pasteMode={!!copiedDay}
@@ -540,6 +524,7 @@ export default function App() {
                     onPrevDay={goPrevDay}
                     onNextDay={goNextDay}
                     onToday={goTodayDay}
+                    onNewTask={() => openEditor(activeDate, null)}
                     onGoToMonth={() => setViewMode("month")}
                     onToggleLocation={handleToggleLocation}
                     onCopyDay={() => handleCopyDay(activeDate)}
@@ -574,6 +559,7 @@ export default function App() {
                       nextMonth={nextMonth}
                       goToday={goToday}
                       onFillMonth={settings.recurringTasks?.length > 0 ? handleFillMonth : undefined}
+                      onNewTask={() => openEditor(activeDate, null)}
                     />
                   </div>
                   <div className="flex-1 min-h-0 overflow-y-auto rounded-3xl pb-2">
