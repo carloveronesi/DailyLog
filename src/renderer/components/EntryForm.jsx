@@ -95,21 +95,35 @@ export function EntryForm({
 
   const projects = useMemo(() => loadProjects(), []);
 
-  // Aggrega tutti i clientContacts da tutti i progetti come suggerimenti
+  // Contatti cliente dal progetto corrente (solo per task client)
   const allClientContacts = useMemo(() => {
+    if (entry.type !== "client" || !entry.client) return [];
+    const pid = "client::" + normalizeClientKey(entry.client);
+    const projectContacts = projects[pid]?.clientContacts || [];
+    // fallback: tutti i clientContacts da tutti i progetti
+    if (projectContacts.length > 0) return projectContacts;
     const set = new Set();
-    Object.values(projects).forEach(p => {
-      (p.clientContacts || []).forEach(c => set.add(c));
-    });
-    // Se è un task cliente, metti i contatti del progetto corrente in cima
-    if (entry.type === "client" && entry.client) {
-      const pid = "client::" + normalizeClientKey(entry.client);
-      const projectContacts = projects[pid]?.clientContacts || [];
-      const others = Array.from(set).filter(c => !projectContacts.includes(c)).sort();
-      return [...projectContacts, ...others];
-    }
+    Object.values(projects).forEach(p => (p.clientContacts || []).forEach(c => set.add(c)));
     return Array.from(set).sort();
   }, [projects, entry.type, entry.client]);
+
+  // Collaboratori suggeriti: team del progetto corrente in cima, poi allPeople
+  const suggestedCollaborators = useMemo(() => {
+    let projectTeam = [];
+    if (entry.type === "client" && entry.client) {
+      const pid = "client::" + normalizeClientKey(entry.client);
+      projectTeam = projects[pid]?.team || [];
+    } else if (entry.type === "internal" && entry.subtypeId) {
+      const pid = "internal::" + entry.subtypeId;
+      projectTeam = projects[pid]?.team || [];
+    }
+    const selected = entry.collaborators || [];
+    const teamFiltered = projectTeam.filter(n => !selected.includes(n));
+    const othersFiltered = allPeople
+      .map(p => p.name)
+      .filter(n => !selected.includes(n) && !projectTeam.includes(n));
+    return [...teamFiltered, ...othersFiltered];
+  }, [projects, entry.type, entry.client, entry.subtypeId, entry.collaborators, allPeople]);
 
   const projectSpecificSubtasks = useMemo(() => {
     if (entry.type === "client" && entry.client) {
@@ -315,7 +329,7 @@ export function EntryForm({
           className="flex-1 min-w-[160px]"
           value={personInput}
           onChange={(val) => { if (val) addCollaborator(val); setPersonInput(""); }}
-          options={allPeople.filter(p => !(entry.collaborators || []).includes(p.name)).map(p => p.name)}
+          options={suggestedCollaborators}
           placeholder="Aggiungi persona..."
           allowCustom={true}
         />
@@ -427,7 +441,7 @@ export function EntryForm({
     return (
       <>
         {collaboratoriSection}
-        {clientContactsSection}
+        {entry.type === "client" && clientContactsSection}
         {noteSection}
         {wentWrongNextStepsSection}
       </>
@@ -440,7 +454,7 @@ export function EntryForm({
       {tipoSection}
       {orariSection}
       {collaboratoriSection}
-      {clientContactsSection}
+      {entry.type === "client" && clientContactsSection}
       {noteSection}
       {wentWrongNextStepsSection}
     </div>

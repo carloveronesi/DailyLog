@@ -442,18 +442,45 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
 
   return (
     <div className="flex flex-col min-h-0 flex-1">
-      {/* Header: Titolo — full width */}
-      <div className="shrink-0 mb-4 pr-8 space-y-1">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-          Titolo <span className="text-rose-500">*</span>
-        </label>
-        <input
-          className="w-full bg-transparent text-xl font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
-          value={activeEntry.title}
-          onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
-          placeholder="Inserisci il titolo del task..."
-          autoFocus
-        />
+      {/* Header: Titolo + Location — full width */}
+      <div className="shrink-0 mb-4 pr-8 space-y-3">
+        <div className="space-y-1">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Titolo <span className="text-rose-500">*</span>
+          </label>
+          <input
+            className="w-full bg-transparent text-xl font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
+            value={activeEntry.title}
+            onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
+            placeholder="Inserisci il titolo del task..."
+            autoFocus
+          />
+        </div>
+        {/* Location toggle */}
+        <div className="flex items-center gap-1.5">
+          {[
+            { value: LOCATION_TYPES.REMOTE, label: "Remoto", icon: "home" },
+            { value: LOCATION_TYPES.OFFICE, label: "Ufficio", icon: "building" },
+            { value: LOCATION_TYPES.CLIENT, label: "Cliente", icon: "briefcase" },
+          ].map(({ value, label, icon }) => {
+            const active = location === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setLocation(value)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  active
+                    ? "bg-slate-900 text-white dark:bg-blue-600 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700/60"
+                }`}
+              >
+                <Icon name={icon} className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Body: due colonne scrollabili */}
