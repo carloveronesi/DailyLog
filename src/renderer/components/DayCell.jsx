@@ -155,6 +155,7 @@ export const DayCell = memo(function DayCell({ date, isCurrentMonth, isWeekend, 
 
   return (
     <div className={base + " " + cursor + " " + bg + " " + todayRing} onClick={isClickable ? () => onDayClick(date) : undefined}>
+      {isToday && <div className="absolute top-0 left-0 right-0 h-0.5 bg-sky-400 dark:bg-sky-500 rounded-t-[22px]" />}
       <div className="flex items-center justify-between px-0.5">
         <div className={dayNumTodayCls}>{d}</div>
         {isCurrentMonth && !isNonWorkday && (

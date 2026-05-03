@@ -131,11 +131,19 @@ export function SummaryPanel({
       className="rounded-3xl border border-slate-200/90 bg-white/85 backdrop-blur p-4 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80"
       onMouseLeave={() => onHoverFilterChange?.(null)}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Riepilogo mese</div>
-        </div>
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">DailyLog</div>
+        <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Riepilogo mese</h2>
       </div>
+      {fixedFilter && (
+        <button
+          onClick={() => onFixedFilterChange?.(null)}
+          className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:text-sky-700 bg-sky-50 dark:bg-sky-500/10 px-2.5 py-1 rounded-full border border-sky-200 dark:border-sky-500/30 transition-colors"
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Rimuovi filtro
+        </button>
+      )}
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
@@ -145,6 +153,9 @@ export function SummaryPanel({
         <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
           <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni compilati</div>
           <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.worked.toFixed(1)} gg</div>
+          <div className="mt-2 h-1 rounded-full bg-slate-100 dark:bg-slate-700">
+            <div className="h-1 rounded-full bg-sky-400 dark:bg-sky-500 transition-all" style={{ width: `${Math.min(100, totals.workingDaysInMonth > 0 ? (totals.worked / totals.workingDaysInMonth) * 100 : 0)}%` }} />
+          </div>
         </div>
       </div>
 

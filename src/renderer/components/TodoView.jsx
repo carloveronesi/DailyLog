@@ -110,8 +110,9 @@ export function TodoView({
       {/* Main List Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Attività</h2>
+          <div className="mb-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">DailyLog</div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Attività</h2>
           </div>
           
           {[
@@ -240,9 +241,11 @@ export function TodoView({
                       ) : (
                         <button
                           onClick={handleAddNew}
-                          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
+                          className="flex items-center gap-2 text-sm font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition"
                         >
-                          <Icon name="list-check" className="w-4 h-4" />
+                          <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-500/20 flex items-center justify-center shrink-0">
+                            <Icon name="plus" className="w-3.5 h-3.5" />
+                          </span>
                           Aggiungi Attività
                         </button>
                       )}

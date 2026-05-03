@@ -330,7 +330,7 @@ export function SettingsModal({
 
         <div className="flex-1 overflow-y-auto pr-2 space-y-4">
           {activeTab === "clienti" && (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               {/* Colori clienti */}
               <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
                 <div className="px-6 pt-6 pb-4">
@@ -420,8 +420,8 @@ export function SettingsModal({
           )}
 
           {activeTab === "aspetto" && (
-            <div className="space-y-4">
-              {/* Aspetto: tema + vista riuniti */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              {/* Left: Aspetto */}
               <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
                 <div className="px-6 pt-6 pb-2">
                   <div className="text-base font-bold text-slate-900 dark:text-white">Aspetto</div>
@@ -477,296 +477,254 @@ export function SettingsModal({
                 </div>
               </div>
 
-              {/* Orario lavorativo */}
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Orario lavorativo</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Configura le fasce orarie visualizzate nel calendario.</div>
+              {/* Right: Orario + Patrono */}
+              <div className="space-y-4">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                  <div className="space-y-1">
+                    <div className="text-base font-bold text-slate-900 dark:text-white">Orario lavorativo</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Configura le fasce orarie visualizzate nel calendario.</div>
+                  </div>
+                  {(() => {
+                    const workHours = settings.workHours || {};
+                    const timeOptions = [];
+                    for (let m = 6 * 60; m <= 22 * 60; m += 30) timeOptions.push(m);
+                    const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                    const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block";
+                    return (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className={labelCls}>Mattina — inizio</span>
+                          <select className={selectCls} value={workHours.morningStart ?? 540} onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, morningStart: Number(e.target.value) } }))}>
+                            {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <span className={labelCls}>Mattina — fine</span>
+                          <select className={selectCls} value={workHours.morningEnd ?? 780} onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, morningEnd: Number(e.target.value) } }))}>
+                            {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <span className={labelCls}>Pomeriggio — inizio</span>
+                          <select className={selectCls} value={workHours.afternoonStart ?? 840} onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, afternoonStart: Number(e.target.value) } }))}>
+                            {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <span className={labelCls}>Pomeriggio — fine</span>
+                          <select className={selectCls} value={workHours.afternoonEnd ?? 1080} onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, afternoonEnd: Number(e.target.value) } }))}>
+                            {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-                {(() => {
-                  const workHours = settings.workHours || {};
-                  const timeOptions = [];
-                  for (let m = 6 * 60; m <= 22 * 60; m += 30) {
-                    timeOptions.push(m);
-                  }
-                  const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
-                  const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block";
-                  return (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className={labelCls}>Mattina — inizio</span>
-                        <select
-                          className={selectCls}
-                          value={workHours.morningStart ?? 540}
-                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, morningStart: Number(e.target.value) } }))}
-                        >
-                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <span className={labelCls}>Mattina — fine</span>
-                        <select
-                          className={selectCls}
-                          value={workHours.morningEnd ?? 780}
-                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, morningEnd: Number(e.target.value) } }))}
-                        >
-                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <span className={labelCls}>Pomeriggio — inizio</span>
-                        <select
-                          className={selectCls}
-                          value={workHours.afternoonStart ?? 840}
-                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, afternoonStart: Number(e.target.value) } }))}
-                        >
-                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <span className={labelCls}>Pomeriggio — fine</span>
-                        <select
-                          className={selectCls}
-                          value={workHours.afternoonEnd ?? 1080}
-                          onChange={(e) => setSettings(prev => ({ ...prev, workHours: { ...prev.workHours, afternoonEnd: Number(e.target.value) } }))}
-                        >
-                          {timeOptions.map(m => <option key={m} value={m}>{hourLabel(m)}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
 
-              {/* Giorno del patrono */}
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Giorno del patrono</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Festività locale della sede. Risulta non lavorativo nel calendario.</div>
+                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                  <div className="space-y-1">
+                    <div className="text-base font-bold text-slate-900 dark:text-white">Giorno del patrono</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Festività locale della sede. Risulta non lavorativo nel calendario.</div>
+                  </div>
+                  {(() => {
+                    const raw = settings.patronDay ?? "12-07";
+                    const [mm, dd] = raw.split("-").map(Number);
+                    const selectCls = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                    const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+                    const daysInMonth = [31,29,31,30,31,30,31,31,30,31,30,31];
+                    const maxDay = daysInMonth[(mm || 12) - 1] || 31;
+                    function update(newMm, newDd) {
+                      const m = String(newMm).padStart(2, "0");
+                      const d = String(Math.min(newDd, daysInMonth[newMm - 1] || 31)).padStart(2, "0");
+                      setSettings(prev => ({ ...prev, patronDay: `${m}-${d}` }));
+                    }
+                    return (
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <select className={selectCls} value={mm || 12} onChange={(e) => update(Number(e.target.value), dd || 7)}>
+                          {MONTHS_IT.map((name, i) => <option key={i+1} value={i+1}>{name}</option>)}
+                        </select>
+                        <select className={selectCls} value={dd || 7} onChange={(e) => update(mm || 12, Number(e.target.value))}>
+                          {Array.from({ length: maxDay }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        {(settings.patronDay == null || settings.patronDay === "12-07") && (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">Sant&apos;Ambrogio (Milano)</span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
-                {(() => {
-                  const raw = settings.patronDay ?? "12-07";
-                  const [mm, dd] = raw.split("-").map(Number);
-                  const selectCls = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
-                  const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-                  const daysInMonth = [31,29,31,30,31,30,31,31,30,31,30,31];
-                  const maxDay = daysInMonth[(mm || 12) - 1] || 31;
-                  function update(newMm, newDd) {
-                    const m = String(newMm).padStart(2, "0");
-                    const d = String(Math.min(newDd, daysInMonth[newMm - 1] || 31)).padStart(2, "0");
-                    setSettings(prev => ({ ...prev, patronDay: `${m}-${d}` }));
-                  }
-                  return (
-                    <div className="flex items-center gap-3">
-                      <select className={selectCls} value={mm || 12} onChange={(e) => update(Number(e.target.value), dd || 7)}>
-                        {MONTHS_IT.map((name, i) => <option key={i+1} value={i+1}>{name}</option>)}
-                      </select>
-                      <select className={selectCls} value={dd || 7} onChange={(e) => update(mm || 12, Number(e.target.value))}>
-                        {Array.from({ length: maxDay }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                      {(settings.patronDay == null || settings.patronDay === "12-07") && (
-                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">Sant&apos;Ambrogio (Milano)</span>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
             </div>
           )}
 
           {activeTab === "task" && (
             <div className="space-y-4">
-            <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-              <div className="space-y-1">
-                <div className="text-base font-bold text-slate-900 dark:text-white">Sottotipi</div>
-                <div className="text-sm text-slate-500 dark:text-slate-400">
-                  Titoli prestabiliti per compilare velocemente i tuoi task.
-                </div>
-              </div>
-              <div className="space-y-6 pt-2">
-                {TASK_TYPES.map((t) => (
-                  <div key={t.id} className="pt-4 first:pt-0 border-t first:border-0 border-slate-100 dark:border-slate-700/50">
-                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">{t.label}</div>
-                    <div className="flex gap-2 w-full max-w-lg mb-3">
+              {TASK_TYPES.map((t) => {
+                const items = settings.taskSubtypes?.[t.id] || [];
+                return (
+                  <div key={t.id} className="rounded-[24px] border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-base font-bold text-slate-900 dark:text-white">{t.label}</div>
+                          <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Sottotipi per task {t.label.toLowerCase()}.</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
+                            placeholder={`Es. categoria per ${t.label.toLowerCase()}...`}
+                            value={newSubtypes[t.id] || ""}
+                            onChange={(e) => setNewSubtypes((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") addSubtype(t.id); }}
+                          />
+                          <Button
+                            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 shrink-0"
+                            onClick={() => addSubtype(t.id)}
+                            type="button"
+                          >
+                            Aggiungi
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        {items.length === 0 ? (
+                          <div className="flex items-center justify-center h-full min-h-[80px]">
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">Nessuno configurato.</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {items.map((val) => {
+                              const id = val.id || val;
+                              const label = val.label || val;
+                              const idx = items.findIndex((x) => (x.id || x) === id);
+                              const isEditing = editingSubtype?.typeId === t.id && editingSubtype?.id === id;
+                              return (
+                                <div key={id} className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-700/30 px-3 py-2 border border-slate-100 dark:border-slate-700/50 group/item">
+                                  {isEditing ? (
+                                    <input
+                                      autoFocus
+                                      className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-700 dark:text-slate-300 min-w-0"
+                                      value={editingSubtype.label}
+                                      onChange={(e) => setEditingSubtype((prev) => ({ ...prev, label: e.target.value }))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") saveSubtypeRename();
+                                        if (e.key === "Escape") setEditingSubtype(null);
+                                      }}
+                                      onBlur={saveSubtypeRename}
+                                    />
+                                  ) : (
+                                    <span
+                                      className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                                      title="Clicca per rinominare"
+                                      onClick={() => setEditingSubtype({ typeId: t.id, id, label })}
+                                    >
+                                      {label}
+                                    </span>
+                                  )}
+                                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                    <button onClick={() => moveSubtype(t.id, id, "up")} disabled={idx <= 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta su">
+                                      <Icon name="chev-up" className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => moveSubtype(t.id, id, "down")} disabled={idx >= items.length - 1} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta giù">
+                                      <Icon name="chev-down" className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => removeSubtype(t.id, id)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors" title="Rimuovi">
+                                      <Icon name="x" className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Tag Todo */}
+              <div className="rounded-[24px] border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-base font-bold text-slate-900 dark:text-white">Tag Todo</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Tag globali da assegnare alle attività nella todo-list.</div>
+                    </div>
+                    <div className="flex gap-2">
                       <input
                         className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
-                        placeholder={`Es. categoria per ${t.label.toLowerCase()}...`}
-                        value={newSubtypes[t.id] || ""}
-                        onChange={(e) => setNewSubtypes((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") addSubtype(t.id);
-                        }}
+                        placeholder="Es. Urgent, Personal, Progetti..."
+                        value={newTodoTag}
+                        onChange={(e) => setNewTodoTag(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTodoTag(); } }}
                       />
                       <Button
-                        className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 py-2 shrink-0"
-                        onClick={() => addSubtype(t.id)}
+                        className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 shrink-0"
+                        onClick={addTodoTag}
                         type="button"
                       >
                         Aggiungi
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(settings.taskSubtypes?.[t.id] || []).length === 0 ? (
-                        <span className="text-xs text-slate-400 italic">Nessuno configurato.</span>
-                      ) : (
-                        (settings.taskSubtypes?.[t.id] || []).map((val) => {
-                          const id = val.id || val;
-                          const label = val.label || val;
-                          const isEditing = editingSubtype?.typeId === t.id && editingSubtype?.id === id;
-                          return (
-                            <div key={id} className="flex items-center gap-1.5 rounded-full bg-slate-100 pl-3 pr-1 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {isEditing ? (
-                                <input
-                                  autoFocus
-                                  className="bg-transparent outline-none text-xs font-semibold w-24 min-w-0"
-                                  value={editingSubtype.label}
-                                  onChange={(e) => setEditingSubtype((prev) => ({ ...prev, label: e.target.value }))}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") saveSubtypeRename();
-                                    if (e.key === "Escape") setEditingSubtype(null);
-                                  }}
-                                  onBlur={saveSubtypeRename}
-                                />
-                              ) : (
-                                <span
-                                  className="cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
-                                  title="Clicca per rinominare"
-                                  onClick={() => setEditingSubtype({ typeId: t.id, id, label })}
-                                >
-                                  {label}
-                                </span>
-                              )}
-                              {(() => {
-                                const list = settings.taskSubtypes?.[t.id] || [];
-                                const idx = list.findIndex((x) => (x.id || x) === id);
-                                return (
-                                  <>
-                                    <button
-                                      onClick={() => moveSubtype(t.id, id, "up")}
-                                      disabled={idx <= 0}
-                                      className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                      title="Sposta su"
-                                    >
-                                      <Icon name="chev-up" className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      onClick={() => moveSubtype(t.id, id, "down")}
-                                      disabled={idx >= list.length - 1}
-                                      className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                      title="Sposta giù"
-                                    >
-                                      <Icon name="chev-down" className="w-3 h-3" />
-                                    </button>
-                                  </>
-                                );
-                              })()}
-                              <button onClick={() => removeSubtype(t.id, id)} className="p-1 rounded-full text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Rimuovi">
-                                <Icon name="x" className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
                   </div>
-                ))}
-              </div>
-
-            </div>
-
-            {/* Card Tag Todo */}
-            <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Tag Todo</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">
-                    Tag globali da assegnare alle attività nella todo-list.
-                  </div>
-                </div>
-                <div className="flex gap-2 w-full max-w-lg mb-4">
-                  <input
-                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
-                    placeholder="Es. Urgent, Personal, Progetti..."
-                    value={newTodoTag}
-                    onChange={(e) => setNewTodoTag(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addTodoTag();
-                      }
-                    }}
-                  />
-                  <Button
-                    className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 py-2 shrink-0"
-                    onClick={addTodoTag}
-                    type="button"
-                  >
-                    Aggiungi
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(settings.todoTags || []).length === 0 ? (
-                    <span className="text-xs text-slate-400 italic">Nessun tag configurato.</span>
-                  ) : (
-                    (settings.todoTags || []).map((tag) => (
-                      <div key={tag} className="flex items-center gap-1.5 rounded-full bg-sky-50 pl-3 pr-1 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border border-sky-100 dark:border-sky-500/20">
-                        {editingTag === tag ? (
-                          <input
-                            autoFocus
-                            className="bg-transparent outline-none text-xs font-semibold text-sky-700 dark:text-sky-400 w-20 min-w-0"
-                            value={editingTagValue}
-                            onChange={(e) => setEditingTagValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") saveTagRename();
-                              if (e.key === "Escape") { setEditingTag(null); setEditingTagValue(""); }
-                            }}
-                            onBlur={saveTagRename}
-                          />
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:text-sky-500 dark:hover:text-sky-300 transition-colors"
-                            title="Clicca per rinominare"
-                            onClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
-                          >
-                            {tag}
-                          </span>
-                        )}
-                        {(() => {
+                  <div>
+                    {(settings.todoTags || []).length === 0 ? (
+                      <div className="flex items-center justify-center h-full min-h-[80px]">
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">Nessun tag configurato.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {(settings.todoTags || []).map((tag) => {
                           const tags = settings.todoTags || [];
                           const idx = tags.indexOf(tag);
                           return (
-                            <>
-                              <button
-                                onClick={() => moveTag(tag, "up")}
-                                disabled={idx <= 0}
-                                className="p-1 rounded-full text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                title="Sposta su"
-                              >
-                                <Icon name="chev-up" className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={() => moveTag(tag, "down")}
-                                disabled={idx >= tags.length - 1}
-                                className="p-1 rounded-full text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                title="Sposta giù"
-                              >
-                                <Icon name="chev-down" className="w-3 h-3" />
-                              </button>
-                            </>
+                            <div key={tag} className="flex items-center justify-between rounded-xl bg-sky-50 dark:bg-sky-500/10 px-3 py-2 border border-sky-100 dark:border-sky-500/20 group/tag">
+                              {editingTag === tag ? (
+                                <input
+                                  autoFocus
+                                  className="flex-1 bg-transparent outline-none text-sm font-semibold text-sky-700 dark:text-sky-400 min-w-0"
+                                  value={editingTagValue}
+                                  onChange={(e) => setEditingTagValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") saveTagRename();
+                                    if (e.key === "Escape") { setEditingTag(null); setEditingTagValue(""); }
+                                  }}
+                                  onBlur={saveTagRename}
+                                />
+                              ) : (
+                                <span
+                                  className="text-sm font-semibold text-sky-700 dark:text-sky-400 truncate cursor-pointer hover:text-sky-500 transition-colors"
+                                  title="Clicca per rinominare"
+                                  onClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
+                                >
+                                  {tag}
+                                </span>
+                              )}
+                              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/tag:opacity-100 transition-opacity">
+                                <button onClick={() => moveTag(tag, "up")} disabled={idx <= 0} className="p-1 rounded-lg text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta su">
+                                  <Icon name="chev-up" className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => moveTag(tag, "down")} disabled={idx >= tags.length - 1} className="p-1 rounded-lg text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta giù">
+                                  <Icon name="chev-down" className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => removeTodoTag(tag)} className="p-1 rounded-lg text-sky-400 hover:text-rose-500 hover:bg-sky-100 dark:hover:bg-rose-500/20 transition-colors" title="Rimuovi">
+                                  <Icon name="x" className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
                           );
-                        })()}
-                        <button onClick={() => removeTodoTag(tag)} className="p-1 rounded-full text-sky-400 hover:text-rose-500 hover:bg-sky-100 dark:hover:bg-rose-500/20 transition-colors" title="Rimuovi">
-                          <Icon name="x" className="w-3.5 h-3.5" />
-                        </button>
+                        })}
                       </div>
-                    ))
-                  )}
+                    )}
+                  </div>
                 </div>
-            </div>
+              </div>
             </div>
           )}
 
           {activeTab === "salvataggio" && (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
                 {/* Card Esporta */}
                 <div className="space-y-1">
@@ -829,6 +787,7 @@ export function SettingsModal({
                 </div>
               </div>
 
+              <div className="space-y-4">
               {/* Card Importa */}
               <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
                 <div className="space-y-1">
@@ -956,6 +915,7 @@ export function SettingsModal({
                   </div>
                 </div>
               )}
+              </div>
             </div>
           )}
         </div>
