@@ -56,8 +56,9 @@
 - Associazione a un progetto
 
 ### Ricerca
-- Ricerca full-text su tutti i mesi salvati
-- Filtri per tipo, cliente, intervallo di date
+- Pannello fullscreen con ricerca full-text su tutti i mesi salvati
+- Filtri per tipo, sottotipo, cliente, collaboratore, intervallo di date
+- Risultati cliccabili: apre direttamente il giorno e lo slot corrispondente
 
 ### Undo / Redo
 - Cronologia delle modifiche con etichetta descrittiva per ogni operazione

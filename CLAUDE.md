@@ -140,6 +140,17 @@ matchesRecurringPattern(task, date) // true se il task ricorrente si applica all
 - `useSettings()` (da `SettingsContext`) usato nei componenti per leggere `clientColors` e `taskSubtypes` senza prop drilling; il Provider è in App.jsx
 - `useTaskOperations` (da `hooks/useTaskOperations.js`) incapsula tutta la logica di move/resize/delete slot e il toast di blocco
 
+## Navigazione sidebar e modal
+La sidebar è larga `lg:w-20`. I bottoni di navigazione (giorno/settimana/mese/progetti) usano la funzione `navigate(view)` definita in `App.jsx` — non chiamare `setViewMode` direttamente. `navigate` chiude settings, editor e search prima di cambiare vista, evitando che un modal fullscreen blocchi la navigazione.
+
+## Modal fullscreen
+Il componente `Modal` in `ui.jsx` supporta la prop `fullscreen`. Quando attiva, il modal occupa `fixed inset-0 lg:left-20` (lascia spazio alla sidebar). Tre componenti la usano:
+- `Editor` — wrappato in `<Modal fullscreen>` in App.jsx
+- `SettingsModal` — usa `<Modal fullscreen>` internamente
+- `SearchModal` — usa `<Modal fullscreen>` internamente
+
+Tutti e tre seguono lo stesso pattern header: label `text-xs uppercase` ("DailyLog") + titolo `text-3xl font-extrabold`.
+
 ## Editor.jsx — layout a due colonne
 Il modale Editor usa un layout responsive a due colonne (`max-w-2xl lg:max-w-4xl`):
 - **Header**: campo Titolo full-width con `autoFocus`
