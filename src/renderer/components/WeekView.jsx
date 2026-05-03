@@ -34,6 +34,7 @@ export function WeekView({
   activeDate,
   monthDataByDate,
   onOpenSlot,
+  onOpenTask,
   goPrevWeek,
   goNextWeek,
   goToday,
@@ -335,7 +336,9 @@ export function WeekView({
                                 }
                               }}
                               onOpen={() => {
-                                if (block.end && block.end > block.start + SLOT_MINUTES) {
+                                if (onOpenTask && block.entry) {
+                                  onOpenTask({ date, entry: block.entry, start: block.start, end: block.end, slot: block.slot });
+                                } else if (block.end && block.end > block.start + SLOT_MINUTES) {
                                   onOpenSlot?.({ date, start: block.start, end: block.end });
                                 } else {
                                   onOpenSlot?.({ date, slot: block.slot });

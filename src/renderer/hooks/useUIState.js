@@ -21,6 +21,12 @@ export function useUIState({ settings, setMonthYear }) {
   const [activeDate, setActiveDate] = useState(() => new Date());
   const [showBackupConfirm, setShowBackupConfirm] = useState(false);
   const [hasInitializedView, setHasInitializedView] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailEntry, setDetailEntry] = useState(null);
+  const [detailDate, setDetailDate] = useState(null);
+  const [detailStart, setDetailStart] = useState(null);
+  const [detailEnd, setDetailEnd] = useState(null);
+  const [detailSlot, setDetailSlot] = useState(null);
   const [searchFilters, setSearchFilters] = useState({
     startDate: "",
     endDate: "",
@@ -36,6 +42,24 @@ export function useUIState({ settings, setMonthYear }) {
       setHasInitializedView(true);
     }
   }, [settings?.defaultView, hasInitializedView]);
+
+  function openDetail(date, entry, start, end, slot) {
+    setDetailDate(date);
+    setDetailEntry(entry);
+    setDetailStart(start ?? null);
+    setDetailEnd(end ?? null);
+    setDetailSlot(slot ?? null);
+    setDetailOpen(true);
+  }
+
+  function closeDetail() {
+    setDetailOpen(false);
+    setDetailEntry(null);
+    setDetailDate(null);
+    setDetailStart(null);
+    setDetailEnd(null);
+    setDetailSlot(null);
+  }
 
   function openEditor(date, slotOrRange = null) {
     setSelectedDate(date);
@@ -97,5 +121,7 @@ export function useUIState({ settings, setMonthYear }) {
     openEditor, openDayFromMonth, closeEditor,
     goPrevDay, goNextDay, goTodayDay,
     searchFilters, setSearchFilters,
+    detailOpen, detailEntry, detailDate, detailStart, detailEnd, detailSlot,
+    openDetail, closeDetail,
   };
 }

@@ -17,6 +17,7 @@ export function DayView({
   date,
   dayData,
   onOpenSlot,
+  onOpenTask,
   onMoveTask,
   onResizeTask,
   onDeleteSlot,
@@ -320,7 +321,9 @@ export function DayView({
                     }
                   }}
                   onOpen={() => {
-                    if (block.end && block.end > block.start + SLOT_MINUTES) {
+                    if (onOpenTask && block.entry) {
+                      onOpenTask({ entry: block.entry, start: block.start, end: block.end, slot: block.slot });
+                    } else if (block.end && block.end > block.start + SLOT_MINUTES) {
                       onOpenSlot?.({ start: block.start, end: block.end });
                     } else {
                       onOpenSlot?.(block.slot);

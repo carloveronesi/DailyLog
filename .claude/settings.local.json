@@ -7,7 +7,9 @@
       "Bash(npx vite:*)",
       "Bash(npm install:*)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\" -Recurse -Filter \"*.jsx\")",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "./components/Editor";
 import { SettingsModal } from "./components/SettingsModal";
 import { SummaryPanel } from "./components/SummaryPanel";
+import { TaskDetailPanel } from "./components/TaskDetailPanel";
 import { Header } from "./components/Header";
 import { CalendarGrid } from "./components/CalendarGrid";
 import { DayView } from "./components/DayView";
@@ -106,6 +107,8 @@ export default function App() {
     openEditor, openDayFromMonth, closeEditor,
     goPrevDay, goNextDay, goTodayDay,
     searchFilters, setSearchFilters,
+    detailOpen, detailEntry, detailDate, detailStart, detailEnd, detailSlot,
+    openDetail, closeDetail,
   } = useUIState({ settings, setMonthYear });
 
   const { todos, addTodo, updateTodo, deleteTodo, toggleDone } = useTodos();
@@ -271,6 +274,10 @@ export default function App() {
         e.preventDefault();
         handleRedo();
       }
+      if (e.key === "Escape" && detailOpen && !editorOpen && !settingsOpen && !searchOpen) {
+        closeDetail();
+        return;
+      }
       if (e.key === "Escape" && (copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
         setCopiedDay(null);
         copiedEntryRef.current = null;
@@ -280,7 +287,7 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorOpen, settingsOpen, searchOpen, hasUndo, hasRedo, copiedDay, copiedEntry]);
+  }, [editorOpen, settingsOpen, searchOpen, hasUndo, hasRedo, copiedDay, copiedEntry, detailOpen]);
 
   const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
@@ -298,6 +305,7 @@ export default function App() {
     setViewMode(view);
     setSettingsOpen(false);
     closeEditor();
+    closeDetail();
     setSearchOpen(false);
   }
 
@@ -498,6 +506,10 @@ export default function App() {
                       openEditor(date, slot);
                     }
                   }}
+                  onOpenTask={({ date, entry, start, end, slot }) => {
+                    setActiveDate(date);
+                    openDetail(date, entry, start, end, slot);
+                  }}
                   onMoveTask={onMoveTask}
                   onResizeTask={onResizeTask}
                   onDeleteSlot={handleSlotDeletion}
@@ -534,6 +546,9 @@ export default function App() {
                       return;
                     }
                     openEditor(activeDate, slot);
+                  }}
+                  onOpenTask={({ entry, start, end, slot }) => {
+                    openDetail(activeDate, entry, start, end, slot);
                   }}
                   onMoveTask={(args) => onMoveTask(activeDate, args)}
                   onResizeTask={(args) => onResizeTask(activeDate, args)}
@@ -687,6 +702,27 @@ export default function App() {
             />
           ) : null}
         </Modal>
+
+        {detailOpen && detailEntry && (
+          <TaskDetailPanel
+            date={detailDate}
+            entry={detailEntry}
+            start={detailStart}
+            end={detailEnd}
+            slot={detailSlot}
+            onClose={closeDetail}
+            onEdit={() => {
+              closeDetail();
+              if (detailStart !== null && detailEnd !== null) {
+                openEditor(detailDate, { start: detailStart, end: detailEnd });
+              } else if (detailSlot) {
+                openEditor(detailDate, detailSlot);
+              } else {
+                openEditor(detailDate);
+              }
+            }}
+          />
+        )}
 
         <SearchModal
           open={searchOpen}
