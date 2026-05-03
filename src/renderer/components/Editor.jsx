@@ -438,65 +438,45 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     rangeStartMin, setRangeStartMin,
     rangeEndMin, setRangeEndMin,
     startSection, endOptions, rangeDuration, autoAdjusted, hourLabel,
+    location, setLocation,
+  };
+
+  const TYPE_GRADIENT = {
+    client:   "from-sky-400 to-cyan-300",
+    internal: "from-slate-400 to-slate-300",
+    vacation: "from-emerald-400 to-green-300",
+    event:    "from-purple-400 to-violet-300",
   };
 
   return (
     <div className="flex flex-col min-h-0 flex-1">
-      {/* Header: Titolo + Location — full width */}
-      <div className="shrink-0 mb-4 pr-8 space-y-3">
-        <div className="space-y-1">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Titolo <span className="text-rose-500">*</span>
-          </label>
-          <input
-            className="w-full bg-transparent text-xl font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
-            value={activeEntry.title}
-            onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
-            placeholder="Inserisci il titolo del task..."
-            autoFocus
-          />
-        </div>
-        {/* Location toggle */}
-        <div className="flex items-center gap-1.5">
-          {[
-            { value: LOCATION_TYPES.REMOTE, label: "Remoto", icon: "home" },
-            { value: LOCATION_TYPES.OFFICE, label: "Ufficio", icon: "building" },
-            { value: LOCATION_TYPES.CLIENT, label: "Cliente", icon: "briefcase" },
-          ].map(({ value, label, icon }) => {
-            const active = location === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setLocation(value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  active
-                    ? "bg-slate-900 text-white dark:bg-blue-600 dark:text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700/60"
-                }`}
-              >
-                <Icon name={icon} className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Body: due colonne scrollabili */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4 pb-4">
-          {/* Colonna sinistra: tipo, orari, ricorrenza */}
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(240px,1fr)] gap-x-8 items-start pb-4">
+          {/* Colonna sinistra: titolo, note, link, blockers/next steps, ricorrenza */}
           <div className="flex flex-col gap-4">
+            {/* Titolo */}
+            <div className="border-b-2 border-transparent focus-within:border-slate-200 dark:focus-within:border-slate-700 transition-colors pb-1">
+              <input
+                className="w-full bg-transparent text-2xl font-bold text-slate-900 placeholder:text-slate-300 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
+                value={activeEntry.title}
+                onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
+                placeholder="Titolo del task..."
+                autoFocus
+              />
+            </div>
             <EntryForm {...entryFormProps} column="left" />
             {recurringSection}
           </div>
-          {/* Colonna destra: collaboratori, note, next steps, went wrong */}
-          <div className="flex flex-col gap-4">
+          {/* Colonna destra: metadata sidebar */}
+          <div className="flex flex-col gap-6 lg:border-l lg:border-slate-100 dark:lg:border-slate-700/50 lg:pl-8">
             <EntryForm {...entryFormProps} column="right" />
           </div>
         </div>
       </div>
+
+      {/* Scroll fade indicator */}
+      <div className="shrink-0 -mx-5 h-8 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none" />
 
       {/* Footer sticky */}
       <div className="shrink-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3 rounded-b-3xl">
@@ -509,9 +489,6 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           >
             Salva
           </Button>
-          <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg">
-            {rangeDuration}h
-          </span>
           {saveError && (
             <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>
           )}

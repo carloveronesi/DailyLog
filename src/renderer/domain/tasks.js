@@ -118,6 +118,8 @@ export function defaultEntry() {
     notes: "",
     wentWrong: "",
     nextSteps: "",
+    links: [],
+    milestone: null,
   };
 }
 
