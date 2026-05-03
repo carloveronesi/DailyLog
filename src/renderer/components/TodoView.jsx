@@ -1,15 +1,142 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Icon, Button, Modal } from "./ui";
 import { useTodos } from "../hooks/useTodos";
 
-function DateInput({ value, onChange, placeholder }) {
+const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+const DAYS_IT = ["Lu","Ma","Me","Gi","Ve","Sa","Do"];
+
+function DatePicker({ value, onChange, isOverdue = false }) {
+  const [open, setOpen] = useState(false);
+  const [viewYear, setViewYear] = useState(() => (value ? new Date(value + "T00:00:00") : new Date()).getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => (value ? new Date(value + "T00:00:00") : new Date()).getMonth());
+  const [popupPos, setPopupPos] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef(null);
+  const popupRef = useRef(null);
+  const todayYmd = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e) {
+      if (
+        buttonRef.current && !buttonRef.current.contains(e.target) &&
+        popupRef.current && !popupRef.current.contains(e.target)
+      ) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  function openPicker() {
+    const d = value ? new Date(value + "T00:00:00") : new Date();
+    setViewYear(d.getFullYear());
+    setViewMonth(d.getMonth());
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPopupPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setOpen(o => !o);
+  }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  }
+
+  function selectDay(day) {
+    const ymd = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    onChange({ target: { value: ymd } });
+    setOpen(false);
+  }
+
+  const startDow = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells = [...Array(startDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const displayLabel = value
+    ? new Date(value + "T00:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "short", year: "numeric" })
+    : null;
+
+  const popup = open && createPortal(
+    <div
+      ref={popupRef}
+      style={{ position: "fixed", top: popupPos.top, left: popupPos.left, zIndex: 9999 }}
+      className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-3 w-[240px]"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition">
+          <Icon name="chev-left" className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{MONTHS_IT[viewMonth]} {viewYear}</span>
+        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition">
+          <Icon name="chev-right" className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 mb-1">
+        {DAYS_IT.map(d => <div key={d} className="text-center text-[9px] font-bold uppercase text-slate-400 py-1">{d}</div>)}
+      </div>
+
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />;
+          const ymd = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const isSelected = ymd === value;
+          const isToday = ymd === todayYmd;
+          return (
+            <button
+              key={i}
+              onClick={() => selectDay(day)}
+              className={`w-full aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition
+                ${isSelected
+                  ? "bg-sky-500 text-white font-bold shadow-sm"
+                  : isToday
+                    ? "border border-sky-400 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+
+      {value && (
+        <button
+          onClick={() => { onChange({ target: { value: "" } }); setOpen(false); }}
+          className="mt-2 w-full text-xs text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/10 transition font-medium"
+        >
+          Rimuovi data
+        </button>
+      )}
+    </div>,
+    document.body
+  );
+
   return (
-    <input
-      type="date"
-      value={value || ""}
-      onChange={onChange}
-      className={`min-w-[120px] rounded-lg px-2 py-1.5 text-sm bg-transparent transition hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-sky-300 dark:hover:bg-slate-800 dark:focus:bg-slate-900 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 outline-none [&::-webkit-calendar-picker-indicator]:hidden ${!value ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-slate-100"}`}
-    />
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={openPicker}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition min-w-[110px] border
+          ${!value
+            ? "text-slate-400 dark:text-slate-500 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+            : isOverdue
+              ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 font-semibold"
+              : "bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+          }`}
+      >
+        <Icon name="calendar" className="w-3.5 h-3.5 shrink-0 opacity-60" />
+        <span>{displayLabel || "—"}</span>
+      </button>
+      {popup}
+    </div>
   );
 }
 
@@ -26,6 +153,7 @@ export function TodoView({
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
 
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const pending = useMemo(() => todos.filter(t => !t.isDone), [todos]);
   const done = useMemo(() => todos.filter(t => t.isDone), [todos]);
 
@@ -139,9 +267,10 @@ export function TodoView({
                     const doneSubtasks = (todo.subtasks || []).filter(s => s.isDone).length;
                     const totalSubtasks = (todo.subtasks || []).length;
                     const hasSubtasks = totalSubtasks > 0;
-                    
+                    const isOverdue = !todo.isDone && !!todo.endDate && todo.endDate < today;
+
                     return (
-                      <div key={todo.id} className="grid grid-cols-[1fr_auto_auto_64px] lg:grid-cols-[1fr_120px_120px_64px] gap-2 lg:gap-4 p-2 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition group/row">
+                      <div key={todo.id} className={`grid grid-cols-[1fr_auto_auto_64px] lg:grid-cols-[1fr_120px_120px_64px] gap-2 lg:gap-4 p-2 items-center transition group/row ${isOverdue ? "bg-red-50 dark:bg-red-900/10 hover:bg-red-100/70 dark:hover:bg-red-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"}`}>
                         <div className="flex items-center gap-3 overflow-hidden">
                           <button 
                             onClick={() => toggleDone(todo.id)}
@@ -183,16 +312,17 @@ export function TodoView({
                         </div>
                         
                         <div className="hidden sm:block">
-                          <DateInput 
-                            value={todo.startDate} 
-                            onChange={(e) => updateTodo(todo.id, { startDate: e.target.value })} 
+                          <DatePicker
+                            value={todo.startDate}
+                            onChange={(e) => updateTodo(todo.id, { startDate: e.target.value })}
                           />
                         </div>
-                        
+
                         <div className="hidden sm:block">
-                          <DateInput 
-                            value={todo.endDate} 
-                            onChange={(e) => updateTodo(todo.id, { endDate: e.target.value })} 
+                          <DatePicker
+                            value={todo.endDate}
+                            onChange={(e) => updateTodo(todo.id, { endDate: e.target.value })}
+                            isOverdue={isOverdue}
                           />
                         </div>
                         
@@ -363,30 +493,21 @@ export function TodoView({
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid grid-cols-[30px_1fr] items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
-                <Icon name="calendar" className="w-4 h-4 justify-self-center text-slate-400" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Inizio</span>
-                  <input 
-                    type="date"
-                    value={selectedTodo.startDate || ""}
-                    onChange={(e) => updateTodo(selectedTodo.id, { startDate: e.target.value })}
-                    className="bg-transparent text-sm font-medium outline-none text-slate-700 dark:text-slate-300 [&::-webkit-calendar-picker-indicator]:hidden"
-                  />
-                </div>
+              <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Inizio</span>
+                <DatePicker
+                  value={selectedTodo.startDate}
+                  onChange={(e) => updateTodo(selectedTodo.id, { startDate: e.target.value })}
+                />
               </div>
-              
-              <div className="grid grid-cols-[30px_1fr] items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
-                <Icon name="calendar" className="w-4 h-4 justify-self-center text-slate-400" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Scadenza</span>
-                  <input 
-                    type="date"
-                    value={selectedTodo.endDate || ""}
-                    onChange={(e) => updateTodo(selectedTodo.id, { endDate: e.target.value })}
-                    className="bg-transparent text-sm font-medium outline-none text-slate-700 dark:text-slate-300 [&::-webkit-calendar-picker-indicator]:hidden"
-                  />
-                </div>
+
+              <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Scadenza</span>
+                <DatePicker
+                  value={selectedTodo.endDate}
+                  onChange={(e) => updateTodo(selectedTodo.id, { endDate: e.target.value })}
+                  isOverdue={!selectedTodo.isDone && !!selectedTodo.endDate && selectedTodo.endDate < today}
+                />
               </div>
             </div>
             
