@@ -30,6 +30,8 @@ export function DayView({
   pasteMode,
   onPasteDay,
   onCopyEntry,
+  pendingTodoCount = 0,
+  onGoToTodo,
 }) {
   const workSlots = useWorkSlots();
   const { MORNING_SLOTS, AFTERNOON_SLOTS, DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
@@ -117,6 +119,18 @@ export function DayView({
                 {dayData?.location === "office" ? "In Ufficio" : dayData?.location === "client" ? "Sede Cliente" : "Da Remoto"}
               </span>
             </button>
+            {onGoToTodo && (
+              <button
+                onClick={onGoToTodo}
+                className="ml-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:bg-slate-800 transition-all"
+                title="Vai alle attività"
+              >
+                <Icon name="list-check" className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                <span className={`text-xs font-bold uppercase tracking-wider ${pendingTodoCount > 0 ? "text-sky-600 dark:text-sky-400" : "text-slate-400 dark:text-slate-500"}`}>
+                  {pendingTodoCount} {pendingTodoCount === 1 ? "attività" : "attività"}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 

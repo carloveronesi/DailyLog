@@ -1,7 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Button, Modal } from "./ui";
-import { useTodos } from "../hooks/useTodos";
 
 const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const DAYS_IT = ["Lu","Ma","Me","Gi","Ve","Sa","Do"];
@@ -140,13 +139,17 @@ function DatePicker({ value, onChange, isOverdue = false }) {
   );
 }
 
-export function TodoView({ 
-  isEmbedded = false, 
-  availableProjects = [], 
+export function TodoView({
+  isEmbedded = false,
+  availableProjects = [],
   availableTags = [],
-  onAddGlobalTodoTag
+  onAddGlobalTodoTag,
+  todos,
+  addTodo,
+  updateTodo,
+  deleteTodo,
+  toggleDone,
 }) {
-  const { todos, addTodo, updateTodo, deleteTodo, toggleDone } = useTodos();
   const [selectedTodoId, setSelectedTodoId] = useState(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [newTagInput, setNewTagInput] = useState("");

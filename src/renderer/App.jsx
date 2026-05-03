@@ -13,6 +13,7 @@ import { Button, Icon, Modal } from "./components/ui";
 import { useCalendarData } from "./hooks/useCalendarData";
 import { useBackupSync } from "./hooks/useBackupSync";
 import { useTaskOperations } from "./hooks/useTaskOperations";
+import { useTodos } from "./hooks/useTodos";
 import { useUIState } from "./hooks/useUIState";
 import { SettingsContext, useWorkSlots } from "./contexts/SettingsContext";
 import { ymd, sameYMD, dowMon0 } from "./utils/date";
@@ -106,6 +107,9 @@ export default function App() {
     goPrevDay, goNextDay, goTodayDay,
     searchFilters, setSearchFilters,
   } = useUIState({ settings, setMonthYear });
+
+  const { todos, addTodo, updateTodo, deleteTodo, toggleDone } = useTodos();
+  const pendingTodoCount = useMemo(() => todos.filter(t => !t.isDone).length, [todos]);
 
   // Sincronizza mese calendario con la data attiva nelle viste settimana/giorno
   useEffect(() => {
@@ -298,12 +302,13 @@ export default function App() {
   }
 
   const isToday = sameYMD(activeDate, new Date());
-  const mainLayoutClass = viewMode === "projects"
+  const showTodoPanel = settings.showTodo !== false;
+  const mainLayoutClass = viewMode === "projects" || viewMode === "todo"
     ? "flex flex-col lg:flex-1 lg:min-h-0"
     : viewMode === "month"
       ? "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5"
-      : viewMode === "day"
-        ? (isToday ? "grid grid-cols-1 lg:grid-cols-2 gap-5" : "grid grid-cols-1 gap-5")
+      : viewMode === "day" && showTodoPanel
+        ? "grid grid-cols-1 lg:grid-cols-2 gap-5"
         : "grid grid-cols-1 gap-5";
 
   return (
@@ -425,6 +430,12 @@ export default function App() {
               accent={viewMode !== "projects"}
               isActive={viewMode === "projects"}
             />
+            <SidebarBtn
+              icon="list-check"
+              label="To-do"
+              onClick={() => navigate("todo")}
+              isActive={viewMode === "todo"}
+            />
           </div>
 
           {/* Bottom */}
@@ -513,48 +524,53 @@ export default function App() {
                   onCopyEntry={handleCopyEntry}
                 />
               )}
-              {viewMode === "day" && (
-                <>
-                  <DayView
-                    date={activeDate}
-                    dayData={dayData}
-                    onOpenSlot={(slot) => {
-                      if (copiedEntryRef.current && slot?.start !== undefined) {
-                        handlePasteEntry(activeDate, slot.start);
-                        return;
-                      }
-                      openEditor(activeDate, slot);
+              {viewMode === "day" && (<>
+                <DayView
+                  date={activeDate}
+                  dayData={dayData}
+                  onOpenSlot={(slot) => {
+                    if (copiedEntryRef.current && slot?.start !== undefined) {
+                      handlePasteEntry(activeDate, slot.start);
+                      return;
+                    }
+                    openEditor(activeDate, slot);
+                  }}
+                  onMoveTask={(args) => onMoveTask(activeDate, args)}
+                  onResizeTask={(args) => onResizeTask(activeDate, args)}
+                  onDeleteSlot={(args) => handleSlotDeletion(activeDate, args)}
+                  onPrevDay={goPrevDay}
+                  onNextDay={goNextDay}
+                  onToday={goTodayDay}
+                  onNewTask={() => openEditor(activeDate, null)}
+                  onGoToMonth={() => setViewMode("month")}
+                  onToggleLocation={handleToggleLocation}
+                  onCopyDay={() => handleCopyDay(activeDate)}
+                  pasteMode={!!copiedDay}
+                  onPasteDay={() => handlePasteDay(activeDate)}
+                  onCopyEntry={handleCopyEntry}
+                  pendingTodoCount={pendingTodoCount}
+                  onGoToTodo={() => navigate("todo")}
+                />
+                {showTodoPanel && (
+                  <TodoView
+                    isEmbedded
+                    availableProjects={clientNames}
+                    availableTags={settings.todoTags}
+                    onAddGlobalTodoTag={(newTag) => {
+                      setSettings(prev => {
+                        const tags = prev.todoTags || [];
+                        if (tags.some(t => t.toLowerCase() === newTag.toLowerCase())) return prev;
+                        return { ...prev, todoTags: [...tags, newTag] };
+                      });
                     }}
-                    onMoveTask={(args) => onMoveTask(activeDate, args)}
-                    onResizeTask={(args) => onResizeTask(activeDate, args)}
-                    onDeleteSlot={(args) => handleSlotDeletion(activeDate, args)}
-                    onPrevDay={goPrevDay}
-                    onNextDay={goNextDay}
-                    onToday={goTodayDay}
-                    onNewTask={() => openEditor(activeDate, null)}
-                    onGoToMonth={() => setViewMode("month")}
-                    onToggleLocation={handleToggleLocation}
-                    onCopyDay={() => handleCopyDay(activeDate)}
-                    pasteMode={!!copiedDay}
-                    onPasteDay={() => handlePasteDay(activeDate)}
-                    onCopyEntry={handleCopyEntry}
+                    todos={todos}
+                    addTodo={addTodo}
+                    updateTodo={updateTodo}
+                    deleteTodo={deleteTodo}
+                    toggleDone={toggleDone}
                   />
-                  {isToday && settings.showTodo !== false && (
-                    <TodoView
-                      isEmbedded
-                      availableProjects={clientNames}
-                      availableTags={settings.todoTags}
-                      onAddGlobalTodoTag={(newTag) => {
-                        setSettings(prev => {
-                          const tags = prev.todoTags || [];
-                          if (tags.some(t => t.toLowerCase() === newTag.toLowerCase())) return prev;
-                          return { ...prev, todoTags: [...tags, newTag] };
-                        });
-                      }}
-                    />
-                  )}
-                </>
-              )}
+                )}
+              </>)}
 
               {viewMode === "month" ? (
                 <aside className="space-y-4 flex flex-col lg:h-full lg:overflow-hidden">
@@ -588,6 +604,25 @@ export default function App() {
                   clientNames={clientNames}
                   allPeople={allPeople}
                   onProjectsChange={() => setProjectsVersion(v => v + 1)}
+                />
+              )}
+
+              {viewMode === "todo" && (
+                <TodoView
+                  availableProjects={clientNames}
+                  availableTags={settings.todoTags}
+                  onAddGlobalTodoTag={(newTag) => {
+                    setSettings(prev => {
+                      const tags = prev.todoTags || [];
+                      if (tags.some(t => t.toLowerCase() === newTag.toLowerCase())) return prev;
+                      return { ...prev, todoTags: [...tags, newTag] };
+                    });
+                  }}
+                  todos={todos}
+                  addTodo={addTodo}
+                  updateTodo={updateTodo}
+                  deleteTodo={deleteTodo}
+                  toggleDone={toggleDone}
                 />
               )}
             </main>
