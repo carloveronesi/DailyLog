@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 // Componenti con stile Tailwind per il rendering markdown
-const mdComponents = {
+export const mdComponents = {
   p:          ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
   strong:     ({ children }) => <strong className="font-bold text-slate-900 dark:text-white">{children}</strong>,
   em:         ({ children }) => <em className="italic">{children}</em>,

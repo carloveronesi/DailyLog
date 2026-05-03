@@ -290,6 +290,13 @@ export default function App() {
     upsertDay(date, { ...existing, location: next }, "Cambia sede");
   }, [monthDataByDate, upsertDay]);
 
+  function navigate(view) {
+    setViewMode(view);
+    setSettingsOpen(false);
+    closeEditor();
+    setSearchOpen(false);
+  }
+
   const isToday = sameYMD(activeDate, new Date());
   const mainLayoutClass = viewMode === "projects"
     ? "flex flex-col lg:flex-1 lg:min-h-0"
@@ -395,26 +402,26 @@ export default function App() {
             <SidebarBtn
               icon="day"
               label="Vista Giorno"
-              onClick={() => setViewMode("day")}
+              onClick={() => navigate("day")}
               isActive={viewMode === "day"}
             />
             <SidebarBtn
               icon="week"
               label="Vista Sett."
-              onClick={() => setViewMode("week")}
+              onClick={() => navigate("week")}
               isActive={viewMode === "week"}
             />
             <SidebarBtn
               icon="calendar"
               label="Vista Mese"
-              onClick={() => setViewMode("month")}
+              onClick={() => navigate("month")}
               isActive={viewMode === "month"}
             />
             <div className="hidden lg:block w-8 h-px bg-slate-200 dark:bg-slate-700 my-1" />
             <SidebarBtn
               icon="briefcase"
               label="Progetti"
-              onClick={() => setViewMode("projects")}
+              onClick={() => navigate("projects")}
               accent={viewMode !== "projects"}
               isActive={viewMode === "projects"}
             />

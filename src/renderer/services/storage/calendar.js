@@ -60,6 +60,42 @@ export function saveMonthData(year, monthIndex0, data) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+export function renameClientInStorage(oldName, newName) {
+  const oldNorm = oldName.trim().toLocaleLowerCase("it-IT");
+  for (let i = 0; i < localStorage.length; i++) {
+    const storageKey = localStorage.key(i);
+    if (!storageKey || !storageKey.startsWith(STORAGE_PREFIX)) continue;
+    if (storageKey === SETTINGS_KEY) continue;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const byDate = parsed?.byDate;
+      if (!byDate || typeof byDate !== "object") continue;
+      let dirty = false;
+      for (const dateKey of Object.keys(byDate)) {
+        const day = byDate[dateKey];
+        for (const slot of ["AM", "PM"]) {
+          const entry = day?.[slot];
+          if (entry?.type === "client" && (entry.client || "").trim().toLocaleLowerCase("it-IT") === oldNorm) {
+            entry.client = newName;
+            dirty = true;
+          }
+        }
+        for (const entry of Object.values(day?.hours || {})) {
+          if (entry?.type === "client" && (entry.client || "").trim().toLocaleLowerCase("it-IT") === oldNorm) {
+            entry.client = newName;
+            dirty = true;
+          }
+        }
+      }
+      if (dirty) localStorage.setItem(storageKey, JSON.stringify(parsed));
+    } catch {
+      // ignore malformed payloads
+    }
+  }
+}
+
 export function listStoredClients() {
   const byKey = new Map();
 

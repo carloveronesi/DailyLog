@@ -1,13 +1,26 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useSettings } from "../contexts/SettingsContext";
 import {
   loadProjects,
   saveProjects,
   listStoredInternalSubtypes,
   aggregateProjectEntries,
+  renameClientInStorage,
 } from "../services/storage";
 import { getClientColor, getInternalColor, getSubtypeLabel, normalizeClientKey } from "../domain/tasks";
 import { Icon, Button } from "./ui";
+import { MarkdownEditor, mdComponents } from "./MarkdownEditor";
+
+function MdView({ text, emptyText }) {
+  if (!text?.trim()) return <p className="text-sm text-slate-400 dark:text-slate-500 italic">{emptyText}</p>;
+  return (
+    <div className="text-sm text-slate-700 dark:text-slate-300">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{text}</ReactMarkdown>
+    </div>
+  );
+}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -161,13 +174,14 @@ function StatusBadge({ status }) {
 
 // ─── ProjectDetail ───────────────────────────────────────────────────────────
 
-function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, onSave, onArchive, taskSubtypes, currentTab, startInEditMode }) {
+function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeople, topPeople = [], onSave, onRename, onDelete, onArchive, taskSubtypes, currentTab, startInEditMode }) {
   const { settings } = useSettings();
   const workHours = settings?.workHours;
 
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState(null);
   const [sortDesc, setSortDesc] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // Subtasks state
   const [newSubtask, setNewSubtask] = useState("");
@@ -231,6 +245,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
 
   function startEdit() {
     setForm({
+      projectDisplayName: projectName,
       cliente: meta?.cliente || "",
       description: meta?.description || "",
       objectives: meta?.objectives || "",
@@ -238,8 +253,8 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       endDate: meta?.endDate || "",
       estimatedHours: meta?.estimatedHours || "",
       status: meta?.status || "active",
-      team: (meta?.team || []).join("\n"),
-      clientContacts: (meta?.clientContacts || []).join("\n"),
+      team: meta?.team || [],
+      clientContacts: meta?.clientContacts || [],
     });
     setIsEditing(true);
   }
@@ -251,7 +266,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
   }, []);
 
   function handleSave() {
-    onSave(projectId, {
+    const updatedMeta = {
       ...meta,
       cliente: form.cliente.trim(),
       description: form.description.trim(),
@@ -260,9 +275,15 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       endDate: form.endDate.trim(),
       estimatedHours: form.estimatedHours ? Number(form.estimatedHours) : "",
       status: form.status,
-      team: form.team.split("\n").map((s) => s.trim()).filter(Boolean),
-      clientContacts: form.clientContacts.split("\n").map((s) => s.trim()).filter(Boolean),
-    });
+      team: form.team,
+      clientContacts: form.clientContacts,
+    };
+    const newName = form.projectDisplayName?.trim();
+    if (isClient && newName && newName !== projectName) {
+      onRename?.(projectId, newName, updatedMeta);
+    } else {
+      onSave(projectId, updatedMeta);
+    }
     setIsEditing(false);
   }
 
@@ -327,17 +348,26 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
       {/* Header */}
       <div className="shrink-0 px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
-              {!isEditing && <StatusBadge status={currentStatus} />}
-              {!isEditing && isOverdue && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
-                  <Icon name="alert-triangle" className="w-3 h-3" />
-                  In Ritardo
-                </span>
-              )}
-            </div>
+          <div className="flex flex-col min-w-0 flex-1">
+            {isEditing && isClient ? (
+              <input
+                type="text"
+                value={form.projectDisplayName}
+                onChange={(e) => setForm(f => ({ ...f, projectDisplayName: e.target.value }))}
+                placeholder="Nome progetto…"
+                className="text-2xl font-extrabold bg-transparent border-b-2 border-sky-400 outline-none text-slate-900 dark:text-slate-100 pb-0.5 mb-1"
+              />
+            ) : (
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 truncate">{projectName}</h2>
+                {!isEditing && <StatusBadge status={currentStatus} />}
+                {!isEditing && isOverdue && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400">
+                    In Ritardo
+                  </span>
+                )}
+              </div>
+            )}
             {!isEditing && meta?.cliente && (
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                 {meta.cliente}
@@ -371,6 +401,24 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                   Salva
                 </button>
               </>
+            ) : deleteConfirm ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-sm font-medium text-rose-600 dark:text-rose-400">Eliminare il progetto?</span>
+                <button
+                  type="button"
+                  onClick={() => onDelete?.(projectId)}
+                  className="px-3 py-1.5 text-sm font-semibold rounded-xl bg-rose-500 hover:bg-rose-600 text-white transition-colors"
+                >
+                  Elimina
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(false)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Annulla
+                </button>
+              </div>
             ) : (
               <>
                 <button
@@ -384,6 +432,14 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 >
                   <Icon name={currentStatus === "archived" ? "inbox" : "archive"} className="w-3.5 h-3.5" />
                   {currentStatus === "archived" ? "Ripristina" : "Archivia"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-200 dark:hover:border-rose-700 transition-colors"
+                >
+                  <Icon name="trash" className="w-3.5 h-3.5" />
+                  Elimina
                 </button>
                 <button
                   type="button"
@@ -519,9 +575,15 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 <section>
                   <SectionTitle icon="clipboard" label="Descrizione" />
                   {isEditing ? (
-                    <textarea value={form.description} onChange={set("description")} rows={4} placeholder="Aggiungi una descrizione del progetto…" className={textareaClass} />
+                    <div className="mt-1">
+                      <MarkdownEditor
+                        value={form.description}
+                        onChange={(v) => setForm(f => ({ ...f, description: v }))}
+                        placeholder="Aggiungi una descrizione del progetto…"
+                      />
+                    </div>
                   ) : (
-                    <p className={emptyOrText(meta?.description)}>{meta?.description || "Nessuna descrizione"}</p>
+                    <MdView text={meta?.description} emptyText="Nessuna descrizione" />
                   )}
                 </section>
 
@@ -529,9 +591,15 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 <section>
                   <SectionTitle icon="target" label="Obiettivi" />
                   {isEditing ? (
-                    <textarea value={form.objectives} onChange={set("objectives")} rows={4} placeholder="Descrivi gli obiettivi del progetto…" className={textareaClass} />
+                    <div className="mt-1">
+                      <MarkdownEditor
+                        value={form.objectives}
+                        onChange={(v) => setForm(f => ({ ...f, objectives: v }))}
+                        placeholder="Descrivi gli obiettivi del progetto…"
+                      />
+                    </div>
                   ) : (
-                    <p className={emptyOrText(meta?.objectives)}>{meta?.objectives || "Nessun obiettivo definito"}</p>
+                    <MdView text={meta?.objectives} emptyText="Nessun obiettivo definito" />
                   )}
                 </section>
               </div>
@@ -569,37 +637,12 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 <section>
                   <SectionTitle icon="users" label="Team" />
                   {isEditing ? (
-                    <div>
-                      <textarea
-                        value={form.team}
-                        onChange={set("team")}
-                        rows={3}
-                        placeholder={"Un nome per riga…\n" + (allPeople?.length ? allPeople.slice(0, 3).map(p => typeof p === 'object' ? p.name : p).join("\n") : "")}
-                        className={textareaClass}
-                      />
-                      {allPeople?.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {allPeople.map((p, idx) => {
-                            const personName = typeof p === 'object' ? p.name : p;
-                            if (!personName) return null;
-                            return (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => {
-                                  const current = form.team.split("\n").map((s) => s.trim()).filter(Boolean);
-                                  if (current.includes(personName)) return;
-                                  setForm((f) => ({ ...f, team: [...current, personName].join("\n") }));
-                                }}
-                                className="px-2 py-0.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
-                              >
-                                + {personName}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    <PeopleInput
+                      value={form.team}
+                      onChange={(v) => setForm(f => ({ ...f, team: v }))}
+                      suggestions={topPeople.length ? topPeople : (allPeople || []).map(p => typeof p === "object" ? p.name : p).filter(Boolean)}
+                      placeholder="Cerca o aggiungi membro…"
+                    />
                   ) : (
                     <ChipList items={meta?.team} emptyText="Nessun membro del team" />
                   )}
@@ -610,7 +653,12 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                   <section>
                     <SectionTitle icon="users" label="Referenti cliente" />
                     {isEditing ? (
-                      <textarea value={form.clientContacts} onChange={set("clientContacts")} rows={2} placeholder="Un nome per riga…" className={textareaClass} />
+                      <PeopleInput
+                        value={form.clientContacts}
+                        onChange={(v) => setForm(f => ({ ...f, clientContacts: v }))}
+                        suggestions={topPeople.length ? topPeople : (allPeople || []).map(p => typeof p === "object" ? p.name : p).filter(Boolean)}
+                        placeholder="Cerca o aggiungi referente…"
+                      />
                     ) : (
                       <ChipList items={meta?.clientContacts} emptyText="Nessun referente cliente" />
                     )}
@@ -842,6 +890,91 @@ function SectionTitle({ icon, label }) {
   );
 }
 
+function PeopleInput({ value, onChange, suggestions, placeholder }) {
+  const [inputVal, setInputVal] = useState("");
+  const [showDrop, setShowDrop] = useState(false);
+
+  const filtered = useMemo(() => {
+    if (!inputVal.trim()) return [];
+    const q = inputVal.trim().toLowerCase();
+    return suggestions.filter(n => !value.includes(n) && n.toLowerCase().includes(q)).slice(0, 6);
+  }, [inputVal, suggestions, value]);
+
+  const quickSuggestions = suggestions.filter(n => !value.includes(n)).slice(0, 5);
+
+  function add(name) {
+    const trimmed = name.trim();
+    if (!trimmed || value.includes(trimmed)) return;
+    onChange([...value, trimmed]);
+    setInputVal("");
+    setShowDrop(false);
+  }
+
+  function remove(name) {
+    onChange(value.filter(n => n !== name));
+  }
+
+  return (
+    <div className="space-y-2 mt-1">
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map(name => (
+            <span key={name} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-xl bg-sky-50 dark:bg-sky-900/30 border border-sky-200/80 dark:border-sky-700/50 text-sm font-medium text-sky-700 dark:text-sky-300">
+              {name}
+              <button
+                type="button"
+                onClick={() => remove(name)}
+                className="w-4 h-4 rounded-full flex items-center justify-center text-sky-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+              >
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-2.5 h-2.5">
+                  <line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/>
+                </svg>
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="relative">
+        <input
+          type="text"
+          value={inputVal}
+          onChange={e => { setInputVal(e.target.value); setShowDrop(true); }}
+          onKeyDown={e => {
+            if (e.key === "Enter") { e.preventDefault(); add(inputVal); }
+            if (e.key === "Escape") { setInputVal(""); setShowDrop(false); }
+          }}
+          onFocus={() => setShowDrop(true)}
+          onBlur={() => setTimeout(() => setShowDrop(false), 150)}
+          placeholder={placeholder || "Aggiungi persona…"}
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
+        />
+        {showDrop && filtered.length > 0 && (
+          <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
+            {filtered.map(name => (
+              <button key={name} type="button" onMouseDown={() => add(name)}
+                className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors">
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {quickSuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {quickSuggestions.map(name => (
+            <button key={name} type="button" onClick={() => add(name)}
+              className="px-2 py-0.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 transition-colors">
+              + {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChipList({ items, emptyText }) {
   if (!items?.length) return <p className="text-sm text-slate-400 dark:text-slate-500 italic">{emptyText}</p>;
   return (
@@ -990,6 +1123,20 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
       return showArchived ? isArchived : !isArchived;
     }), [internalProjects, projects, showArchived]);
 
+  // Top 5 people più usate nei progetti (team + clientContacts)
+  const topPeople = useMemo(() => {
+    const counts = new Map();
+    Object.values(projects).forEach(meta => {
+      [...(meta?.team || []), ...(meta?.clientContacts || [])].forEach(name => {
+        if (name) counts.set(name, (counts.get(name) || 0) + 1);
+      });
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name)
+      .slice(0, 10);
+  }, [projects]);
+
   // Aggregated stats for selected project
   const stats = useMemo(() => {
     if (!selectedId || !workHours) return null;
@@ -1020,6 +1167,31 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
     const updated = { ...projects, [projectId]: meta };
     saveProjects(updated);
     setProjects(updated);
+    onProjectsChange?.();
+  }, [projects, onProjectsChange]);
+
+  const handleDelete = useCallback((projectId) => {
+    const updated = { ...projects };
+    delete updated[projectId];
+    saveProjects(updated);
+    setProjects(updated);
+    setSelectedId(null);
+    onProjectsChange?.();
+  }, [projects, onProjectsChange]);
+
+  const handleRename = useCallback((projectId, newName, updatedMeta) => {
+    if (!projectId.startsWith("client::") || !newName.trim()) return;
+    const oldName = projectId.slice(8); // normalized old name
+    const newId = projectIdForClient(newName);
+    // Rename in calendar entries
+    renameClientInStorage(oldName, newName.trim());
+    // Update projects map
+    const updated = { ...projects };
+    delete updated[projectId];
+    updated[newId] = { ...updatedMeta };
+    saveProjects(updated);
+    setProjects(updated);
+    setSelectedId(newId);
     onProjectsChange?.();
   }, [projects, onProjectsChange]);
 
@@ -1160,7 +1332,10 @@ export function ProjectView({ clientNames = [], allPeople = [], onProjectsChange
             meta={selectedMeta}
             stats={stats}
             allPeople={allPeople}
+            topPeople={topPeople}
             onSave={handleSave}
+            onRename={handleRename}
+            onDelete={handleDelete}
             onArchive={handleArchive}
             taskSubtypes={taskSubtypes}
             currentTab={selectedTab}
