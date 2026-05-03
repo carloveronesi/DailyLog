@@ -391,13 +391,16 @@ export function EntryForm({
   );
 
   const sidebarSelect = (value, onChange, children) => (
-    <select
-      className="w-full text-xs rounded-lg border-0 bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 font-medium text-slate-800 dark:text-slate-200 appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-sky-400/20 transition"
-      value={value}
-      onChange={onChange}
-    >
-      {children}
-    </select>
+    <div className="relative">
+      <select
+        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-10 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-200 appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 transition"
+        value={value}
+        onChange={onChange}
+      >
+        {children}
+      </select>
+      <Icon name="chev-down" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+    </div>
   );
 
   if (column === "left") {
@@ -578,7 +581,7 @@ export function EntryForm({
                 Milestone <span className="text-slate-300 dark:text-slate-600 text-[10px]">(Opz.)</span>
               </span>,
               <input
-                className="w-full text-xs rounded-lg bg-slate-100 dark:bg-slate-800 border-0 px-2.5 py-1.5 font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none focus:ring-2 focus:ring-sky-400/20 transition"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-3 py-2.5 text-sm font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 transition"
                 placeholder="Nessuna"
                 value={entry.milestone || ""}
                 onChange={(e) => setField("milestone", e.target.value || null)}
@@ -642,20 +645,21 @@ export function EntryForm({
             <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Luogo di Lavoro</div>
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 gap-1">
               {[
-                { value: LOCATION_TYPES.REMOTE, label: "Remoto" },
-                { value: LOCATION_TYPES.OFFICE, label: "Ufficio" },
-                { value: LOCATION_TYPES.CLIENT, label: "Cliente" },
-              ].map(({ value, label }) => (
+                { value: LOCATION_TYPES.REMOTE, label: "Remoto", icon: "home" },
+                { value: LOCATION_TYPES.OFFICE, label: "Ufficio", icon: "building" },
+                { value: LOCATION_TYPES.CLIENT, label: "Cliente", icon: "briefcase" },
+              ].map(({ value, label, icon }) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setLocation(value)}
-                  className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                  className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                     location === value
                       ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   }`}
                 >
+                  <Icon name={icon} className="w-3.5 h-3.5" />
                   {label}
                 </button>
               ))}
