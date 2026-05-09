@@ -341,44 +341,42 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   }
 
   const recurringSection = (
-    <div className={`rounded-2xl border px-4 py-3 flex flex-col gap-2.5 transition-colors ${recurringFeedback ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700/50 dark:bg-slate-800/50'}`}>
-      {/* Header — sempre visibile */}
+    <div className={`rounded-2xl border px-4 py-3 flex flex-col gap-2.5 transition-colors ${recurringFeedback ? 'border-si-success/30 bg-si-success/5' : 'border-si-border bg-si-muted'}`}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => setRecurringOpen(v => !v)}
-          className="flex items-center gap-2 min-w-0"
+          className="flex items-center gap-2 min-w-0 border-0 bg-transparent cursor-pointer"
         >
-          <Icon name="repeat" className={`w-4 h-4 shrink-0 transition-colors ${recurringFeedback ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'}`} />
-          <span className={`text-xs font-semibold transition-colors ${recurringFeedback ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-700 dark:text-slate-300'}`}>
+          <Icon name="repeat" className={`w-4 h-4 shrink-0 transition-colors ${recurringFeedback ? 'text-si-success' : 'text-si-gray'}`} />
+          <span className={`text-xs font-semibold transition-colors ${recurringFeedback ? 'text-si-success' : 'text-si-inkSoft'}`}>
             {recurringFeedback ? 'Modello salvato!' : 'Ripeti'}
           </span>
           {existingRecurring && !recurringOpen && !recurringFeedback && (
-            <span className="text-xs font-normal text-slate-400 dark:text-slate-500 italic truncate">— {existingRecurringLabel}</span>
+            <span className="text-xs font-normal text-si-grayLight italic truncate">— {existingRecurringLabel}</span>
           )}
-          <Icon name={recurringOpen ? "chev-up" : "chev-down"} className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+          <Icon name={recurringOpen ? "chev-up" : "chev-down"} className="w-3.5 h-3.5 text-si-gray shrink-0" />
         </button>
         {recurringOpen && (
           <div className="flex items-center gap-3 shrink-0">
             {existingRecurring ? (
               <>
-                <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Aggiorna</button>
-                <button type="button" onClick={handleRemoveRecurring} className="text-xs font-semibold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">Rimuovi</button>
+                <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-si-accent hover:text-si-accentDark transition-colors border-0 bg-transparent cursor-pointer">Aggiorna</button>
+                <button type="button" onClick={handleRemoveRecurring} className="text-xs font-semibold text-si-gray hover:text-si-rose transition-colors border-0 bg-transparent cursor-pointer">Rimuovi</button>
               </>
             ) : (
-              <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Salva modello</button>
+              <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-si-accent hover:text-si-accentDark transition-colors border-0 bg-transparent cursor-pointer">Salva modello</button>
             )}
           </div>
         )}
       </div>
-      {/* Corpo collassabile */}
       {recurringOpen && (
         <>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={recurringFreq}
               onChange={e => setRecurringFreq(e.target.value)}
-              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
+              className="text-xs rounded-lg border border-si-border bg-si-surface px-2 py-1 font-medium text-si-inkSoft cursor-pointer outline-none"
             >
               <option value="daily">Ogni giorno (lun-ven)</option>
               <option value="weekly">Ogni settimana</option>
@@ -390,7 +388,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
               <select
                 value={recurringDow}
                 onChange={e => setRecurringDow(Number(e.target.value))}
-                className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
+                className="text-xs rounded-lg border border-si-border bg-si-surface px-2 py-1 font-medium text-si-inkSoft cursor-pointer outline-none"
               >
                 {[["Lunedì",0],["Martedì",1],["Mercoledì",2],["Giovedì",3],["Venerdì",4]].map(([lbl, v]) => (
                   <option key={v} value={v}>{lbl}</option>
@@ -399,30 +397,30 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
             )}
             {recurringFreq === "monthly" && (
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-500 dark:text-slate-400">giorno</span>
+                <span className="text-xs text-si-gray">giorno</span>
                 <input
                   type="number" min={1} max={28}
                   value={recurringDom}
                   onChange={e => setRecurringDom(Math.max(1, Math.min(28, Number(e.target.value))))}
-                  className="text-xs w-14 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                  className="text-xs w-14 rounded-lg border border-si-border bg-si-surface px-2 py-1 font-medium text-si-inkSoft outline-none"
                 />
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Fino al</span>
+            <span className="text-xs text-si-gray">Fino al</span>
             <input
               type="date"
               value={recurringEndYmd}
               onChange={e => setRecurringEndYmd(e.target.value)}
               min={ymd(date)}
-              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+              className="text-xs rounded-lg border border-si-border bg-si-surface px-2 py-1 font-medium text-si-inkSoft outline-none"
             />
             {recurringEndYmd && (
-              <button type="button" onClick={() => setRecurringEndYmd("")} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Rimuovi</button>
+              <button type="button" onClick={() => setRecurringEndYmd("")} className="text-xs text-si-gray hover:text-si-rose transition-colors border-0 bg-transparent cursor-pointer">Rimuovi</button>
             )}
             {!recurringEndYmd && (
-              <span className="text-xs text-slate-400 dark:text-slate-500 italic">nessuna scadenza</span>
+              <span className="text-xs text-si-grayLight italic">nessuna scadenza</span>
             )}
           </div>
         </>
@@ -441,61 +439,57 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     location, setLocation,
   };
 
-  const TYPE_GRADIENT = {
-    client:   "from-sky-400 to-cyan-300",
-    internal: "from-slate-400 to-slate-300",
-    vacation: "from-emerald-400 to-green-300",
-    event:    "from-purple-400 to-violet-300",
-  };
-
   return (
     <div className="flex flex-col min-h-0 flex-1">
+      {/* Titolo full-width */}
+      <div className="flex items-center gap-3 pb-4 border-b border-si-border mb-4 shrink-0">
+        <div className="w-[3px] self-stretch rounded-full bg-si-accent shrink-0" />
+        <input
+          className="flex-1 bg-transparent text-2xl font-bold text-si-ink placeholder:text-si-grayLight focus:outline-none"
+          value={activeEntry.title}
+          onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
+          placeholder="Titolo del task..."
+          autoFocus
+        />
+      </div>
+
       {/* Body: due colonne scrollabili */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(240px,1fr)] gap-x-8 items-start pb-4">
-          {/* Colonna sinistra: titolo, note, link, blockers/next steps, ricorrenza */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,1fr)_1.6fr] gap-x-8 items-start pb-4">
+          {/* Colonna sinistra: metadata + ricorrenza */}
           <div className="flex flex-col gap-4">
-            {/* Titolo */}
-            <div className="border-b-2 border-transparent focus-within:border-slate-200 dark:focus-within:border-slate-700 transition-colors pb-1">
-              <input
-                className="w-full bg-transparent text-2xl font-bold text-slate-900 placeholder:text-slate-300 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
-                value={activeEntry.title}
-                onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
-                placeholder="Titolo del task..."
-                autoFocus
-              />
-            </div>
-            <EntryForm {...entryFormProps} column="left" />
+            <EntryForm {...entryFormProps} column="right" />
             {recurringSection}
           </div>
-          {/* Colonna destra: metadata sidebar */}
-          <div className="flex flex-col gap-6 lg:border-l lg:border-slate-100 dark:lg:border-slate-700/50 lg:pl-8">
-            <EntryForm {...entryFormProps} column="right" />
+          {/* Colonna destra: note, feedback, trascrizione */}
+          <div className="flex flex-col gap-4 lg:border-l lg:border-si-border lg:pl-8">
+            <EntryForm {...entryFormProps} column="left" />
           </div>
         </div>
       </div>
 
       {/* Scroll fade indicator */}
-      <div className="shrink-0 -mx-5 h-8 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none" />
+      <div className="shrink-0 -mx-5 h-8 bg-gradient-to-t from-si-bg to-transparent pointer-events-none" />
 
       {/* Footer sticky */}
-      <div className="shrink-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3 rounded-b-3xl">
+      <div className="shrink-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-si-bg/95 border-t border-si-border flex items-center justify-between gap-3 rounded-b-[20px]">
         <div className="flex items-center gap-3">
-          <Button
-            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10 disabled:opacity-30 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+          <button
+            className="px-8 py-2.5 text-base font-bold text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed border-0 cursor-pointer"
+            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 6px 16px rgba(99,102,241,0.32)" }}
             onClick={handleSave}
             type="button"
             disabled={isSaveDisabled}
           >
             Salva
-          </Button>
+          </button>
           {saveError && (
-            <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>
+            <span className="text-sm text-si-rose">{saveError}</span>
           )}
         </div>
         {fullDay ? (
           <Button
-            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            className="bg-transparent text-si-gray border border-si-border hover:bg-si-rose/10 hover:text-si-rose hover:border-si-rose/30 transition-all font-medium"
             onClick={onDeleteDay}
             type="button"
           >
@@ -504,7 +498,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           </Button>
         ) : (
           <Button
-            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            className="bg-transparent text-si-gray border border-si-border hover:bg-si-rose/10 hover:text-si-rose hover:border-si-rose/30 transition-all font-medium"
             onClick={handleDeleteSlot}
             type="button"
           >

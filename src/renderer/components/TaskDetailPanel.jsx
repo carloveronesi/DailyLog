@@ -20,7 +20,7 @@ function formatTimeRange(start, end, slot) {
 function Section({ label, children }) {
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500 mb-1.5">
+      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-si-gray mb-1.5">
         {label}
       </div>
       {children}
@@ -68,12 +68,12 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
   return (
     <>
       <div
-        className="fixed inset-0 z-[55] bg-black/10 dark:bg-black/20"
+        className="fixed inset-0 z-[55] bg-si-ink/10"
         onClick={onClose}
       />
-      <aside className="fixed right-0 top-0 h-full w-full max-w-sm z-[60] flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200/90 dark:border-slate-700/60 shadow-2xl overflow-hidden">
+      <aside className="fixed right-0 top-0 h-full w-full max-w-sm z-[60] flex flex-col bg-si-surface border-l border-si-border shadow-si-lg overflow-hidden">
         {/* Header */}
-        <div className="shrink-0 px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="shrink-0 px-5 pt-5 pb-4 border-b border-si-border">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -83,12 +83,12 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
                 {typeLabel}
               </span>
               {subtypeLabel && subtypeLabel !== "Generico" && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-si-muted text-si-gray border border-si-border">
                   {subtypeLabel}
                 </span>
               )}
               {internalSubtaskLabel && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-si-muted text-si-gray border border-si-border">
                   {internalSubtaskLabel}
                 </span>
               )}
@@ -96,19 +96,19 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
             <button
               type="button"
               onClick={onClose}
-              className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+              className="shrink-0 p-1.5 rounded-lg text-si-gray hover:text-si-ink hover:bg-si-muted transition-colors border-0 bg-transparent cursor-pointer"
             >
               <Icon name="x" className="w-4 h-4" />
             </button>
           </div>
 
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight break-words">
-            {entry.title?.trim() || <span className="italic text-slate-400 font-normal text-lg">(senza titolo)</span>}
+          <h2 className="text-2xl font-bold text-si-ink leading-tight break-words">
+            {entry.title?.trim() || <span className="italic text-si-grayLight font-normal text-lg">(senza titolo)</span>}
           </h2>
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-si-gray">
             {dateStr && <span>{dateStr}</span>}
-            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="text-si-grayLight">·</span>
             <span className="flex items-center gap-1">
               <Icon name="clock" className="w-3 h-3" />
               {timeRange}
@@ -119,22 +119,22 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {!hasBody && (
-            <div className="text-sm text-slate-400 dark:text-slate-500 italic text-center pt-4">
+            <div className="text-sm text-si-grayLight italic text-center pt-4">
               Nessun dettaglio aggiuntivo
             </div>
           )}
 
           {entry.type === "client" && entry.client && (
             <Section label="Cliente">
-              <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">{entry.client}</div>
+              <div className="text-sm font-semibold text-si-ink">{entry.client}</div>
             </Section>
           )}
 
           {entry.milestone && (
             <Section label="Milestone">
               <div className="flex items-center gap-1.5">
-                <Icon name="target" className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                <span className="text-sm text-slate-700 dark:text-slate-300">{entry.milestone}</span>
+                <Icon name="target" className="w-3.5 h-3.5 text-si-accent shrink-0" />
+                <span className="text-sm text-si-inkSoft">{entry.milestone}</span>
               </div>
             </Section>
           )}
@@ -145,7 +145,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
                 {entry.collaborators.map(c => (
                   <span
                     key={c}
-                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 border border-sky-100 dark:border-sky-800/50"
+                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-si-accentSoft text-si-accent"
                   >
                     {c}
                   </span>
@@ -160,7 +160,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
                 {entry.clientContacts.map(c => (
                   <span
                     key={c}
-                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-100 dark:border-violet-800/50"
+                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-si-violetSoft text-si-violet"
                   >
                     {c}
                   </span>
@@ -171,7 +171,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
 
           {entry.notes?.trim() && (
             <Section label="Note">
-              <div className="text-sm text-slate-700 dark:text-slate-300">
+              <div className="text-sm text-si-inkSoft">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                   {entry.notes}
                 </ReactMarkdown>
@@ -181,7 +181,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
 
           {entry.wentWrong?.trim() && (
             <Section label="Cosa non ha funzionato">
-              <div className="rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 px-3 py-2.5 text-sm text-rose-700 dark:text-rose-300">
+              <div className="rounded-xl bg-si-rose/8 border border-si-rose/20 px-3 py-2.5 text-sm text-si-rose">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                   {entry.wentWrong}
                 </ReactMarkdown>
@@ -191,7 +191,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
 
           {entry.nextSteps?.trim() && (
             <Section label="Prossimi passi">
-              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 px-3 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">
+              <div className="rounded-xl bg-si-success/8 border border-si-success/20 px-3 py-2.5 text-sm text-si-success">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
                   {entry.nextSteps}
                 </ReactMarkdown>
@@ -208,7 +208,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
                     href={link.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 text-sm text-sky-600 dark:text-sky-400 hover:underline"
+                    className="flex items-center gap-2 text-sm text-si-accent hover:underline"
                   >
                     <Icon name="link" className="w-3.5 h-3.5 shrink-0" />
                     {link.label || link.url}
@@ -220,11 +220,12 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 px-5 py-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="shrink-0 px-5 py-4 border-t border-si-border">
           <button
             type="button"
             onClick={onEdit}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 text-white font-semibold text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white font-semibold text-sm transition-colors border-0 cursor-pointer"
+            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 4px 12px rgba(99,102,241,0.28)" }}
           >
             <Icon name="pencil" className="w-4 h-4" />
             Modifica

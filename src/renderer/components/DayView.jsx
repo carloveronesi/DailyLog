@@ -96,22 +96,22 @@ export function DayView({
   const needsScroll = rowHeight <= MIN_ROW_HEIGHT;
 
   return (
-    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
+    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-[20px] bg-si-surface shadow-si px-5 pt-4 pb-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Vista giornaliera</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent">Vista giornaliera</div>
           <div className="flex items-center gap-3">
             <div className="flex items-baseline gap-3">
-              <div className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{dayNum}</div>
-              <div className="text-lg font-semibold text-slate-600 dark:text-slate-300">{weekday}</div>
-              <div className="text-lg font-semibold text-slate-500 dark:text-slate-400">{monthName} {year}</div>
+              <div className="text-4xl font-bold tracking-tight text-si-ink">{dayNum}</div>
+              <div className="text-lg font-semibold text-si-inkSoft">{weekday}</div>
+              <div className="text-lg font-semibold text-si-gray">{monthName} {year}</div>
             </div>
             <button
                onClick={() => onToggleLocation?.(date)}
-               className={`ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+               className={`ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-0 transition-all cursor-pointer ${
                  dayData?.location && dayData.location !== "remote"
-                   ? "bg-sky-50 border-sky-200 text-sky-700 dark:bg-sky-500/10 dark:border-sky-500/30 dark:text-sky-400"
-                   : "bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                   ? "bg-si-accentSoft text-si-accent"
+                   : "bg-si-muted text-si-gray hover:bg-si-border hover:text-si-inkSoft"
                }`}
                title="Cambia sede di lavoro"
             >
@@ -123,11 +123,11 @@ export function DayView({
             {onGoToTodo && (
               <button
                 onClick={onGoToTodo}
-                className="ml-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/50 dark:hover:bg-slate-800 transition-all"
+                className="ml-1 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-0 bg-si-muted hover:bg-si-border transition-all cursor-pointer"
                 title="Vai alle attività"
               >
-                <Icon name="list-check" className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                <span className={`text-xs font-bold uppercase tracking-wider ${pendingTodoCount > 0 ? "text-sky-600 dark:text-sky-400" : "text-slate-400 dark:text-slate-500"}`}>
+                <Icon name="list-check" className="w-4 h-4 text-si-gray" />
+                <span className={`text-xs font-bold uppercase tracking-wider ${pendingTodoCount > 0 ? "text-si-accent" : "text-si-gray"}`}>
                   {pendingTodoCount} {pendingTodoCount === 1 ? "attività" : "attività"}
                 </span>
               </button>
@@ -138,7 +138,7 @@ export function DayView({
         <div className="flex items-center gap-2">
           {onGoToMonth && (
             <Button
-              className="bg-white/95 border border-slate-200 text-slate-600 hover:bg-white hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-semibold"
+              className="bg-si-muted text-si-inkSoft hover:bg-si-border flex items-center gap-1.5 text-xs font-semibold"
               onClick={onGoToMonth}
               type="button"
               title="Torna alla vista mese"
@@ -149,7 +149,8 @@ export function DayView({
           )}
           {pasteMode ? (
             <Button
-              className="bg-sky-500 border border-sky-600 text-white hover:bg-sky-600 dark:bg-sky-600 dark:border-sky-700 dark:hover:bg-sky-500 flex items-center gap-1.5"
+              className="text-white flex items-center gap-1.5"
+              style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
               onClick={onPasteDay}
               type="button"
             >
@@ -158,7 +159,7 @@ export function DayView({
             </Button>
           ) : (
             <Button
-              className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="bg-si-muted text-si-gray hover:bg-si-border"
               onClick={onCopyDay}
               type="button"
               title="Copia questo giorno"
@@ -166,32 +167,19 @@ export function DayView({
               <Icon name="clipboard" className="w-4 h-4" />
             </Button>
           )}
-          <Button
-            className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={onPrevDay}
-            type="button"
-            title="Giorno precedente"
-          >
-            <Icon name="chev-left" />
-          </Button>
-          <Button
-            className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={onNextDay}
-            type="button"
-            title="Giorno successivo"
-          >
-            <Icon name="chev-right" />
-          </Button>
-          <Button
-            className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={onToday}
-            type="button"
-          >
-            Oggi
-          </Button>
+          <div className="flex items-center gap-0.5 p-1 bg-si-muted rounded-full shadow-si">
+            <Button className="w-8 h-8 !px-0 !py-0 bg-transparent text-si-ink hover:bg-si-surface" onClick={onPrevDay} type="button" title="Giorno precedente">
+              <Icon name="chev-left" className="w-4 h-4" />
+            </Button>
+            <Button className="h-8 !px-3 bg-transparent text-si-ink text-[12.5px] hover:bg-si-surface" onClick={onToday} type="button">Oggi</Button>
+            <Button className="w-8 h-8 !px-0 !py-0 bg-transparent text-si-ink hover:bg-si-surface" onClick={onNextDay} type="button" title="Giorno successivo">
+              <Icon name="chev-right" className="w-4 h-4" />
+            </Button>
+          </div>
           {onNewTask && (
             <Button
-              className="bg-sky-500 text-white hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 font-semibold"
+              className="h-9 !px-4 text-white text-[13px] font-semibold"
+              style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 4px 12px rgba(99,102,241,0.28)" }}
               onClick={onNewTask}
               type="button"
             >
@@ -204,7 +192,7 @@ export function DayView({
       <div ref={containerRef} className="mt-5 flex-1 min-h-0" style={{ overflowY: needsScroll ? "auto" : "hidden" }}>
         <div className="grid grid-cols-[60px_1fr] gap-3 pt-6 pb-4">
           <div
-            className="relative grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+            className="relative grid text-[11px] font-semibold text-si-gray"
             style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${rowHeight}px)` }}
           >
             {DAY_SLOTS.map((slot) => (
@@ -221,24 +209,24 @@ export function DayView({
           </div>
 
           <div
-            className="relative grid rounded-2xl border border-slate-200/80 bg-white/70 dark:border-slate-700/70 dark:bg-slate-900/40"
+            className="relative grid rounded-2xl border border-si-border bg-si-muted/60"
             style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${rowHeight}px)` }}
           >
             {DAY_SLOTS.map((slot, idx) => (
               <div
                 key={`line-${slot}`}
-                className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
+                className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-si-border"
                 style={{ top: `${idx * rowHeight}px` }}
               />
             ))}
             <div
-              className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
+              className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-si-border"
               style={{ top: `${DAY_SLOTS.length * rowHeight}px` }}
             />
 
             {selection ? (
               <div
-                className="pointer-events-none absolute left-2 right-2 z-10 rounded-2xl border border-sky-400/70 bg-sky-200/30 dark:border-sky-500/60 dark:bg-sky-500/10"
+                className="pointer-events-none absolute left-2 right-2 z-10 rounded-2xl border border-si-accent/60 bg-si-accentBg"
                 style={{
                   top: `${selection.startIndex * rowHeight + 6}px`,
                   height: `${selection.span * rowHeight - 12}px`,
@@ -255,8 +243,8 @@ export function DayView({
                   className={
                     "relative z-10 w-full h-full text-left " +
                     (isBreak
-                      ? "cursor-default bg-slate-50/50 dark:bg-slate-900/30"
-                      : "hover:bg-slate-100/60 dark:hover:bg-slate-800/60")
+                      ? "cursor-default bg-si-border/20"
+                      : "hover:bg-si-accentBg/60")
                   }
                   style={{ gridRow: idx + 1 }}
                   onMouseDown={(e) => {
@@ -289,7 +277,7 @@ export function DayView({
                   tabIndex={isBreak ? -1 : 0}
                 >
                   {isBreak && slot === BREAK_START ? (
-                    <span className="absolute left-3 top-2 text-[10px] font-medium uppercase tracking-[0.14em] text-slate-400/80">
+                    <span className="absolute left-3 top-2 text-[10px] font-medium uppercase tracking-[0.14em] text-si-grayLight">
                       Pausa
                     </span>
                   ) : null}
