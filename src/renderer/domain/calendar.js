@@ -192,9 +192,10 @@ export function matchesRecurringPattern(task, date) {
   const intervalDays = freq === "triweekly" ? 21 : freq === "biweekly" ? 14 : 7;
   if (intervalDays === 7) return true;
 
-  if (!task.anchorYmd) return true;
+  if (!task.anchorYmd || !/^\d{4}-\d{2}-\d{2}$/.test(task.anchorYmd)) return true;
   const [ay, am, ad] = task.anchorYmd.split("-").map(Number);
   const anchor = new Date(ay, am - 1, ad);
+  if (isNaN(anchor.getTime())) return true;
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diffDays = Math.round((d - anchor) / (24 * 60 * 60 * 1000));
   return Math.abs(diffDays) % intervalDays === 0;
