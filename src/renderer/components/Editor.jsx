@@ -399,9 +399,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-si-gray">giorno</span>
                 <input
-                  type="number" min={1} max={28}
+                  type="number" min={1} max={31}
                   value={recurringDom}
-                  onChange={e => setRecurringDom(Math.max(1, Math.min(28, Number(e.target.value))))}
+                  onChange={e => setRecurringDom(Math.max(1, Math.min(31, Number(e.target.value))))}
                   className="text-xs w-14 rounded-lg border border-si-border bg-si-surface px-2 py-1 font-medium text-si-inkSoft outline-none"
                 />
               </div>
