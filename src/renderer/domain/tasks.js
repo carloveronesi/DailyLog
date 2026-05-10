@@ -113,6 +113,16 @@ export function defaultEntry() {
   };
 }
 
+export function normalizeForType(e) {
+  const t = e.type;
+  const out = { ...e };
+  if (t !== "client") out.client = "";
+  if (t === "vacation" && !out.title.trim()) out.title = "Ferie";
+  if (t === "internal" && !out.title.trim()) out.title = "Internal";
+  if (t === "event" && !out.title.trim()) out.title = "Evento";
+  return out;
+}
+
 export function badgeStyle(type) {
   switch (type) {
     case "vacation":
