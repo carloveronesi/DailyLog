@@ -440,7 +440,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   };
 
   return (
-    <div className="flex flex-col min-h-0 flex-1">
+    <div className="flex flex-col min-h-0 flex-1 max-w-screen-xl w-full mx-auto">
       {/* Titolo full-width */}
       <div className="flex items-center gap-3 pb-4 border-b border-si-border mb-4 shrink-0">
         <div className="w-[3px] self-stretch rounded-full bg-si-accent shrink-0" />

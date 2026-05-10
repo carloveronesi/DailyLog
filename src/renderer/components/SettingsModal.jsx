@@ -290,7 +290,7 @@ export function SettingsModal({
 
   return (
     <Modal open={open} onClose={onClose} fullscreen>
-      <div className="flex flex-1 min-h-0 w-full gap-0">
+      <div className="flex flex-1 min-h-0 w-full gap-0 max-w-screen-xl mx-auto">
 
         {/* Sidebar nav */}
         <div className="w-52 shrink-0 flex flex-col gap-0.5 pr-6 border-r border-si-border mr-8">
@@ -318,7 +318,7 @@ export function SettingsModal({
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
           {activeSection === "colori" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div className="flex flex-col gap-4">
               {/* Colori clienti */}
               <div className={card}>
                 <div className="px-6 pt-6 pb-4">
@@ -408,7 +408,7 @@ export function SettingsModal({
           )}
 
           {activeSection === "preferenze" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div className="flex flex-col gap-4">
               {/* Left: Aspetto */}
               <div className={card}>
                 <div className="px-6 pt-6 pb-2">
@@ -551,7 +551,7 @@ export function SettingsModal({
                 const items = settings.taskSubtypes?.[t.id] || [];
                 return (
                   <div key={t.id} className={`${cardPad}`}>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-4">
                       <div className="space-y-3">
                         <div>
                           <div className="text-base font-bold text-si-ink">{t.label}</div>
@@ -634,7 +634,7 @@ export function SettingsModal({
 
               {/* Tag Todo */}
               <div className={`${cardPad}`}>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="flex flex-col gap-4">
                   <div className="space-y-3">
                     <div>
                       <div className="text-base font-bold text-si-ink">Tag Todo</div>
@@ -714,7 +714,7 @@ export function SettingsModal({
           )}
 
           {activeSection === "esportazioni" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div className="flex flex-col gap-4">
               <div className={`${cardPad} space-y-6`}>
                 {/* Card Esporta */}
                 <div className="space-y-1">
