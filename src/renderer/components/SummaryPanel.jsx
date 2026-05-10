@@ -3,30 +3,14 @@ import { getClientColor, getInternalColor, SLOT, getSubtypeLabel } from "../doma
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { getItalianHolidays } from "../utils/holidays";
 
-function isClientFilterActive(activeFilter, clientName) {
-  return activeFilter?.kind === "client" && activeFilter.client === clientName;
+function isFilterActive(filter, kind, value) {
+  return filter?.kind === kind && filter[kind] === value;
 }
 
-function isTypeFilterActive(activeFilter, type) {
-  return activeFilter?.kind === "type" && activeFilter.type === type;
-}
-
-function isClientFilterFaded(fixedFilter, clientName) {
+function isFilterFaded(fixedFilter, kind, value) {
   if (!fixedFilter) return false;
-  if (fixedFilter.kind === "client") {
-    return fixedFilter.client !== clientName;
-  }
-  // Se il filtro fisso è su un tipo, oscura tutti i clienti
-  return fixedFilter.kind === "type";
-}
-
-function isTypeFilterFaded(fixedFilter, type) {
-  if (!fixedFilter) return false;
-  if (fixedFilter.kind === "type") {
-    return fixedFilter.type !== type;
-  }
-  // Se il filtro fisso è su un cliente, oscura tutti i tipi
-  return fixedFilter.kind === "client";
+  if (fixedFilter.kind === kind) return fixedFilter[kind] !== value;
+  return true;
 }
 
 export function SummaryPanel({
@@ -181,10 +165,10 @@ export function SummaryPanel({
                       }
                     }}
                     className={`flex flex-col rounded-xl px-3 py-2.5 cursor-pointer transition-opacity border ${
-                      isClientFilterActive(activeFilter, c.client)
+                      isFilterActive(activeFilter, "client", c.client)
                         ? "border-si-accent bg-si-accentBg"
                         : "border-si-border bg-si-muted hover:border-si-accent/40"
-                    }${isClientFilterFaded(fixedFilter, c.client) ? " opacity-40" : ""}`}
+                    }${isFilterFaded(fixedFilter, "client", c.client) ? " opacity-40" : ""}`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2 min-w-0">
@@ -237,10 +221,10 @@ export function SummaryPanel({
                       }
                     }}
                     className={`flex items-center justify-between rounded-xl px-3 py-2 cursor-pointer transition-opacity border ${
-                      isTypeFilterActive(activeFilter, activity.key)
+                      isFilterActive(activeFilter, "type", activity.key)
                         ? "border-si-accent bg-si-accentBg"
                         : "border-si-border bg-si-muted hover:border-si-accent/40"
-                    }${isTypeFilterFaded(fixedFilter, activity.key) ? " opacity-40" : ""}`}
+                    }${isFilterFaded(fixedFilter, "type", activity.key) ? " opacity-40" : ""}`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
