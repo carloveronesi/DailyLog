@@ -253,43 +253,35 @@ export function ensureSubtypesFormat(settingsSubtypes) {
   return migrated;
 }
 
-export function getSubtypeLabel(type, subtypeId, taskSubtypes, clientName = null) {
+export function getSubtypeLabel(type, subtypeId, taskSubtypes, clientName = null, projects = null) {
   if (!subtypeId) return "Generico";
   const list = taskSubtypes?.[type] || [];
   let found = list.find((st) => (st.id || st) === subtypeId);
   if (found) return found.label || found;
 
   if (type === "client" && clientName) {
-    try {
-      const raw = localStorage.getItem("dailylog__projects");
-      if (raw) {
-        const obj = JSON.parse(raw);
-        const pid = "client::" + clientName.trim().toLocaleLowerCase("it-IT");
-        const pSubtasks = obj[pid]?.subtasks || [];
-        found = pSubtasks.find((st) => st.id === subtypeId);
-        if (found) return found.label;
-      }
-    } catch {
-      // ignore
+    const obj = projects ?? (() => {
+      try { return JSON.parse(localStorage.getItem("dailylog__projects") || "null"); } catch { return null; }
+    })();
+    if (obj) {
+      const pid = "client::" + clientName.trim().toLocaleLowerCase("it-IT");
+      found = (obj[pid]?.subtasks || []).find((st) => st.id === subtypeId);
+      if (found) return found.label;
     }
   }
 
   return "Generico";
 }
 
-export function getInternalSubtaskLabel(projectName, subtaskId) {
+export function getInternalSubtaskLabel(projectName, subtaskId, projects = null) {
   if (!subtaskId) return "Generico";
-  try {
-    const raw = localStorage.getItem("dailylog__projects");
-    if (raw) {
-      const obj = JSON.parse(raw);
-      const pid = "internal::" + projectName.trim().toLocaleLowerCase("it-IT");
-      const pSubtasks = obj[pid]?.subtasks || [];
-      const found = pSubtasks.find((st) => st.id === subtaskId);
-      if (found) return found.label;
-    }
-  } catch {
-    // ignore
+  const obj = projects ?? (() => {
+    try { return JSON.parse(localStorage.getItem("dailylog__projects") || "null"); } catch { return null; }
+  })();
+  if (obj) {
+    const pid = "internal::" + projectName.trim().toLocaleLowerCase("it-IT");
+    const found = (obj[pid]?.subtasks || []).find((st) => st.id === subtaskId);
+    if (found) return found.label;
   }
   return subtaskId;
 }
