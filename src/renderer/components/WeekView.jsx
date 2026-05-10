@@ -269,7 +269,7 @@ export function WeekView({
                             return (
                                 <div
                                     key={`slot-${slot}`}
-                                    className={`relative z-10 w-full h-full cursor-pointer hover:bg-si-accentBg/60 ${isBreak ? 'bg-si-border/20 cursor-default' : ''}`}
+                                    className={`relative z-10 w-full h-full cursor-pointer hover:bg-si-accentBg/60 ${isBreak ? 'bg-si-border/40 cursor-default' : ''}`}
                                     style={{ gridRow: idx + 1 }}
                                     onMouseDown={(e) => {
                                         if (isBreak) return;
@@ -295,7 +295,13 @@ export function WeekView({
                                             }
                                         }
                                     }}
-                                />
+                                >
+                                    {isBreak && slot === BREAK_START && (
+                                        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.12em] text-si-grayLight pointer-events-none select-none">
+                                            Pausa
+                                        </span>
+                                    )}
+                                </div>
                             );
                         })}
 

@@ -243,7 +243,7 @@ export function DayView({
                   className={
                     "relative z-10 w-full h-full text-left " +
                     (isBreak
-                      ? "cursor-default bg-si-border/20"
+                      ? "cursor-default bg-si-border/40"
                       : "hover:bg-si-accentBg/60")
                   }
                   style={{ gridRow: idx + 1 }}

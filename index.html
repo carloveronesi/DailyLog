@@ -27,25 +27,25 @@
             },
             colors: {
               si: {
-                bg:         '#F4F3FB',
-                surface:    '#FFFFFF',
-                muted:      '#FAFAFD',
-                weekend:    '#EFEEF7',
-                ink:        '#1B1B2E',
-                inkSoft:    '#3F3F5A',
-                gray:       '#7676A0',
-                grayLight:  '#B0B0CC',
-                border:     '#E7E6F2',
-                borderSoft: '#EFEEF7',
+                bg:         'var(--si-bg)',
+                surface:    'var(--si-surface)',
+                muted:      'var(--si-muted)',
+                weekend:    'var(--si-weekend)',
+                ink:        'var(--si-ink)',
+                inkSoft:    'var(--si-inkSoft)',
+                gray:       'var(--si-gray)',
+                grayLight:  'var(--si-grayLight)',
+                border:     'var(--si-border)',
+                borderSoft: 'var(--si-borderSoft)',
                 accent:     '#6366F1',
                 accentDark: '#4F46E5',
-                accentSoft: '#E8E7FB',
-                accentBg:   '#F0EFFD',
+                accentSoft: 'var(--si-accentSoft)',
+                accentBg:   'var(--si-accentBg)',
                 violet:     '#8B5CF6',
-                violetSoft: '#F1ECFE',
+                violetSoft: 'var(--si-violetSoft)',
                 rose:       '#F43F5E',
                 amber:      '#F59E0B',
-                amberSoft:  '#FEF3C7',
+                amberSoft:  'var(--si-amberSoft)',
                 success:    '#10B981',
               },
             },
@@ -59,8 +59,49 @@
         },
       };
     </script>
+    <style>
+      :root {
+        --si-bg:         #F4F3FB;
+        --si-surface:    #FFFFFF;
+        --si-muted:      #FAFAFD;
+        --si-weekend:    #EFEEF7;
+        --si-ink:        #1B1B2E;
+        --si-inkSoft:    #3F3F5A;
+        --si-gray:       #7676A0;
+        --si-grayLight:  #B0B0CC;
+        --si-border:     #E7E6F2;
+        --si-borderSoft: #EFEEF7;
+        --si-accentBg:   #F0EFFD;
+        --si-accentSoft: #E8E7FB;
+        --si-violetSoft: #F1ECFE;
+        --si-amberSoft:  #FEF3C7;
+      }
+      .dark {
+        --si-bg:         #0E0E1A;
+        --si-surface:    #17172B;
+        --si-muted:      #13131F;
+        --si-weekend:    #1B1B2E;
+        --si-ink:        #E9E7FF;
+        --si-inkSoft:    #B8B4E0;
+        --si-gray:       #7070A0;
+        --si-grayLight:  #48486A;
+        --si-border:     #2B2B44;
+        --si-borderSoft: #222238;
+        --si-accentBg:   #1C1C38;
+        --si-accentSoft: #26264A;
+        --si-violetSoft: #1D1530;
+        --si-amberSoft:  #271E08;
+      }
+      body {
+        background: linear-gradient(180deg, #F6F5FC 0%, #F1F0FA 100%);
+        min-height: 100vh;
+      }
+      .dark body {
+        background: #0E0E1A;
+      }
+    </style>
   </head>
-  <body class="text-si-ink antialiased dark:bg-slate-900 dark:text-slate-100" style="background:linear-gradient(180deg,#F6F5FC 0%,#F1F0FA 100%);min-height:100vh">
+  <body class="text-si-ink antialiased">
     <div id="root"></div>
     <script type="module" src="./src/renderer/main.jsx"></script>
   </body>

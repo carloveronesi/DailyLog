@@ -24,13 +24,13 @@ export function SettingsModal({
   onDisableAutoBackup,
 }) {
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState("aspetto");
+  const [activeSection, setActiveSection] = useState("preferenze");
   const [importStatus, setImportStatus] = useState(null);
   const [pendingImportFile, setPendingImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
 
   function handleTabChange(tab) {
-    setActiveTab(tab);
+    setActiveSection(tab);
     setImportStatus(null);
   }
 
@@ -141,14 +141,14 @@ export function SettingsModal({
   const [exportTo, setExportTo] = useState("");
 
   useEffect(() => {
-    if (activeTab !== "salvataggio") return;
+    if (activeSection !== "esportazioni") return;
     const months = listStoredMonths();
     setAvailableMonths(months);
     if (months.length > 0) {
       setExportFrom((prev) => (prev && months.includes(prev) ? prev : months[0]));
       setExportTo((prev) => (prev && months.includes(prev) ? prev : months[months.length - 1]));
     }
-  }, [activeTab]);
+  }, [activeSection]);
 
   function handleExportRange() {
     const range = availableMonths.filter((m) => m >= exportFrom && m <= exportTo);
@@ -274,39 +274,50 @@ export function SettingsModal({
   const card = "rounded-[20px] border border-si-border bg-si-surface shadow-si overflow-hidden";
   const cardPad = "rounded-[20px] border border-si-border bg-si-surface shadow-si p-6";
 
+  const NAV_ITEMS = [
+    { key: "preferenze", label: "Preferenze", icon: "settings" },
+    { key: "categorie", label: "Categorie attività", icon: "list-check" },
+    { key: "colori", label: "Colori", icon: "reset-rainbow" },
+    { key: "esportazioni", label: "Esportazioni", icon: "upload" },
+  ];
+
+  const SECTION_TITLES = {
+    preferenze: "Preferenze",
+    categorie: "Categorie attività",
+    colori: "Colori",
+    esportazioni: "Esportazioni",
+  };
+
   return (
     <Modal open={open} onClose={onClose} fullscreen>
-      <div className="flex flex-col flex-1 min-h-0 w-full">
-        <div className="shrink-0 mb-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent mb-1">App</div>
-          <h1 className="text-[28px] font-bold tracking-[-0.03em] text-si-ink">Impostazioni</h1>
-        </div>
-        <div className="flex items-center border-b border-si-border mb-6 shrink-0">
-          {[
-            { key: "aspetto", label: "Aspetto" },
-            { key: "task", label: "Attività" },
-            { key: "clienti", label: "Colori" },
-            { key: "salvataggio", label: "Salvataggio" },
-          ].map(({ key, label }) => (
+      <div className="flex flex-1 min-h-0 w-full gap-0">
+
+        {/* Sidebar nav */}
+        <div className="w-52 shrink-0 flex flex-col gap-0.5 pr-6 border-r border-si-border mr-8">
+          <div className="mb-6">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent mb-1">Impostazioni</div>
+            <h1 className="text-2xl font-bold tracking-[-0.02em] text-si-ink">{SECTION_TITLES[activeSection]}</h1>
+          </div>
+          {NAV_ITEMS.map(({ key, label, icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => handleTabChange(key)}
-              className={`flex-1 pb-3 text-sm font-semibold transition-all relative border-0 bg-transparent cursor-pointer ${activeTab === key
-                ? "text-si-ink"
-                : "text-si-grayLight hover:text-si-inkSoft"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left border-0 cursor-pointer ${
+                activeSection === key
+                  ? "bg-si-accentBg text-si-accent"
+                  : "bg-transparent text-si-gray hover:bg-si-muted hover:text-si-inkSoft"
               }`}
             >
+              <Icon name={icon} className="w-4 h-4 shrink-0" />
               {label}
-              {activeTab === key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-si-accent rounded-full mx-auto w-1/2" />
-              )}
             </button>
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-          {activeTab === "clienti" && (
+        {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
+          {activeSection === "colori" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               {/* Colori clienti */}
               <div className={card}>
@@ -396,7 +407,7 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "aspetto" && (
+          {activeSection === "preferenze" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               {/* Left: Aspetto */}
               <div className={card}>
@@ -534,7 +545,7 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "task" && (
+          {activeSection === "categorie" && (
             <div className="space-y-4">
               {TASK_TYPES.map((t) => {
                 const items = settings.taskSubtypes?.[t.id] || [];
@@ -702,7 +713,7 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "salvataggio" && (
+          {activeSection === "esportazioni" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               <div className={`${cardPad} space-y-6`}>
                 {/* Card Esporta */}
