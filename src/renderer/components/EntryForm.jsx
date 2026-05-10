@@ -95,7 +95,7 @@ export function EntryForm({
     setField("clientContacts", (entry.clientContacts || []).filter(c => c !== name));
   };
 
-  const projects = useMemo(() => loadProjects(), []);
+  const projects = loadProjects();
 
   const getAvatarColor = (name) => {
     const palette = ["bg-si-accent", "bg-si-violet", "bg-[#10B981]", "bg-si-amber", "bg-si-rose"];

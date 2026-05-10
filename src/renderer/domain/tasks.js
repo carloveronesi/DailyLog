@@ -87,7 +87,6 @@ export function buildWorkSlots(workHours) {
 export const MORNING_SLOTS = buildSlots(9 * 60, 13 * 60); // 09:00 -> 12:30
 export const AFTERNOON_SLOTS = buildSlots(14 * 60, 18 * 60); // 14:00 -> 17:30
 export const WORK_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
-export const HOURS_PER_DAY = WORK_SLOTS.length / 2; // 8
 
 export function hourKey(h) {
   return slotKey(h);
@@ -97,15 +96,6 @@ export function hourLabel(h) {
   return slotLabel(h);
 }
 
-export function hasMorningHours(dayData) {
-  if (!dayData?.hours) return false;
-  return MORNING_SLOTS.some((h) => dayData.hours[slotKey(h)]);
-}
-
-export function hasAfternoonHours(dayData) {
-  if (!dayData?.hours) return false;
-  return AFTERNOON_SLOTS.some((h) => dayData.hours[slotKey(h)]);
-}
 
 export function defaultEntry() {
   return {
