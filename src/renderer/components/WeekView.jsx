@@ -5,7 +5,7 @@ import { useCalendarDrag } from "../hooks/useCalendarDrag";
 import { TaskBlock, computeBlockGeometry } from "./TaskBlock";
 import { ymd } from "../utils/date";
 import { Button, Icon } from "./ui";
-import { useWorkSlots } from "../contexts/SettingsContext";
+import { useWorkSlots, useSettings } from "../contexts/SettingsContext";
 
 const DEFAULT_ROW_HEIGHT = 35;
 const MIN_ROW_HEIGHT = 28;
@@ -50,6 +50,8 @@ export function WeekView({
 }) {
   const workSlots = useWorkSlots();
   const { DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
+  const { settings } = useSettings();
+  const defaultLocation = settings?.defaultLocation || "remote";
   const weekDays = useMemo(() => getWorkweekDays(activeDate), [activeDate]);
 
   // Create an array mapping each weekday index (0-4) to its blocks
@@ -217,17 +219,22 @@ export function WeekView({
                              >
                                <Icon name="clipboard" className="w-3.5 h-3.5" />
                              </button>
-                             <button
-                               onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
-                               className={`flex items-center justify-center rounded-lg p-0.5 transition-all ${
-                                 monthDataByDate[ymd(date)]?.location && monthDataByDate[ymd(date)].location !== "remote"
-                                   ? "text-si-accent bg-si-accentSoft opacity-100"
-                                   : "text-si-grayLight opacity-0 group-hover:opacity-100 hover:bg-si-muted"
-                               }`}
-                               title={monthDataByDate[ymd(date)]?.location === "office" ? "In Ufficio" : monthDataByDate[ymd(date)]?.location === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
-                             >
-                               <Icon name={monthDataByDate[ymd(date)]?.location === "office" ? "building" : "home"} className="w-3.5 h-3.5" />
-                             </button>
+                             {(() => {
+                               const dayLoc = monthDataByDate[ymd(date)]?.location || defaultLocation;
+                               return (
+                                 <button
+                                   onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
+                                   className={`flex items-center justify-center rounded-lg p-0.5 transition-all ${
+                                     dayLoc !== "remote"
+                                       ? "text-si-accent bg-si-accentSoft opacity-100"
+                                       : "text-si-grayLight opacity-0 group-hover:opacity-100 hover:bg-si-muted"
+                                   }`}
+                                   title={dayLoc === "office" ? "In Ufficio" : dayLoc === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
+                                 >
+                                   <Icon name={dayLoc === "office" ? "building" : "home"} className="w-3.5 h-3.5" />
+                                 </button>
+                               );
+                             })()}
                            </>
                          )}
                        </div>

@@ -16,7 +16,9 @@
       "Bash(Measure-Object)",
       "Bash(Select-Object Count)",
       "Bash(curl *)",
-      "Bash(python -m http.server 8080)"
+      "Bash(python -m http.server 8080)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\" -Recurse -File)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\" -File)"
     ]
   }
 }

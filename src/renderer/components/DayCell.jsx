@@ -108,6 +108,7 @@ export const DayCell = memo(function DayCell({
   const { MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const { settings } = useSettings();
   const recurringTasks = settings?.recurringTasks || [];
+  const effectiveLocation = entries?.location || settings?.defaultLocation || "remote";
   const d = date.getDate();
   const isToday = isCurrentMonth && date.toDateString() === new Date().toDateString();
   const am = entries?.AM;
@@ -187,14 +188,14 @@ export const DayCell = memo(function DayCell({
           <button
             onClick={e => { e.stopPropagation(); onToggleLocation?.(date); }}
             className={`flex items-center justify-center rounded-md p-1 border-0 transition-all ${
-              entries?.location && entries.location !== "remote"
+              effectiveLocation !== "remote"
                 ? "text-si-accent bg-si-accentSoft"
                 : "text-si-grayLight bg-transparent hover:bg-si-muted"
             }`}
-            title={entries?.location === "office" ? "In Ufficio" : entries?.location === "client" ? "Sede Cliente" : "Remoto"}
+            title={effectiveLocation === "office" ? "In Ufficio" : effectiveLocation === "client" ? "Sede Cliente" : "Remoto"}
             style={{ cursor: "pointer" }}
           >
-            <Icon name={entries?.location === "office" ? "building" : "home"} className="w-3 h-3" />
+            <Icon name={effectiveLocation === "office" ? "building" : "home"} className="w-3 h-3" />
           </button>
         )}
       </div>

@@ -294,14 +294,14 @@ export default function App() {
   const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
     const existing = monthDataByDate[key] || {};
-    const current = existing.location || LOCATION_TYPES.REMOTE;
+    const current = existing.location || settings.defaultLocation || LOCATION_TYPES.REMOTE;
     let next;
     if (current === LOCATION_TYPES.REMOTE) next = LOCATION_TYPES.OFFICE;
     else if (current === LOCATION_TYPES.OFFICE) next = LOCATION_TYPES.CLIENT;
     else next = LOCATION_TYPES.REMOTE;
 
     upsertDay(date, { ...existing, location: next }, "Cambia sede");
-  }, [monthDataByDate, upsertDay]);
+  }, [monthDataByDate, upsertDay, settings.defaultLocation]);
 
   function navigate(view) {
     setViewMode(view);

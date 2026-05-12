@@ -82,7 +82,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [rangeStartMin, setRangeStartMin] = useState(MORNING_SLOTS[0]);
   const [rangeEndMin, setRangeEndMin] = useState(MORNING_SLOTS[0] + SLOT_MINUTES);
   const [fullDay, setFullDay] = useState(false);
-  const [location, setLocation] = useState(existingEntries?.location || LOCATION_TYPES.REMOTE);
+  const [location, setLocation] = useState(existingEntries?.location || settings?.defaultLocation || LOCATION_TYPES.REMOTE);
   const [autoAdjusted, setAutoAdjusted] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
@@ -92,7 +92,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setEntryPM(init.entryPM);
     setHourEntries(init.hourEntries);
     setFullDay(init.fullDay);
-    setLocation(existingEntries?.location || LOCATION_TYPES.REMOTE);
+    setLocation(existingEntries?.location || settings?.defaultLocation || LOCATION_TYPES.REMOTE);
 
     const hourKeys = Object.keys(existingEntries?.hours || {}).map(slotMinutes).filter((v) => Number.isFinite(v));
     let start = MORNING_SLOTS[0];

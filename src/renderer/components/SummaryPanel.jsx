@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getClientColor, getInternalColor, SLOT, getSubtypeLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, SLOT, getSubtypeLabel, slotKey } from "../domain/tasks";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { getItalianHolidays } from "../utils/holidays";
 
@@ -23,7 +23,7 @@ export function SummaryPanel({
   onFixedFilterChange,
 }) {
   const { settings } = useSettings();
-  const { WORK_SLOTS } = useWorkSlots();
+  const { WORK_SLOTS, MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const internalColors = settings?.internalColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -41,7 +41,27 @@ export function SummaryPanel({
 
     const lastDayOfMonth = new Date(year, monthIndex0 + 1, 0).getDate();
     const holidays = getItalianHolidays(year);
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === monthIndex0;
+    const isPastMonth = (year < today.getFullYear()) || (year === today.getFullYear() && monthIndex0 < today.getMonth());
+    let lastDayConsidered;
+    if (isCurrentMonth) lastDayConsidered = today.getDate();
+    else if (isPastMonth) lastDayConsidered = lastDayOfMonth;
+    else lastDayConsidered = 0;
+
+    const byDate = data?.byDate || {};
+
+    function isDayFullyFilled(dayData) {
+      if (!dayData) return false;
+      const hours = dayData.hours || {};
+      const morningCovered = !!dayData.AM || MORNING_SLOTS.every(m => hours[slotKey(m)]);
+      const afternoonCovered = !!dayData.PM || AFTERNOON_SLOTS.every(m => hours[slotKey(m)]);
+      return morningCovered && afternoonCovered;
+    }
+
     let workingDaysInMonth = 0;
+    let workingDaysElapsed = 0;
+    let fullyFilledDays = 0;
     for (let day = 1; day <= lastDayOfMonth; day++) {
       const d = new Date(year, monthIndex0, day);
       const dow = d.getDay();
@@ -49,9 +69,11 @@ export function SummaryPanel({
       const key = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       if (holidays.has(key)) continue;
       workingDaysInMonth += 1;
+      if (day <= lastDayConsidered) {
+        workingDaysElapsed += 1;
+        if (isDayFullyFilled(byDate[key])) fullyFilledDays += 1;
+      }
     }
-
-    const byDate = data?.byDate || {};
     for (const dateKey of Object.keys(byDate)) {
       const day = byDate[dateKey];
       for (const s of [SLOT.AM, SLOT.PM]) {
@@ -107,11 +129,11 @@ export function SummaryPanel({
       { key: "event", label: "Eventi", data: event, dotClassName: "bg-si-violet" },
     ].filter((activity) => activity.data.total > 0);
 
-    return { clients, internal: internal.total, vacation: vacation.total, event: event.total, worked, workingDaysInMonth, otherActivities };
-  }, [data, year, monthIndex0, WORK_SLOTS]);
+    return { clients, internal: internal.total, vacation: vacation.total, event: event.total, worked, workingDaysInMonth, workingDaysElapsed, fullyFilledDays, otherActivities };
+  }, [data, year, monthIndex0, WORK_SLOTS, MORNING_SLOTS, AFTERNOON_SLOTS]);
 
-  const pct = totals.workingDaysInMonth > 0
-    ? Math.min(100, Math.round((totals.worked / totals.workingDaysInMonth) * 100))
+  const pct = totals.workingDaysElapsed > 0
+    ? Math.min(100, Math.round((totals.fullyFilledDays / totals.workingDaysElapsed) * 100))
     : 0;
 
   return (
@@ -119,17 +141,29 @@ export function SummaryPanel({
       className="rounded-[20px] bg-si-surface shadow-si p-5 flex flex-col gap-5"
       onMouseLeave={() => onHoverFilterChange?.(null)}
     >
-      {/* Hero completion card */}
-      <div
-        className="rounded-2xl p-4 text-white"
-        style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
-      >
-        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-75 mb-1">Completamento mese</div>
-        <div className="text-3xl font-bold leading-none mb-3">{pct}%</div>
-        <div className="h-1.5 rounded-full bg-white/30">
-          <div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
+      {/* Hero KPI: avanzamento mese + completamento */}
+      <div className="grid grid-cols-2 gap-3">
+        <div
+          className="rounded-2xl p-4 text-white"
+          style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+        >
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-75 mb-1">Avanzamento mese</div>
+          <div className="text-3xl font-bold leading-none mb-3">
+            {totals.workingDaysElapsed}<span className="text-lg opacity-75">/{totals.workingDaysInMonth}</span>
+          </div>
+          <div className="text-[11px] opacity-70">giorni lavorativi</div>
         </div>
-        <div className="mt-2 text-[11px] opacity-70">{totals.worked.toFixed(1)} / {totals.workingDaysInMonth} giorni lavorativi</div>
+        <div
+          className="rounded-2xl p-4 text-white"
+          style={{ background: "linear-gradient(135deg,#10B981,#06B6D4)" }}
+        >
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-75 mb-1">Giorni compilati</div>
+          <div className="text-3xl font-bold leading-none mb-3">{pct}%</div>
+          <div className="h-1.5 rounded-full bg-white/30">
+            <div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="mt-2 text-[11px] opacity-70">{totals.fullyFilledDays} / {totals.workingDaysElapsed} compilati</div>
+        </div>
       </div>
 
       {fixedFilter && (

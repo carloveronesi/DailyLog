@@ -5,7 +5,7 @@ import { useCalendarDrag } from "../hooks/useCalendarDrag";
 import { TaskBlock, computeBlockGeometry } from "./TaskBlock";
 import { monthNameIT } from "../utils/date";
 import { Button, Icon } from "./ui";
-import { useWorkSlots } from "../contexts/SettingsContext";
+import { useWorkSlots, useSettings } from "../contexts/SettingsContext";
 
 const WEEKDAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 const DEFAULT_ROW_HEIGHT = 35;
@@ -36,6 +36,8 @@ export function DayView({
 }) {
   const workSlots = useWorkSlots();
   const { MORNING_SLOTS, AFTERNOON_SLOTS, DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
+  const { settings } = useSettings();
+  const effectiveLocation = dayData?.location || settings?.defaultLocation || "remote";
 
   function slotSection(slotMin) {
     if (slotMin >= BREAK_START && slotMin < BREAK_END) return "break";
@@ -109,15 +111,15 @@ export function DayView({
             <button
                onClick={() => onToggleLocation?.(date)}
                className={`ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full border-0 transition-all cursor-pointer ${
-                 dayData?.location && dayData.location !== "remote"
+                 effectiveLocation !== "remote"
                    ? "bg-si-accentSoft text-si-accent"
                    : "bg-si-muted text-si-gray hover:bg-si-border hover:text-si-inkSoft"
                }`}
                title="Cambia sede di lavoro"
             >
-              <Icon name={dayData?.location === "office" ? "building" : "home"} className="w-4 h-4" />
+              <Icon name={effectiveLocation === "office" ? "building" : "home"} className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider">
-                {dayData?.location === "office" ? "In Ufficio" : dayData?.location === "client" ? "Sede Cliente" : "Da Remoto"}
+                {effectiveLocation === "office" ? "In Ufficio" : effectiveLocation === "client" ? "Sede Cliente" : "Da Remoto"}
               </span>
             </button>
             {onGoToTodo && (

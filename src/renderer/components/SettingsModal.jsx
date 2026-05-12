@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { importAll, listStoredMonths, exportMonths } from "../services/storage";
 import { loadTodos, saveTodos } from "../services/storage/todo";
 import { Button, Icon, Modal, Segmented } from "./ui";
-import { getClientColor, getInternalColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, hourLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, LOCATION_TYPES, hourLabel } from "../domain/tasks";
 
 export function SettingsModal({
   open,
@@ -445,6 +445,23 @@ export function SettingsModal({
                           { label: "Giorno", value: "day" },
                           { label: "Settimana", value: "week" },
                           { label: "Mese", value: "month" },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="px-6 py-4 flex items-center justify-between gap-6">
+                    <div>
+                      <div className="text-sm font-semibold text-si-inkSoft">Sede di default</div>
+                      <div className="text-xs text-si-gray mt-0.5">Sede applicata ai nuovi giorni</div>
+                    </div>
+                    <div className="shrink-0">
+                      <Segmented
+                        value={settings.defaultLocation || LOCATION_TYPES.REMOTE}
+                        onChange={(val) => setSettings((prev) => ({ ...prev, defaultLocation: val }))}
+                        options={[
+                          { label: "Remoto", value: LOCATION_TYPES.REMOTE },
+                          { label: "Ufficio", value: LOCATION_TYPES.OFFICE },
+                          { label: "Cliente", value: LOCATION_TYPES.CLIENT },
                         ]}
                       />
                     </div>
