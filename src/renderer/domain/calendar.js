@@ -52,17 +52,9 @@ export function buildHourBlocks(dayData, workSlots = DEFAULT_WORK_SLOTS) {
   if (!dayData?.hours) return [];
   const blocks = [];
   let current = null;
-  const hourKeys = Object.keys(dayData.hours || {});
-  const hasHalfSlots = hourKeys.some((k) => k.endsWith(":30"));
   const effectiveWorkSlots = workSlots.WORK_SLOTS;
 
-  const slotsToScan = hasHalfSlots
-    ? effectiveWorkSlots
-    : effectiveWorkSlots.filter((slot) => slot % 60 === 0);
-  const stepMinutes = hasHalfSlots ? SLOT_MINUTES : 60;
-  const spanStep = hasHalfSlots ? 1 : 2;
-
-  for (const slot of slotsToScan) {
+  for (const slot of effectiveWorkSlots) {
     const entry = dayData.hours[hourKey(slot)] || null;
     if (!entry) {
       current = null;
@@ -70,8 +62,8 @@ export function buildHourBlocks(dayData, workSlots = DEFAULT_WORK_SLOTS) {
     }
 
     if (current && isSameHourEntry(current.entry, entry) && current.end === slot) {
-      current.end += stepMinutes;
-      current.span += spanStep;
+      current.end += SLOT_MINUTES;
+      current.span += 1;
       continue;
     }
 
@@ -79,15 +71,15 @@ export function buildHourBlocks(dayData, workSlots = DEFAULT_WORK_SLOTS) {
     current = {
       entry,
       start: slot,
-      end: slot + stepMinutes,
-      span: spanStep,
+      end: slot + SLOT_MINUTES,
+      span: 1,
       label,
     };
     blocks.push(current);
   }
 
   return blocks.map((block) => {
-    if (block.span <= spanStep) return block;
+    if (block.span <= 1) return block;
     return {
       ...block,
       label: `${hourLabel(block.start)} - ${hourLabel(block.end)}`,
