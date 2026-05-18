@@ -22,22 +22,24 @@ import { exportAll, listStoredClients, listStoredPeople, savePeople, loadProject
 import { LOCATION_TYPES, SLOT_MINUTES, hourKey } from "./domain/tasks";
 import { matchesRecurringPattern } from "./domain/calendar";
 
-function SidebarBtn({ icon, label, onClick, disabled, activeClass = "", isActive = false, accent = false }) {
-  const activeBtnClass = accent
-    ? "bg-sky-500 hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500"
-    : (isActive ? "bg-slate-100 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800" : "hover:bg-slate-100 dark:hover:bg-slate-800");
-  const iconColor = accent ? "text-white" : (activeClass ? activeClass : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-700 dark:text-slate-300"));
-  const labelColor = accent ? "text-white" : (isActive ? "text-sky-600 dark:text-sky-400" : "text-slate-600 dark:text-slate-400");
-
+function SidebarBtn({ icon, label, onClick, disabled, isActive = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative flex flex-col items-center justify-center w-full py-2 px-1 lg:py-3 transition-colors lg:rounded-none rounded-2xl group/btn overflow-visible ${disabled ? "opacity-50 cursor-not-allowed" : ""} ${activeBtnClass}`}
+      title={label}
+      className={`relative flex flex-col items-center justify-center w-[60px] h-[52px] rounded-xl transition-all border-0 ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } ${
+        isActive
+          ? "bg-si-surface text-si-accent"
+          : "bg-transparent text-si-gray hover:text-si-ink hover:bg-si-surface/60"
+      }`}
+      style={isActive ? { boxShadow: "0 1px 2px rgba(40,40,80,0.06), 0 4px 12px rgba(40,40,80,0.08)" } : {}}
     >
-      <Icon name={icon} className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${iconColor}`} />
-      <span className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 leading-none ${labelColor}`}>
+      <Icon name={icon} className="w-5 h-5 shrink-0" />
+      <span className="text-[9px] font-semibold uppercase tracking-wider mt-0.5 leading-none">
         {label.split(" ")[0]}
       </span>
     </button>
@@ -92,7 +94,7 @@ export default function App() {
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
   const { WORK_SLOTS } = useWorkSlots(settings);
-  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
+  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast, showBlockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
 
   const {
     selectedDate, selectedSlot, selectedRange,
@@ -173,7 +175,13 @@ export default function App() {
       freeCount++;
     }
     const slotsToWrite = Math.min(val.slotCount, freeCount);
-    if (slotsToWrite === 0) return;
+    if (slotsToWrite === 0) {
+      showBlockedToast("Nessuno slot libero qui per incollare.");
+      return;
+    }
+    if (slotsToWrite < val.slotCount) {
+      showBlockedToast(`Incollati ${slotsToWrite}/${val.slotCount} slot (spazio insufficiente).`);
+    }
 
     for (let i = 0; i < slotsToWrite; i++) {
       newHours[hourKey(slotStart + i * SLOT_MINUTES)] = { ...val.entry };
@@ -247,6 +255,11 @@ export default function App() {
   useEffect(() => () => { if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current); }, []);
 
   const [showHistory, setShowHistory] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const gPrefixRef = useRef(0);
+  const editorDirtyRef = useRef(false);
+  const [pendingNavView, setPendingNavView] = useState(null);
+  const handleEditorDirtyChange = useCallback((d) => { editorDirtyRef.current = d; }, []);
 
   function handleUndo() {
     undoLastChange();
@@ -261,47 +274,156 @@ export default function App() {
     redoLastChange();
   }
 
-  // Ctrl+Z shortcut + ESC per annullare paste mode
+  // Global keyboard shortcuts
   useEffect(() => {
+    function isEditableTarget(t) {
+      if (!t) return false;
+      const tag = t.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (t.isContentEditable) return true;
+      return false;
+    }
+    function anyModalOpen() {
+      return editorOpen || settingsOpen || searchOpen || showShortcuts;
+    }
+    function goPrev() {
+      if (viewMode === "month") prevMonth();
+      else goPrevDay();
+    }
+    function goNext() {
+      if (viewMode === "month") nextMonth();
+      else goNextDay();
+    }
+    function goNow() {
+      if (viewMode === "month") goToday();
+      else goTodayDay();
+    }
     function onKeyDown(e) {
+      // Undo / Redo (always allowed except when inside a modal that handles its own)
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        if (editorOpen || settingsOpen || searchOpen) return;
+        if (anyModalOpen()) return;
         e.preventDefault();
         handleUndo();
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-        if (editorOpen || settingsOpen || searchOpen) return;
-        e.preventDefault();
-        handleRedo();
-      }
-      if (e.key === "Escape" && detailOpen && !editorOpen && !settingsOpen && !searchOpen) {
-        closeDetail();
         return;
       }
-      if (e.key === "Escape" && (copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
-        setCopiedDay(null);
-        copiedEntryRef.current = null;
-        setCopiedEntry(null);
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        if (anyModalOpen()) return;
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      // Cmd/Ctrl+K → search (works even with detail open)
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+        if (editorOpen || settingsOpen) return;
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+
+      // Escape handlers
+      if (e.key === "Escape") {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (detailOpen && !editorOpen && !settingsOpen && !searchOpen) { closeDetail(); return; }
+        if ((copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
+          setCopiedDay(null);
+          copiedEntryRef.current = null;
+          setCopiedEntry(null);
+          return;
+        }
+      }
+
+      // From here on, only typeable single-key shortcuts. Skip if modifier or inside input.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isEditableTarget(e.target)) return;
+      if (anyModalOpen()) return;
+
+      // `g` prefix for jump-to-view (g d / g w / g m / g p / g l)
+      if (gPrefixRef.current && Date.now() - gPrefixRef.current < 1500) {
+        const map = { d: "day", w: "week", m: "month", p: "projects", l: "todo" };
+        const view = map[e.key.toLowerCase()];
+        gPrefixRef.current = 0;
+        if (view) { e.preventDefault(); navigate(view); return; }
+      }
+
+      if (e.key === "?") {
+        e.preventDefault();
+        setShowShortcuts(true);
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        openEditor(activeDate, null);
+        return;
+      }
+      if (e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        goNow();
+        return;
+      }
+      if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
+        e.preventDefault();
+        goNext();
+        return;
+      }
+      if (e.key === "h" || e.key === "H" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+        return;
+      }
+      if (e.key === "l" || e.key === "L" || e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+        return;
+      }
+      if (e.key === "k" || e.key === "K" || e.key === "ArrowUp") {
+        e.preventDefault();
+        goPrev();
+        return;
+      }
+      if (e.key === "g" || e.key === "G") {
+        gPrefixRef.current = Date.now();
+        return;
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorOpen, settingsOpen, searchOpen, hasUndo, hasRedo, copiedDay, copiedEntry, detailOpen]);
+  }, [editorOpen, settingsOpen, searchOpen, showShortcuts, hasUndo, hasRedo, copiedDay, copiedEntry, detailOpen, viewMode, activeDate]);
 
   const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
     const existing = monthDataByDate[key] || {};
-    const current = existing.location || LOCATION_TYPES.REMOTE;
+    const current = existing.location || settings.defaultLocation || LOCATION_TYPES.REMOTE;
     let next;
     if (current === LOCATION_TYPES.REMOTE) next = LOCATION_TYPES.OFFICE;
     else if (current === LOCATION_TYPES.OFFICE) next = LOCATION_TYPES.CLIENT;
     else next = LOCATION_TYPES.REMOTE;
 
     upsertDay(date, { ...existing, location: next }, "Cambia sede");
-  }, [monthDataByDate, upsertDay]);
+  }, [monthDataByDate, upsertDay, settings.defaultLocation]);
 
   function navigate(view) {
+    if (editorOpen && editorDirtyRef.current) {
+      setPendingNavView(view);
+      return;
+    }
+    setViewMode(view);
+    setSettingsOpen(false);
+    closeEditor();
+    closeDetail();
+    setSearchOpen(false);
+  }
+
+  function confirmDiscardAndNavigate() {
+    const view = pendingNavView;
+    setPendingNavView(null);
+    editorDirtyRef.current = false;
     setViewMode(view);
     setSettingsOpen(false);
     closeEditor();
@@ -321,49 +443,49 @@ export default function App() {
 
   return (
     <SettingsContext.Provider value={{ settings, setSettings }}>
-      <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white dark:bg-slate-950 transition-colors">
+      <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden" style={{ background: "transparent" }}>
         {blockedToast ? (
-          <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-rose-200/80 bg-rose-50/95 px-4 py-2 text-sm font-semibold text-rose-700 shadow-soft backdrop-blur dark:border-rose-900/60 dark:bg-rose-950/70 dark:text-rose-200">
+          <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-si-rose/20 bg-si-surface px-4 py-2 text-sm font-semibold text-si-rose shadow-si-lg">
             {blockedToast}
           </div>
         ) : null}
         {(copiedDay || copiedEntry) && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-sky-200/80 bg-sky-50/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-sky-800/50 dark:bg-sky-950/80">
-            <Icon name="clipboard" className="w-4 h-4 text-sky-500 dark:text-sky-400 shrink-0" />
-            <span className="text-sm font-semibold text-sky-700 dark:text-sky-300">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-si-accentSoft bg-si-surface px-4 py-2.5 shadow-si-lg">
+            <Icon name="clipboard" className="w-4 h-4 text-si-accent shrink-0" />
+            <span className="text-sm font-semibold text-si-accent">
               {copiedEntry ? "Clicca su uno slot vuoto per incollare" : "Clicca un giorno per incollare"}
             </span>
-            <span className="w-px h-4 bg-sky-200 dark:bg-sky-700" />
-            <button type="button" onClick={handleCancelPaste} className="text-sm font-semibold text-sky-500 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-200 transition-colors">
+            <span className="w-px h-4 bg-si-accentSoft" />
+            <button type="button" onClick={handleCancelPaste} className="text-sm font-semibold text-si-accent hover:text-si-accentDark transition-colors">
               Annulla
-              <span className="ml-1.5 text-[10px] font-normal text-sky-400 dark:text-sky-600">Esc</span>
+              <span className="ml-1.5 text-[10px] font-normal text-si-gray">Esc</span>
             </button>
           </div>
         )}
         {savedToast ? (
-          <div className={`fixed ${(copiedDay || copiedEntry) ? "bottom-20" : "bottom-6"} left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-4 py-2.5 shadow-lg backdrop-blur dark:border-emerald-800/50 dark:bg-emerald-950/80`}>
-            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Salvato</span>
+          <div className={`fixed ${(copiedDay || copiedEntry) ? "bottom-20" : "bottom-6"} left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-si-success/20 bg-si-surface px-4 py-2.5 shadow-si-lg`}>
+            <span className="text-sm font-semibold text-si-success">Salvato</span>
           </div>
         ) : null}
         {(hasUndo || hasRedo) && (
           <div className="fixed bottom-6 right-6 z-[120]">
             {showHistory && (
-              <div className="mb-2 w-56 rounded-2xl border border-slate-200/80 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700/50 dark:bg-slate-800/95 overflow-hidden">
+              <div className="mb-2 w-56 rounded-2xl border border-si-border bg-si-surface shadow-si-lg overflow-hidden">
                 <div className="max-h-60 overflow-y-auto">
                   {undoHistory.length === 0 && redoHistory.length === 0 ? (
-                    <div className="px-4 py-3 text-xs text-slate-400 text-center">Nessuna azione</div>
+                    <div className="px-4 py-3 text-xs text-si-grayLight text-center">Nessuna azione</div>
                   ) : (
                     <>
                       {undoHistory.map((label, i) => (
-                        <div key={`u${i}`} className={`px-4 py-1.5 text-sm truncate ${i === 0 ? "font-semibold text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
+                        <div key={`u${i}`} className={`px-4 py-1.5 text-sm truncate ${i === 0 ? "font-semibold text-si-ink" : "text-si-gray"}`}>
                           {label}
                         </div>
                       ))}
-                      <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400 border-y border-slate-100 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-500">
+                      <div className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-si-grayLight border-y border-si-border bg-si-muted">
                         — ora —
                       </div>
                       {redoHistory.map((label, i) => (
-                        <div key={`r${i}`} className="px-4 py-1.5 text-sm text-slate-400 dark:text-slate-500 truncate italic">
+                        <div key={`r${i}`} className="px-4 py-1.5 text-sm text-si-grayLight truncate italic">
                           {label}
                         </div>
                       ))}
@@ -372,21 +494,21 @@ export default function App() {
                 </div>
               </div>
             )}
-            <div className="flex items-center rounded-2xl border border-slate-200/80 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700/50 dark:bg-slate-800/95 overflow-hidden">
+            <div className="flex items-center rounded-2xl border border-si-border bg-si-surface shadow-si overflow-hidden">
               <button
                 type="button"
                 onClick={handleUndo}
                 disabled={!hasUndo}
                 title={undoLabel ? `Annulla: ${undoLabel} (Ctrl+Z)` : "Niente da annullare"}
-                className="p-3 transition-colors hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-slate-700/60"
+                className="p-3 transition-colors hover:bg-si-muted disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <Icon name="undo" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                <Icon name="undo" className="w-4 h-4 text-si-inkSoft" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowHistory(h => !h)}
                 title="Cronologia azioni"
-                className={`p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/60 ${showHistory ? "text-sky-500 dark:text-sky-400" : "text-slate-400 dark:text-slate-500"}`}
+                className={`p-3 transition-colors hover:bg-si-muted ${showHistory ? "text-si-accent" : "text-si-grayLight"}`}
               >
                 <Icon name="history" className="w-4 h-4" />
               </button>
@@ -395,88 +517,77 @@ export default function App() {
                 onClick={handleRedo}
                 disabled={!hasRedo}
                 title={redoLabel ? `Ripristina: ${redoLabel} (Ctrl+Y)` : "Niente da ripristinare"}
-                className="p-3 transition-colors hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed dark:hover:bg-slate-700/60"
+                className="p-3 transition-colors hover:bg-si-muted disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <Icon name="redo" className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                <Icon name="redo" className="w-4 h-4 text-si-inkSoft" />
               </button>
             </div>
           </div>
         )}
         {/* Sidebar: bottom on mobile, left on desktop */}
-        <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-20 bg-white dark:bg-slate-900 border-t lg:border-t-0 lg:border-r border-slate-200 dark:border-slate-800 z-50 group px-2 lg:px-0 py-2 lg:py-0 overflow-visible relative shadow-soft dark:shadow-none transition-all duration-300">
+        <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-[84px] z-50 px-2 lg:px-0 py-2 lg:py-4 overflow-visible relative border-t lg:border-t-0 border-si-border">
 
-          {/* Top */}
-          <div className="flex lg:flex-col items-center w-full lg:pt-4 space-x-2 lg:space-x-0 lg:space-y-1">
-            <SidebarBtn icon="search" label="Cerca nello storico" onClick={() => setSearchOpen(true)} />
-          </div>
+          {/* Logo (desktop only) */}
+          <button
+            type="button"
+            onClick={() => navigate("day")}
+            className="hidden lg:flex items-center justify-center w-[44px] h-[44px] rounded-[14px] mb-3 shrink-0 bg-si-surface border border-si-border hover:border-si-ink transition-colors cursor-pointer"
+            title="Vai a oggi"
+          >
+            <span className="text-si-ink font-extrabold text-[17px] tracking-[-0.04em]">DL</span>
+          </button>
 
-          {/* Middle */}
-          <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center w-full lg:mt-auto lg:mb-auto space-x-2 lg:space-x-0 lg:space-y-1 px-4 lg:px-0">
-            <SidebarBtn
-              icon="day"
-              label="Vista Giorno"
-              onClick={() => navigate("day")}
-              isActive={viewMode === "day"}
-            />
-            <SidebarBtn
-              icon="week"
-              label="Vista Sett."
-              onClick={() => navigate("week")}
-              isActive={viewMode === "week"}
-            />
-            <SidebarBtn
-              icon="calendar"
-              label="Vista Mese"
-              onClick={() => navigate("month")}
-              isActive={viewMode === "month"}
-            />
-            <div className="hidden lg:block w-8 h-px bg-slate-200 dark:bg-slate-700 my-1" />
-            <SidebarBtn
-              icon="briefcase"
-              label="Progetti"
-              onClick={() => navigate("projects")}
-              accent={viewMode !== "projects"}
-              isActive={viewMode === "projects"}
-            />
-            <SidebarBtn
-              icon="list-check"
-              label="To-do"
-              onClick={() => navigate("todo")}
-              isActive={viewMode === "todo"}
-            />
+          {/* Middle nav */}
+          <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center gap-1 px-2 lg:px-0">
+            <SidebarBtn icon="day" label="Giorno" onClick={() => navigate("day")} isActive={viewMode === "day"} />
+            <SidebarBtn icon="week" label="Settimana" onClick={() => navigate("week")} isActive={viewMode === "week"} />
+            <SidebarBtn icon="calendar" label="Mese" onClick={() => navigate("month")} isActive={viewMode === "month"} />
+            <div className="hidden lg:block w-8 h-px bg-si-border my-1" />
+            <SidebarBtn icon="briefcase" label="Progetti" onClick={() => navigate("projects")} isActive={viewMode === "projects"} />
+            <SidebarBtn icon="list-check" label="To-do" onClick={() => navigate("todo")} isActive={viewMode === "todo"} />
           </div>
 
           {/* Bottom */}
-          <div className="flex lg:flex-col items-center w-full lg:pb-4">
+          <div className="flex lg:flex-col items-center gap-1">
+            <SidebarBtn icon="search" label="Cerca" onClick={() => setSearchOpen(true)} />
             <SidebarBtn icon="settings" label="Impostazioni" onClick={() => setSettingsOpen(true)} />
-
             {!hasDesktopBridge && (
               <button
                 type="button"
                 onClick={backupFileHandle ? () => setShowBackupConfirm(true) : (supportsAutoBackup ? enableAutoBackup : undefined)}
                 disabled={!supportsAutoBackup && !backupFileHandle}
-                className={`relative flex items-center justify-center w-full p-3 lg:p-4 transition-colors rounded-2xl lg:rounded-none group/btn overflow-visible ${!supportsAutoBackup && !backupFileHandle ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"}`}
-                title={backupFileHandle ? "Backup automatico attivo — clicca per disattivare" : supportsAutoBackup ? "Backup automatico non attivo — clicca per attivare" : "Backup automatico non supportato dal browser"}
+                title={backupFileHandle ? "Backup automatico attivo" : supportsAutoBackup ? "Backup non attivo" : "Backup non supportato"}
+                className={`flex flex-col items-center justify-center w-[60px] h-[52px] rounded-xl border-0 transition-all ${
+                  !supportsAutoBackup && !backupFileHandle ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-si-surface/60"
+                }`}
               >
                 <Icon
                   name={backupFileHandle ? "check" : "upload"}
-                  className={`shrink-0 transition-transform duration-200 group-hover/btn:scale-110 ${backupFileHandle ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"}`}
+                  className={`w-5 h-5 shrink-0 ${backupFileHandle ? "text-si-success" : "text-si-amber"}`}
                 />
                 {!backupFileHandle && supportsAutoBackup && (
-                  <span className="absolute top-2 right-2 lg:top-3 lg:right-3 w-2 h-2 rounded-full bg-amber-400 dark:bg-amber-500 animate-pulse" />
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-si-amber animate-pulse" />
                 )}
-                <span className="hidden lg:block absolute left-full ml-3 whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-all transform translate-x-1 group-hover/btn:translate-x-0 font-bold text-[11px] uppercase tracking-widest text-white bg-slate-900/90 dark:bg-slate-700/95 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl z-[100] pointer-events-none before:content-[''] before:absolute before:right-full before:top-1/2 before:-translate-y-1/2 before:border-4 before:border-transparent before:border-r-slate-900/90 dark:before:border-r-slate-700/95">
-                  {backupFileHandle ? "Backup attivo" : "Backup non attivo"}
-                </span>
               </button>
             )}
-
           </div>
         </nav>
 
         <div className="flex-1 w-full flex flex-col min-h-0 overflow-y-auto">
-          <div className="mx-auto w-full max-w-7xl px-4 pt-4 pb-6 lg:px-6 lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
-            <main className={`${mainLayoutClass} lg:flex-1 lg:min-h-0 lg:items-stretch`}>
+          <div className="w-full lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
+            <Header
+              view={viewMode}
+              year={year}
+              month={month}
+              activeDate={activeDate}
+              onPrev={prevMonth}
+              onNext={nextMonth}
+              onToday={goToday}
+              onFillMonth={viewMode === "month" && (settings.recurringTasks?.length > 0) ? handleFillMonth : undefined}
+              onNewTask={viewMode === "month" ? () => openEditor(activeDate, null) : undefined}
+              pendingTodoCount={pendingTodoCount}
+            />
+            <main className={`px-4 pb-6 lg:px-6 ${mainLayoutClass} lg:flex-1 lg:min-h-0 lg:items-stretch`}>
               {viewMode === "month" && (
                 <CalendarGrid
                   year={year}
@@ -588,19 +699,8 @@ export default function App() {
               </>)}
 
               {viewMode === "month" ? (
-                <aside className="space-y-4 flex flex-col lg:h-full lg:overflow-hidden">
-                  <div className="shrink-0">
-                    <Header
-                      year={year}
-                      month={month}
-                      prevMonth={prevMonth}
-                      nextMonth={nextMonth}
-                      goToday={goToday}
-                      onFillMonth={settings.recurringTasks?.length > 0 ? handleFillMonth : undefined}
-                      onNewTask={() => openEditor(activeDate, null)}
-                    />
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto rounded-3xl pb-2">
+                <aside className="flex flex-col lg:h-full lg:overflow-hidden">
+                  <div className="flex-1 min-h-0 overflow-y-auto pb-2">
                     <SummaryPanel
                       year={year}
                       monthIndex0={month}
@@ -671,6 +771,7 @@ export default function App() {
               initialSlot={selectedSlot}
               initialRange={selectedRange}
               existingEntries={existingEntries}
+              onDirtyChange={handleEditorDirtyChange}
               onSave={(entries) => {
                 const prev = monthDataByDate[ymd(selectedDate)];
                 const prevSlots = Object.keys(prev?.hours || {}).length;
@@ -770,18 +871,18 @@ export default function App() {
           onClose={() => setShowBackupConfirm(false)}
         >
           <div className="space-y-4">
-            <p className="text-slate-600 dark:text-slate-400">
+            <p className="text-si-gray">
               Sei sicuro di voler disattivare il salvataggio automatico? I tuoi dati non verranno più sincronizzati periodicamente sul file selezionato.
             </p>
             <div className="flex justify-end gap-3 pt-4">
               <Button
-                className="bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border"
                 onClick={() => setShowBackupConfirm(false)}
               >
                 Annulla
               </Button>
               <Button
-                className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600"
+                className="bg-si-rose text-white hover:opacity-90"
                 onClick={() => {
                   disableAutoBackup();
                   setShowBackupConfirm(false);
@@ -792,8 +893,111 @@ export default function App() {
             </div>
           </div>
         </Modal>
+
+        <Modal
+          open={showShortcuts}
+          title="Scorciatoie da tastiera"
+          onClose={() => setShowShortcuts(false)}
+        >
+          <ShortcutsSheet />
+        </Modal>
+
+        <Modal
+          open={!!pendingNavView}
+          title="Modifiche non salvate"
+          onClose={() => setPendingNavView(null)}
+          className="max-w-md"
+        >
+          <div className="space-y-4">
+            <p className="text-si-inkSoft text-sm">
+              Hai modifiche non salvate nell'editor. Cosa vuoi fare?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border"
+                onClick={() => setPendingNavView(null)}
+              >
+                Resta nell'editor
+              </Button>
+              <Button
+                className="bg-si-ink text-white hover:bg-si-inkSoft"
+                onClick={confirmDiscardAndNavigate}
+              >
+                Scarta modifiche
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </SettingsContext.Provider>
+  );
+}
+
+function Kbd({ children }) {
+  return (
+    <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md border border-si-border bg-si-muted text-[11px] font-mono font-semibold text-si-inkSoft">
+      {children}
+    </kbd>
+  );
+}
+
+function ShortcutsSheet() {
+  const sections = [
+    {
+      title: "Navigazione",
+      rows: [
+        { keys: ["g", "d"], label: "Vai a Giorno" },
+        { keys: ["g", "w"], label: "Vai a Settimana" },
+        { keys: ["g", "m"], label: "Vai a Mese" },
+        { keys: ["g", "p"], label: "Vai a Progetti" },
+        { keys: ["g", "l"], label: "Vai a To-do" },
+        { keys: ["t"], label: "Oggi" },
+        { keys: ["h", "←"], label: "Periodo precedente" },
+        { keys: ["l", "→"], label: "Periodo successivo" },
+        { keys: ["j", "↓"], label: "Periodo successivo" },
+        { keys: ["k", "↑"], label: "Periodo precedente" },
+      ],
+    },
+    {
+      title: "Azioni",
+      rows: [
+        { keys: ["N"], label: "Nuova voce sul giorno attivo" },
+        { keys: ["/"], label: "Cerca" },
+        { keys: ["Ctrl", "K"], label: "Cerca" },
+        { keys: ["Ctrl", "Enter"], label: "Salva (nell'editor)" },
+        { keys: ["Ctrl", "Z"], label: "Annulla" },
+        { keys: ["Ctrl", "Y"], label: "Ripristina" },
+        { keys: ["Esc"], label: "Chiudi pannello / annulla incolla" },
+        { keys: ["?"], label: "Mostra questa lista" },
+      ],
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-5 text-sm">
+      {sections.map((s) => (
+        <div key={s.title}>
+          <div className="text-xs font-bold uppercase tracking-wider text-si-gray mb-2">{s.title}</div>
+          <div className="grid grid-cols-1 gap-y-1.5">
+            {s.rows.map((r, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <span className="text-si-inkSoft">{r.label}</span>
+                <span className="flex items-center gap-1">
+                  {r.keys.map((k, j) => (
+                    <span key={j} className="flex items-center gap-1">
+                      {j > 0 && <span className="text-si-gray text-xs">+</span>}
+                      <Kbd>{k}</Kbd>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-si-gray pt-2 border-t border-si-border">
+        Le scorciatoie sono disattivate mentre stai scrivendo in un campo.
+      </p>
+    </div>
   );
 }
 

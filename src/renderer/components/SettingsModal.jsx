@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { importAll, listStoredMonths, exportMonths } from "../services/storage";
 import { loadTodos, saveTodos } from "../services/storage/todo";
 import { Button, Icon, Modal, Segmented } from "./ui";
-import { getClientColor, getInternalColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, hourLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, normalizeClientKey, normalizeHexColor, TASK_TYPES, LOCATION_TYPES, hourLabel } from "../domain/tasks";
 
 export function SettingsModal({
   open,
@@ -24,13 +24,13 @@ export function SettingsModal({
   onDisableAutoBackup,
 }) {
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState("aspetto");
-  const [importStatus, setImportStatus] = useState(null); // { ok: bool, message: string }
+  const [activeSection, setActiveSection] = useState("preferenze");
+  const [importStatus, setImportStatus] = useState(null);
   const [pendingImportFile, setPendingImportFile] = useState(null);
-  const [importPreview, setImportPreview] = useState(null); // { months, dateRange, dayCount } | { error: string } | null
+  const [importPreview, setImportPreview] = useState(null);
 
   function handleTabChange(tab) {
-    setActiveTab(tab);
+    setActiveSection(tab);
     setImportStatus(null);
   }
 
@@ -102,13 +102,9 @@ export function SettingsModal({
     const key = normalizeClientKey(clientName);
     const normalized = normalizeHexColor(color);
     if (!key || !normalized) return;
-
     setSettings((prev) => ({
       ...prev,
-      clientColors: {
-        ...(prev.clientColors || {}),
-        [key]: normalized,
-      },
+      clientColors: { ...(prev.clientColors || {}), [key]: normalized },
     }));
   }
 
@@ -133,14 +129,10 @@ export function SettingsModal({
   function resetClientColor(clientName) {
     const key = normalizeClientKey(clientName);
     if (!key) return;
-
     setSettings((prev) => {
       const nextColors = { ...(prev.clientColors || {}) };
       delete nextColors[key];
-      return {
-        ...prev,
-        clientColors: nextColors,
-      };
+      return { ...prev, clientColors: nextColors };
     });
   }
 
@@ -149,14 +141,14 @@ export function SettingsModal({
   const [exportTo, setExportTo] = useState("");
 
   useEffect(() => {
-    if (activeTab !== "salvataggio") return;
+    if (activeSection !== "esportazioni") return;
     const months = listStoredMonths();
     setAvailableMonths(months);
     if (months.length > 0) {
       setExportFrom((prev) => (prev && months.includes(prev) ? prev : months[0]));
       setExportTo((prev) => (prev && months.includes(prev) ? prev : months[months.length - 1]));
     }
-  }, [activeTab]);
+  }, [activeSection]);
 
   function handleExportRange() {
     const range = availableMonths.filter((m) => m >= exportFrom && m <= exportTo);
@@ -166,8 +158,8 @@ export function SettingsModal({
 
   const [newSubtypes, setNewSubtypes] = useState({});
   const [newTodoTag, setNewTodoTag] = useState("");
-  const [editingSubtype, setEditingSubtype] = useState(null); // { typeId, id, label }
-  const [editingTag, setEditingTag] = useState(null);         // string (vecchio nome)
+  const [editingSubtype, setEditingSubtype] = useState(null);
+  const [editingTag, setEditingTag] = useState(null);
   const [editingTagValue, setEditingTagValue] = useState("");
 
   function saveSubtypeRename() {
@@ -198,7 +190,6 @@ export function SettingsModal({
         ...prev,
         todoTags: (prev.todoTags || []).map((t) => (t === editingTag ? newTag : t)),
       }));
-      // Propaga rinomina a tutti i todo che usano il vecchio tag
       const currentTodos = loadTodos();
       if (currentTodos.some((todo) => (todo.tags || []).includes(editingTag))) {
         saveTodos(
@@ -219,10 +210,7 @@ export function SettingsModal({
     setSettings((prev) => {
       const tags = prev.todoTags || [];
       if (tags.some((t) => t.toLowerCase() === val.toLowerCase())) return prev;
-      return {
-        ...prev,
-        todoTags: [...tags, val],
-      };
+      return { ...prev, todoTags: [...tags, val] };
     });
     setNewTodoTag("");
   }
@@ -243,13 +231,7 @@ export function SettingsModal({
       const st = prev.taskSubtypes || {};
       const list = st[typeId] || [];
       if (list.some((x) => x.id === newId || x.label.toLowerCase() === val.toLowerCase())) return prev;
-      return {
-        ...prev,
-        taskSubtypes: {
-          ...st,
-          [typeId]: [...list, { id: newId, label: val }],
-        },
-      };
+      return { ...prev, taskSubtypes: { ...st, [typeId]: [...list, { id: newId, label: val }] } };
     });
     setNewSubtypes((prev) => ({ ...prev, [typeId]: "" }));
   }
@@ -258,13 +240,7 @@ export function SettingsModal({
     setSettings((prev) => {
       const st = prev.taskSubtypes || {};
       const list = st[typeId] || [];
-      return {
-        ...prev,
-        taskSubtypes: {
-          ...st,
-          [typeId]: list.filter((x) => x.id !== idToRemove),
-        },
-      };
+      return { ...prev, taskSubtypes: { ...st, [typeId]: list.filter((x) => x.id !== idToRemove) } };
     });
   }
 
@@ -278,10 +254,7 @@ export function SettingsModal({
       if (direction === "down" && idx === list.length - 1) return prev;
       const swapIdx = direction === "up" ? idx - 1 : idx + 1;
       [list[idx], list[swapIdx]] = [list[swapIdx], list[idx]];
-      return {
-        ...prev,
-        taskSubtypes: { ...st, [typeId]: list },
-      };
+      return { ...prev, taskSubtypes: { ...st, [typeId]: list } };
     });
   }
 
@@ -298,49 +271,64 @@ export function SettingsModal({
     });
   }
 
+  const card = "rounded-[20px] border border-si-border bg-si-surface shadow-si overflow-hidden";
+  const cardPad = "rounded-[20px] border border-si-border bg-si-surface shadow-si p-6";
+
+  const NAV_ITEMS = [
+    { key: "preferenze", label: "Preferenze", icon: "settings" },
+    { key: "categorie", label: "Categorie attività", icon: "list-check" },
+    { key: "colori", label: "Colori", icon: "reset-rainbow" },
+    { key: "esportazioni", label: "Esportazioni", icon: "upload" },
+  ];
+
+  const SECTION_TITLES = {
+    preferenze: "Preferenze",
+    categorie: "Categorie attività",
+    colori: "Colori",
+    esportazioni: "Esportazioni",
+  };
+
   return (
     <Modal open={open} onClose={onClose} fullscreen>
-      <div className="flex flex-col flex-1 min-h-0 w-full">
-        <div className="shrink-0 mb-4">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Impostazioni</h1>
-        </div>
-        <div className="flex items-center justify-around border-b border-slate-200 dark:border-slate-700/50 mb-6 shrink-0">
-          {[
-            { key: "aspetto", label: "Aspetto" },
-            { key: "task", label: "Attività" },
-            { key: "clienti", label: "Colori" },
-            { key: "salvataggio", label: "Salvataggio" },
-          ].map(({ key, label }) => (
+      <div className="flex flex-1 min-h-0 w-full gap-0 max-w-screen-xl mx-auto">
+
+        {/* Sidebar nav */}
+        <div className="w-52 shrink-0 flex flex-col gap-0.5 pr-6 border-r border-si-border mr-8">
+          <div className="mb-6">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent mb-1">Impostazioni</div>
+            <h1 className="text-2xl font-bold tracking-[-0.02em] text-si-ink">{SECTION_TITLES[activeSection]}</h1>
+          </div>
+          {NAV_ITEMS.map(({ key, label, icon }) => (
             <button
               key={key}
               type="button"
               onClick={() => handleTabChange(key)}
-              className={`flex-1 pb-3 text-sm font-semibold transition-all relative ${activeTab === key
-                ? "text-slate-900 dark:text-white"
-                : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left border-0 cursor-pointer ${
+                activeSection === key
+                  ? "bg-si-accentBg text-si-accent"
+                  : "bg-transparent text-si-gray hover:bg-si-muted hover:text-si-inkSoft"
               }`}
             >
+              <Icon name={icon} className="w-4 h-4 shrink-0" />
               {label}
-              {activeTab === key && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-full mx-auto w-1/2" />
-              )}
             </button>
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-          {activeTab === "clienti" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
+          {activeSection === "colori" && (
+            <div className="flex flex-col gap-4">
               {/* Colori clienti */}
-              <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+              <div className={card}>
                 <div className="px-6 pt-6 pb-4">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Colori clienti</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  <div className="text-base font-bold text-si-ink">Colori clienti</div>
+                  <div className="text-sm text-si-gray mt-0.5">
                     Clicca su un colore per personalizzarlo. I colori non assegnati sono generati automaticamente.
                   </div>
                 </div>
                 {clientNames.length === 0 ? (
-                  <div className="px-6 pb-6 text-sm text-slate-400 dark:text-slate-500 italic">
+                  <div className="px-6 pb-6 text-sm text-si-grayLight italic">
                     Nessun cliente trovato nei log salvati.
                   </div>
                 ) : (
@@ -353,20 +341,20 @@ export function SettingsModal({
                       return (
                         <div
                           key={clientName}
-                          className={"flex items-center justify-between px-6 py-3 transition-colors " + (idx < clientNames.length - 1 ? "border-b border-slate-100 dark:border-slate-700/50" : "")}
+                          className={"flex items-center justify-between px-6 py-3 transition-colors " + (idx < clientNames.length - 1 ? "border-b border-si-border" : "")}
                         >
                           <div className="flex items-center gap-4 group">
                             <label className="relative cursor-pointer">
                               <input type="color" className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" value={color} onChange={(e) => setClientColor(clientName, e.target.value)} />
-                              <div className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105" style={{ backgroundColor: color }} />
+                              <div className="w-10 h-10 rounded-full border-2 border-si-surface shadow-si transition-transform group-hover:scale-105" style={{ backgroundColor: color }} />
                             </label>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{clientName}</span>
-                              {!hasCustom && <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">auto</span>}
+                              <span className="text-sm font-semibold text-si-inkSoft">{clientName}</span>
+                              {!hasCustom && <span className="text-[10px] font-semibold uppercase tracking-wide text-si-grayLight bg-si-muted px-1.5 py-0.5 rounded border border-si-border">auto</span>}
                             </div>
                           </div>
                           {hasCustom && (
-                            <button onClick={() => resetClientColor(clientName)} type="button" className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50 transition-all hover:scale-110" title="Ripristina colore automatico">
+                            <button onClick={() => resetClientColor(clientName)} type="button" className="p-2 rounded-full text-si-grayLight hover:text-si-inkSoft hover:bg-si-muted transition-all hover:scale-110 border-0 bg-transparent cursor-pointer" title="Ripristina colore automatico">
                               <Icon name="rotate-ccw" className="w-4 h-4" />
                             </button>
                           )}
@@ -379,10 +367,10 @@ export function SettingsModal({
 
               {/* Colori subtask interni */}
               {(settings.taskSubtypes?.["internal"] || []).length > 0 && (
-                <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+                <div className={card}>
                   <div className="px-6 pt-6 pb-4">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">Colori subtask interni</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    <div className="text-base font-bold text-si-ink">Colori subtask interni</div>
+                    <div className="text-sm text-si-gray mt-0.5">
                       Clicca su un colore per personalizzarlo. I colori non assegnati sono generati automaticamente.
                     </div>
                   </div>
@@ -394,19 +382,19 @@ export function SettingsModal({
                       const rawColor = getInternalColor(id, settings.internalColors);
                       const color = normalizeHexColor(rawColor) || rawColor || "#94a3b8";
                       return (
-                        <div key={id} className={"flex items-center justify-between px-6 py-3 transition-colors " + (idx < arr.length - 1 ? "border-b border-slate-100 dark:border-slate-700/50" : "")}>
+                        <div key={id} className={"flex items-center justify-between px-6 py-3 transition-colors " + (idx < arr.length - 1 ? "border-b border-si-border" : "")}>
                           <div className="flex items-center gap-4 group">
                             <label className="relative cursor-pointer">
                               <input type="color" className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" value={color} onChange={(e) => setInternalSubtypeColor(id, e.target.value)} />
-                              <div className="w-10 h-10 rounded-full border-2 border-white dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105" style={{ backgroundColor: color }} />
+                              <div className="w-10 h-10 rounded-full border-2 border-si-surface shadow-si transition-transform group-hover:scale-105" style={{ backgroundColor: color }} />
                             </label>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</span>
-                              {!hasCustom && <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">auto</span>}
+                              <span className="text-sm font-semibold text-si-inkSoft">{label}</span>
+                              {!hasCustom && <span className="text-[10px] font-semibold uppercase tracking-wide text-si-grayLight bg-si-muted px-1.5 py-0.5 rounded border border-si-border">auto</span>}
                             </div>
                           </div>
                           {hasCustom && (
-                            <button onClick={() => resetInternalSubtypeColor(id)} type="button" className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50 transition-all hover:scale-110" title="Ripristina colore automatico">
+                            <button onClick={() => resetInternalSubtypeColor(id)} type="button" className="p-2 rounded-full text-si-grayLight hover:text-si-inkSoft hover:bg-si-muted transition-all hover:scale-110 border-0 bg-transparent cursor-pointer" title="Ripristina colore automatico">
                               <Icon name="rotate-ccw" className="w-4 h-4" />
                             </button>
                           )}
@@ -419,19 +407,19 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "aspetto" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {activeSection === "preferenze" && (
+            <div className="flex flex-col gap-4">
               {/* Left: Aspetto */}
-              <div className="rounded-[24px] border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 shadow-sm overflow-hidden">
+              <div className={card}>
                 <div className="px-6 pt-6 pb-2">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Aspetto</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Personalizza la visualizzazione dell&apos;interfaccia.</div>
+                  <div className="text-base font-bold text-si-ink">Aspetto</div>
+                  <div className="text-sm text-si-gray mt-0.5">Personalizza la visualizzazione dell&apos;interfaccia.</div>
                 </div>
-                <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                <div className="divide-y divide-si-border">
                   <div className="px-6 py-4 flex items-center justify-between gap-6">
                     <div>
-                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Tema</div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Chiaro o scuro</div>
+                      <div className="text-sm font-semibold text-si-inkSoft">Tema</div>
+                      <div className="text-xs text-si-gray mt-0.5">Chiaro o scuro</div>
                     </div>
                     <div className="shrink-0">
                       <Segmented
@@ -446,8 +434,8 @@ export function SettingsModal({
                   </div>
                   <div className="px-6 py-4 flex items-center justify-between gap-6">
                     <div>
-                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Vista all&apos;avvio</div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Visualizzazione predefinita</div>
+                      <div className="text-sm font-semibold text-si-inkSoft">Vista all&apos;avvio</div>
+                      <div className="text-xs text-si-gray mt-0.5">Visualizzazione predefinita</div>
                     </div>
                     <div className="shrink-0">
                       <Segmented
@@ -463,13 +451,30 @@ export function SettingsModal({
                   </div>
                   <div className="px-6 py-4 flex items-center justify-between gap-6">
                     <div>
-                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">Lista attività (To-do)</div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Mostra il pannello to-do nella vista giornaliera</div>
+                      <div className="text-sm font-semibold text-si-inkSoft">Sede di default</div>
+                      <div className="text-xs text-si-gray mt-0.5">Sede applicata ai nuovi giorni</div>
+                    </div>
+                    <div className="shrink-0">
+                      <Segmented
+                        value={settings.defaultLocation || LOCATION_TYPES.REMOTE}
+                        onChange={(val) => setSettings((prev) => ({ ...prev, defaultLocation: val }))}
+                        options={[
+                          { label: "Remoto", value: LOCATION_TYPES.REMOTE },
+                          { label: "Ufficio", value: LOCATION_TYPES.OFFICE },
+                          { label: "Cliente", value: LOCATION_TYPES.CLIENT },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="px-6 py-4 flex items-center justify-between gap-6">
+                    <div>
+                      <div className="text-sm font-semibold text-si-inkSoft">Lista attività (To-do)</div>
+                      <div className="text-xs text-si-gray mt-0.5">Mostra il pannello to-do nella vista giornaliera</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSettings((prev) => ({ ...prev, showTodo: prev.showTodo === false ? true : false }))}
-                      className={"relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none " + (settings.showTodo === false ? "bg-slate-200 dark:bg-slate-700" : "bg-blue-600")}
+                      className={"relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none border-0 cursor-pointer " + (settings.showTodo === false ? "bg-si-border" : "bg-si-accent")}
                     >
                       <span className={"inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform " + (settings.showTodo === false ? "translate-x-1" : "translate-x-6")} />
                     </button>
@@ -479,17 +484,17 @@ export function SettingsModal({
 
               {/* Right: Orario + Patrono */}
               <div className="space-y-4">
-                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className={`${cardPad} space-y-4`}>
                   <div className="space-y-1">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">Orario lavorativo</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">Configura le fasce orarie visualizzate nel calendario.</div>
+                    <div className="text-base font-bold text-si-ink">Orario lavorativo</div>
+                    <div className="text-sm text-si-gray">Configura le fasce orarie visualizzate nel calendario.</div>
                   </div>
                   {(() => {
                     const workHours = settings.workHours || {};
                     const timeOptions = [];
                     for (let m = 6 * 60; m <= 22 * 60; m += 30) timeOptions.push(m);
-                    const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
-                    const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block";
+                    const selectCls = "w-full rounded-xl border border-si-border bg-si-surface px-3 py-2 text-sm font-semibold text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition";
+                    const labelCls = "text-[11px] font-semibold uppercase tracking-[0.14em] text-si-gray mb-1.5 block";
                     return (
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -521,15 +526,15 @@ export function SettingsModal({
                   })()}
                 </div>
 
-                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className={`${cardPad} space-y-4`}>
                   <div className="space-y-1">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">Giorno del patrono</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">Festività locale della sede. Risulta non lavorativo nel calendario.</div>
+                    <div className="text-base font-bold text-si-ink">Giorno del patrono</div>
+                    <div className="text-sm text-si-gray">Festività locale della sede. Risulta non lavorativo nel calendario.</div>
                   </div>
                   {(() => {
                     const raw = settings.patronDay ?? "12-07";
                     const [mm, dd] = raw.split("-").map(Number);
-                    const selectCls = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                    const selectCls = "rounded-xl border border-si-border bg-si-surface px-3 py-2 text-sm font-semibold text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition";
                     const MONTHS_IT = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
                     const daysInMonth = [31,29,31,30,31,30,31,31,30,31,30,31];
                     const maxDay = daysInMonth[(mm || 12) - 1] || 31;
@@ -547,7 +552,7 @@ export function SettingsModal({
                           {Array.from({ length: maxDay }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                         {(settings.patronDay == null || settings.patronDay === "12-07") && (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">Sant&apos;Ambrogio (Milano)</span>
+                          <span className="text-xs text-si-grayLight italic">Sant&apos;Ambrogio (Milano)</span>
                         )}
                       </div>
                     );
@@ -557,28 +562,28 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "task" && (
+          {activeSection === "categorie" && (
             <div className="space-y-4">
               {TASK_TYPES.map((t) => {
                 const items = settings.taskSubtypes?.[t.id] || [];
                 return (
-                  <div key={t.id} className="rounded-[24px] border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div key={t.id} className={`${cardPad}`}>
+                    <div className="flex flex-col gap-4">
                       <div className="space-y-3">
                         <div>
-                          <div className="text-base font-bold text-slate-900 dark:text-white">{t.label}</div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Sottotipi per task {t.label.toLowerCase()}.</div>
+                          <div className="text-base font-bold text-si-ink">{t.label}</div>
+                          <div className="text-sm text-si-gray mt-0.5">Sottotipi per task {t.label.toLowerCase()}.</div>
                         </div>
                         <div className="flex gap-2">
                           <input
-                            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
+                            className="flex-1 rounded-xl border border-si-border bg-si-surface px-3 py-2 text-sm text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
                             placeholder={`Es. categoria per ${t.label.toLowerCase()}...`}
                             value={newSubtypes[t.id] || ""}
                             onChange={(e) => setNewSubtypes((prev) => ({ ...prev, [t.id]: e.target.value }))}
                             onKeyDown={(e) => { if (e.key === "Enter") addSubtype(t.id); }}
                           />
                           <Button
-                            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 shrink-0"
+                            className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 shrink-0 transition-colors"
                             onClick={() => addSubtype(t.id)}
                             type="button"
                           >
@@ -589,7 +594,7 @@ export function SettingsModal({
                       <div>
                         {items.length === 0 ? (
                           <div className="flex items-center justify-center h-full min-h-[80px]">
-                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">Nessuno configurato.</span>
+                            <span className="text-xs text-si-grayLight italic">Nessuno configurato.</span>
                           </div>
                         ) : (
                           <div className="space-y-1.5">
@@ -599,11 +604,11 @@ export function SettingsModal({
                               const idx = items.findIndex((x) => (x.id || x) === id);
                               const isEditing = editingSubtype?.typeId === t.id && editingSubtype?.id === id;
                               return (
-                                <div key={id} className="flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-700/30 px-3 py-2 border border-slate-100 dark:border-slate-700/50 group/item">
+                                <div key={id} className="flex items-center justify-between rounded-xl bg-si-muted px-3 py-2 border border-si-border group/item">
                                   {isEditing ? (
                                     <input
                                       autoFocus
-                                      className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-700 dark:text-slate-300 min-w-0"
+                                      className="flex-1 bg-transparent outline-none text-sm font-semibold text-si-inkSoft min-w-0"
                                       value={editingSubtype.label}
                                       onChange={(e) => setEditingSubtype((prev) => ({ ...prev, label: e.target.value }))}
                                       onKeyDown={(e) => {
@@ -614,7 +619,7 @@ export function SettingsModal({
                                     />
                                   ) : (
                                     <span
-                                      className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                                      className="text-sm font-semibold text-si-inkSoft truncate cursor-pointer hover:text-si-accent transition-colors"
                                       title="Clicca per rinominare"
                                       onClick={() => setEditingSubtype({ typeId: t.id, id, label })}
                                     >
@@ -622,13 +627,13 @@ export function SettingsModal({
                                     </span>
                                   )}
                                   <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                                    <button onClick={() => moveSubtype(t.id, id, "up")} disabled={idx <= 0} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta su">
+                                    <button onClick={() => moveSubtype(t.id, id, "up")} disabled={idx <= 0} className="p-1 rounded-lg text-si-grayLight hover:text-si-inkSoft hover:bg-si-border transition-colors disabled:opacity-30 disabled:pointer-events-none border-0 bg-transparent cursor-pointer" title="Sposta su">
                                       <Icon name="chev-up" className="w-3.5 h-3.5" />
                                     </button>
-                                    <button onClick={() => moveSubtype(t.id, id, "down")} disabled={idx >= items.length - 1} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta giù">
+                                    <button onClick={() => moveSubtype(t.id, id, "down")} disabled={idx >= items.length - 1} className="p-1 rounded-lg text-si-grayLight hover:text-si-inkSoft hover:bg-si-border transition-colors disabled:opacity-30 disabled:pointer-events-none border-0 bg-transparent cursor-pointer" title="Sposta giù">
                                       <Icon name="chev-down" className="w-3.5 h-3.5" />
                                     </button>
-                                    <button onClick={() => removeSubtype(t.id, id)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors" title="Rimuovi">
+                                    <button onClick={() => removeSubtype(t.id, id)} className="p-1 rounded-lg text-si-grayLight hover:text-si-rose hover:bg-si-border transition-colors border-0 bg-transparent cursor-pointer" title="Rimuovi">
                                       <Icon name="x" className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
@@ -644,23 +649,23 @@ export function SettingsModal({
               })}
 
               {/* Tag Todo */}
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className={`${cardPad}`}>
+                <div className="flex flex-col gap-4">
                   <div className="space-y-3">
                     <div>
-                      <div className="text-base font-bold text-slate-900 dark:text-white">Tag Todo</div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Tag globali da assegnare alle attività nella todo-list.</div>
+                      <div className="text-base font-bold text-si-ink">Tag Todo</div>
+                      <div className="text-sm text-si-gray mt-0.5">Tag globali da assegnare alle attività nella todo-list.</div>
                     </div>
                     <div className="flex gap-2">
                       <input
-                        className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-sky-500/20"
+                        className="flex-1 rounded-xl border border-si-border bg-si-surface px-3 py-2 text-sm text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
                         placeholder="Es. Urgent, Personal, Progetti..."
                         value={newTodoTag}
                         onChange={(e) => setNewTodoTag(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTodoTag(); } }}
                       />
                       <Button
-                        className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 shrink-0"
+                        className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 shrink-0 transition-colors"
                         onClick={addTodoTag}
                         type="button"
                       >
@@ -671,7 +676,7 @@ export function SettingsModal({
                   <div>
                     {(settings.todoTags || []).length === 0 ? (
                       <div className="flex items-center justify-center h-full min-h-[80px]">
-                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">Nessun tag configurato.</span>
+                        <span className="text-xs text-si-grayLight italic">Nessun tag configurato.</span>
                       </div>
                     ) : (
                       <div className="space-y-1.5">
@@ -679,11 +684,11 @@ export function SettingsModal({
                           const tags = settings.todoTags || [];
                           const idx = tags.indexOf(tag);
                           return (
-                            <div key={tag} className="flex items-center justify-between rounded-xl bg-sky-50 dark:bg-sky-500/10 px-3 py-2 border border-sky-100 dark:border-sky-500/20 group/tag">
+                            <div key={tag} className="flex items-center justify-between rounded-xl bg-si-accentSoft px-3 py-2 border border-si-accentSoft group/tag">
                               {editingTag === tag ? (
                                 <input
                                   autoFocus
-                                  className="flex-1 bg-transparent outline-none text-sm font-semibold text-sky-700 dark:text-sky-400 min-w-0"
+                                  className="flex-1 bg-transparent outline-none text-sm font-semibold text-si-accent min-w-0"
                                   value={editingTagValue}
                                   onChange={(e) => setEditingTagValue(e.target.value)}
                                   onKeyDown={(e) => {
@@ -694,7 +699,7 @@ export function SettingsModal({
                                 />
                               ) : (
                                 <span
-                                  className="text-sm font-semibold text-sky-700 dark:text-sky-400 truncate cursor-pointer hover:text-sky-500 transition-colors"
+                                  className="text-sm font-semibold text-si-accent truncate cursor-pointer hover:text-si-accentDark transition-colors"
                                   title="Clicca per rinominare"
                                   onClick={() => { setEditingTag(tag); setEditingTagValue(tag); }}
                                 >
@@ -702,13 +707,13 @@ export function SettingsModal({
                                 </span>
                               )}
                               <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover/tag:opacity-100 transition-opacity">
-                                <button onClick={() => moveTag(tag, "up")} disabled={idx <= 0} className="p-1 rounded-lg text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta su">
+                                <button onClick={() => moveTag(tag, "up")} disabled={idx <= 0} className="p-1 rounded-lg text-si-grayLight hover:text-si-accent hover:bg-si-muted transition-colors disabled:opacity-30 disabled:pointer-events-none border-0 bg-transparent cursor-pointer" title="Sposta su">
                                   <Icon name="chev-up" className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => moveTag(tag, "down")} disabled={idx >= tags.length - 1} className="p-1 rounded-lg text-sky-300 hover:text-sky-600 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sposta giù">
+                                <button onClick={() => moveTag(tag, "down")} disabled={idx >= tags.length - 1} className="p-1 rounded-lg text-si-grayLight hover:text-si-accent hover:bg-si-muted transition-colors disabled:opacity-30 disabled:pointer-events-none border-0 bg-transparent cursor-pointer" title="Sposta giù">
                                   <Icon name="chev-down" className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => removeTodoTag(tag)} className="p-1 rounded-lg text-sky-400 hover:text-rose-500 hover:bg-sky-100 dark:hover:bg-rose-500/20 transition-colors" title="Rimuovi">
+                                <button onClick={() => removeTodoTag(tag)} className="p-1 rounded-lg text-si-grayLight hover:text-si-rose hover:bg-si-muted transition-colors border-0 bg-transparent cursor-pointer" title="Rimuovi">
                                   <Icon name="x" className="w-3.5 h-3.5" />
                                 </button>
                               </div>
@@ -723,43 +728,43 @@ export function SettingsModal({
             </div>
           )}
 
-          {activeTab === "salvataggio" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+          {activeSection === "esportazioni" && (
+            <div className="flex flex-col gap-4">
+              <div className={`${cardPad} space-y-6`}>
                 {/* Card Esporta */}
                 <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Esporta</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Salva i tuoi dati in formato JSON.</div>
+                  <div className="text-base font-bold text-si-ink">Esporta</div>
+                  <div className="text-sm text-si-gray">Salva i tuoi dati in formato JSON.</div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Tutti i dati</div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Esporta l&apos;intero archivio</div>
+                      <div className="text-sm font-semibold text-si-inkSoft">Tutti i dati</div>
+                      <div className="text-xs text-si-gray mt-0.5">Esporta l&apos;intero archivio</div>
                     </div>
-                    <Button className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-4 shrink-0" onClick={exportAll} type="button">
+                    <Button className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 shrink-0 transition-colors" onClick={exportAll} type="button">
                       <Icon name="download" className="mr-2 w-4 h-4" />
                       Esporta tutto
                     </Button>
                   </div>
                   {availableMonths.length > 0 && (() => {
-                    const selectCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 outline-none focus:ring-2 focus:ring-sky-500/20 transition";
+                    const selectCls = "w-full rounded-xl border border-si-border bg-si-surface px-3 py-2 text-sm font-semibold text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition";
                     const rangeCount = availableMonths.filter((m) => m >= exportFrom && m <= exportTo).length;
                     return (
-                      <div className="pt-4 border-t border-slate-100 dark:border-slate-700/50 space-y-3">
+                      <div className="pt-4 border-t border-si-border space-y-3">
                         <div>
-                          <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Per periodo</div>
-                          <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Seleziona l&apos;intervallo di mesi</div>
+                          <div className="text-sm font-semibold text-si-inkSoft">Per periodo</div>
+                          <div className="text-xs text-si-gray mt-0.5">Seleziona l&apos;intervallo di mesi</div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block">Da</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-si-gray mb-1.5 block">Da</span>
                             <select className={selectCls} value={exportFrom} onChange={(e) => setExportFrom(e.target.value)}>
                               {availableMonths.map((m) => <option key={m} value={m}>{m}</option>)}
                             </select>
                           </div>
                           <div>
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5 block">A</span>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-si-gray mb-1.5 block">A</span>
                             <select className={selectCls} value={exportTo} onChange={(e) => setExportTo(e.target.value)}>
                               {availableMonths.map((m) => <option key={m} value={m}>{m}</option>)}
                             </select>
@@ -767,7 +772,7 @@ export function SettingsModal({
                         </div>
                         <div className="flex items-center gap-3">
                           <Button
-                            className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl px-4 disabled:opacity-40"
+                            className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border rounded-xl px-4 disabled:opacity-40"
                             onClick={handleExportRange}
                             type="button"
                             disabled={rangeCount === 0}
@@ -776,7 +781,7 @@ export function SettingsModal({
                             Esporta selezione
                           </Button>
                           {rangeCount > 0 && (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">
+                            <span className="text-xs text-si-gray">
                               {rangeCount} {rangeCount === 1 ? "mese" : "mesi"}
                             </span>
                           )}
@@ -789,18 +794,18 @@ export function SettingsModal({
 
               <div className="space-y-4">
               {/* Card Importa */}
-              <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+              <div className={`${cardPad} space-y-4`}>
                 <div className="space-y-1">
-                  <div className="text-base font-bold text-slate-900 dark:text-white">Importa</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Ripristina da un file di backup JSON.</div>
+                  <div className="text-base font-bold text-si-ink">Importa</div>
+                  <div className="text-sm text-si-gray">Ripristina da un file di backup JSON.</div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Seleziona file</div>
-                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Sovrascrive i dati esistenti</div>
+                    <div className="text-sm font-semibold text-si-inkSoft">Seleziona file</div>
+                    <div className="text-xs text-si-gray mt-0.5">Sovrascrive i dati esistenti</div>
                   </div>
                   <Button
-                    className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl px-4 shrink-0"
+                    className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border rounded-xl px-4 shrink-0"
                     onClick={() => fileInputRef.current?.click()}
                     type="button"
                   >
@@ -810,31 +815,31 @@ export function SettingsModal({
                   <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleImportFileSelected} />
                 </div>
                 {importStatus && (
-                  <p className={`text-sm ${importStatus.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                  <p className={`text-sm ${importStatus.ok ? "text-si-success" : "text-si-rose"}`}>
                     {importStatus.message}
                   </p>
                 )}
               </div>
 
               {!hasDesktopBridge && (
-                <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                <div className={`${cardPad} space-y-4`}>
                   <div className="space-y-1">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">Backup Automatico</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="text-base font-bold text-si-ink">Backup Automatico</div>
+                    <div className="text-sm text-si-gray">
                       Salva automaticamente i dati su un file locale ad ogni modifica.
                     </div>
                   </div>
                   {supportsAutoBackup ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${backupFileHandle ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} />
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${backupFileHandle ? "bg-si-success" : "bg-si-border"}`} />
+                        <span className="text-sm text-si-gray">
                           {backupStatus || "Backup automatico non attivo."}
                         </span>
                       </div>
                       {backupFileHandle ? (
                         <Button
-                          className="bg-white border border-slate-200 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 rounded-xl"
+                          className="bg-si-muted border border-si-border text-si-inkSoft hover:bg-si-rose/5 hover:text-si-rose hover:border-si-rose/30 rounded-xl"
                           onClick={onDisableAutoBackup}
                           type="button"
                         >
@@ -842,7 +847,7 @@ export function SettingsModal({
                         </Button>
                       ) : (
                         <Button
-                          className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 rounded-xl px-6"
+                          className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-6 transition-colors"
                           onClick={enableAutoBackup}
                           type="button"
                         >
@@ -851,7 +856,7 @@ export function SettingsModal({
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                    <p className="text-sm text-si-amber">
                       Il tuo browser non supporta il salvataggio automatico su file. Usa Export manuale.
                     </p>
                   )}
@@ -860,13 +865,13 @@ export function SettingsModal({
 
               {hasDesktopBridge && (
                 <div className="space-y-4">
-                  <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
-                    <div className="text-base font-bold text-slate-900 dark:text-white">Comportamento finestra</div>
+                  <div className={`${cardPad} space-y-4`}>
+                    <div className="text-base font-bold text-si-ink">Comportamento finestra</div>
                     <label className="flex items-center gap-4 cursor-pointer select-none group">
                       <div className="relative flex items-center">
                         <input
                           type="checkbox"
-                          className="peer h-5 w-5 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+                          className="peer h-5 w-5 rounded border-si-border text-si-accent focus:ring-si-accent/30"
                           checked={Boolean(settings.minimizeToTrayOnMinimize)}
                           onChange={(e) =>
                             setSettings((prev) => ({
@@ -876,30 +881,30 @@ export function SettingsModal({
                           }
                         />
                       </div>
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                      <span className="text-sm font-medium text-si-inkSoft group-hover:text-si-ink transition-colors">
                         Quando minimizzo, nascondi la finestra e mostra l&apos;icona nella tray.
                       </span>
                     </label>
                   </div>
 
-                  <div className="rounded-[24px] border border-slate-200 bg-white p-6 space-y-6 dark:border-slate-700 dark:bg-slate-800/50 shadow-sm">
+                  <div className={`${cardPad} space-y-4`}>
                     <div className="space-y-1">
-                      <div className="text-base font-bold text-slate-900 dark:text-white">Percorso salvataggi backup</div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">Se vuoto, viene usata la cartella predefinita in Documenti.</div>
+                      <div className="text-base font-bold text-si-ink">Percorso salvataggi backup</div>
+                      <div className="text-sm text-si-gray">Se vuoto, viene usata la cartella predefinita in Documenti.</div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm break-all font-mono text-slate-600 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-400">
+                    <div className="rounded-xl border border-si-border bg-si-muted px-4 py-3 text-sm break-all font-mono text-si-gray">
                       {settings.desktopBackupDir || "(predefinito: Documenti\\DailyLog\\backup)"}
                     </div>
                     <div className="flex flex-wrap gap-3">
                       <Button
-                        className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl"
+                        className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border rounded-xl"
                         onClick={pickDesktopBackupDir}
                         type="button"
                       >
                         Scegli cartella
                       </Button>
                       <Button
-                        className="bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700 rounded-xl"
+                        className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border rounded-xl"
                         onClick={useDefaultDesktopBackupDir}
                         type="button"
                       >
@@ -907,9 +912,9 @@ export function SettingsModal({
                       </Button>
                     </div>
                     {(settingsStatus || desktopBackupPath) && (
-                      <div className="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
-                        {settingsStatus && <div className="text-xs text-slate-500 dark:text-slate-400 italic">{settingsStatus}</div>}
-                        {desktopBackupPath && <div className="text-xs text-slate-500 break-all dark:text-slate-400">File attuale: {desktopBackupPath}</div>}
+                      <div className="space-y-1 pt-2 border-t border-si-border">
+                        {settingsStatus && <div className="text-xs text-si-gray italic">{settingsStatus}</div>}
+                        {desktopBackupPath && <div className="text-xs text-si-gray break-all">File attuale: {desktopBackupPath}</div>}
                       </div>
                     )}
                   </div>
@@ -928,42 +933,42 @@ export function SettingsModal({
         onClose={cancelImport}
       >
         <div className="space-y-4">
-          <p className="text-slate-600 dark:text-slate-400">
-            Stai per importare <span className="font-semibold text-slate-800 dark:text-slate-200">{pendingImportFile?.name}</span>.
+          <p className="text-si-gray">
+            Stai per importare <span className="font-semibold text-si-inkSoft">{pendingImportFile?.name}</span>.
           </p>
           {importPreview === null && (
-            <p className="text-sm text-slate-400 dark:text-slate-500 italic">Analisi del file in corso…</p>
+            <p className="text-sm text-si-grayLight italic">Analisi del file in corso…</p>
           )}
           {importPreview && importPreview.error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-800/50 dark:bg-red-900/20">
-              <p className="text-sm font-semibold text-red-700 dark:text-red-400">{importPreview.error}</p>
+            <div className="rounded-xl border border-si-rose/20 bg-si-rose/5 px-4 py-3">
+              <p className="text-sm font-semibold text-si-rose">{importPreview.error}</p>
             </div>
           ) : importPreview && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-1 dark:border-slate-700 dark:bg-slate-800/50">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Anteprima contenuto</div>
-              <div className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <div className="rounded-xl border border-si-border bg-si-muted px-4 py-3 space-y-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-si-gray mb-2">Anteprima contenuto</div>
+              <div className="flex items-center gap-2 text-sm text-si-inkSoft">
                 <span className="font-semibold">{importPreview.months}</span>
-                <span className="text-slate-500">{importPreview.months === 1 ? "mese" : "mesi"}</span>
-                <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
+                <span className="text-si-gray">{importPreview.months === 1 ? "mese" : "mesi"}</span>
+                <span className="text-si-grayLight mx-1">·</span>
                 <span className="font-semibold">{importPreview.dayCount}</span>
-                <span className="text-slate-500">{importPreview.dayCount === 1 ? "giorno con dati" : "giorni con dati"}</span>
+                <span className="text-si-gray">{importPreview.dayCount === 1 ? "giorno con dati" : "giorni con dati"}</span>
               </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{importPreview.dateRange}</div>
+              <div className="text-xs text-si-gray font-mono">{importPreview.dateRange}</div>
             </div>
           )}
-          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+          <p className="text-sm text-si-amber font-medium">
             Tutti i dati esistenti verranno sovrascritti. L&apos;operazione non è reversibile.
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <Button
-              className="bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              className="bg-si-muted text-si-ink hover:bg-si-border"
               onClick={cancelImport}
               type="button"
             >
               Annulla
             </Button>
             <Button
-              className="bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600 disabled:opacity-40"
+              className="bg-si-rose text-white hover:bg-si-rose/90 disabled:opacity-40"
               onClick={confirmImport}
               type="button"
               disabled={Boolean(importPreview?.error) || importPreview === null}

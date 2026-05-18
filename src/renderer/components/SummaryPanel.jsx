@@ -1,32 +1,16 @@
 import { useMemo } from "react";
-import { getClientColor, getInternalColor, SLOT, getSubtypeLabel } from "../domain/tasks";
+import { getClientColor, getInternalColor, SLOT, getSubtypeLabel, slotKey, normalizeClientKey } from "../domain/tasks";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { getItalianHolidays } from "../utils/holidays";
 
-function isClientFilterActive(activeFilter, clientName) {
-  return activeFilter?.kind === "client" && activeFilter.client === clientName;
+function isFilterActive(filter, kind, value) {
+  return filter?.kind === kind && filter[kind] === value;
 }
 
-function isTypeFilterActive(activeFilter, type) {
-  return activeFilter?.kind === "type" && activeFilter.type === type;
-}
-
-function isClientFilterFaded(fixedFilter, clientName) {
+function isFilterFaded(fixedFilter, kind, value) {
   if (!fixedFilter) return false;
-  if (fixedFilter.kind === "client") {
-    return fixedFilter.client !== clientName;
-  }
-  // Se il filtro fisso è su un tipo, oscura tutti i clienti
-  return fixedFilter.kind === "type";
-}
-
-function isTypeFilterFaded(fixedFilter, type) {
-  if (!fixedFilter) return false;
-  if (fixedFilter.kind === "type") {
-    return fixedFilter.type !== type;
-  }
-  // Se il filtro fisso è su un cliente, oscura tutti i tipi
-  return fixedFilter.kind === "client";
+  if (fixedFilter.kind === kind) return fixedFilter[kind] !== value;
+  return true;
 }
 
 export function SummaryPanel({
@@ -39,7 +23,7 @@ export function SummaryPanel({
   onFixedFilterChange,
 }) {
   const { settings } = useSettings();
-  const { WORK_SLOTS } = useWorkSlots();
+  const { WORK_SLOTS, MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const internalColors = settings?.internalColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -57,7 +41,27 @@ export function SummaryPanel({
 
     const lastDayOfMonth = new Date(year, monthIndex0 + 1, 0).getDate();
     const holidays = getItalianHolidays(year);
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === monthIndex0;
+    const isPastMonth = (year < today.getFullYear()) || (year === today.getFullYear() && monthIndex0 < today.getMonth());
+    let lastDayConsidered;
+    if (isCurrentMonth) lastDayConsidered = today.getDate();
+    else if (isPastMonth) lastDayConsidered = lastDayOfMonth;
+    else lastDayConsidered = 0;
+
+    const byDate = data?.byDate || {};
+
+    function isDayFullyFilled(dayData) {
+      if (!dayData) return false;
+      const hours = dayData.hours || {};
+      const morningCovered = !!dayData.AM || MORNING_SLOTS.every(m => hours[slotKey(m)]);
+      const afternoonCovered = !!dayData.PM || AFTERNOON_SLOTS.every(m => hours[slotKey(m)]);
+      return morningCovered && afternoonCovered;
+    }
+
     let workingDaysInMonth = 0;
+    let workingDaysElapsed = 0;
+    let fullyFilledDays = 0;
     for (let day = 1; day <= lastDayOfMonth; day++) {
       const d = new Date(year, monthIndex0, day);
       const dow = d.getDay();
@@ -65,9 +69,11 @@ export function SummaryPanel({
       const key = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       if (holidays.has(key)) continue;
       workingDaysInMonth += 1;
+      if (day <= lastDayConsidered) {
+        workingDaysElapsed += 1;
+        if (isDayFullyFilled(byDate[key])) fullyFilledDays += 1;
+      }
     }
-
-    const byDate = data?.byDate || {};
     for (const dateKey of Object.keys(byDate)) {
       const day = byDate[dateKey];
       for (const s of [SLOT.AM, SLOT.PM]) {
@@ -75,11 +81,17 @@ export function SummaryPanel({
         if (!e) continue;
         const weight = 0.5;
         if (e.type === "client") {
-          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          let clientData = byClient.get(c);
+          const display = (e.client || "(senza nome)").trim() || "(senza nome)";
+          const k = normalizeClientKey(display) || display.toLowerCase();
+          let clientData = byClient.get(k);
           if (!clientData) {
-            clientData = { total: 0, bySubtype: {} };
-            byClient.set(c, clientData);
+            clientData = { display, variants: new Map(), total: 0, bySubtype: {} };
+            byClient.set(k, clientData);
+          }
+          const vCount = clientData.variants.get(display) || 0;
+          clientData.variants.set(display, vCount + 1);
+          if (vCount + 1 > (clientData.variants.get(clientData.display) || 0)) {
+            clientData.display = display;
           }
           addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
@@ -94,11 +106,17 @@ export function SummaryPanel({
         if (!e) continue;
         const weight = 1 / WORK_SLOTS.length;
         if (e.type === "client") {
-          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          let clientData = byClient.get(c);
+          const display = (e.client || "(senza nome)").trim() || "(senza nome)";
+          const k = normalizeClientKey(display) || display.toLowerCase();
+          let clientData = byClient.get(k);
           if (!clientData) {
-            clientData = { total: 0, bySubtype: {} };
-            byClient.set(c, clientData);
+            clientData = { display, variants: new Map(), total: 0, bySubtype: {} };
+            byClient.set(k, clientData);
+          }
+          const vCount = clientData.variants.get(display) || 0;
+          clientData.variants.set(display, vCount + 1);
+          if (vCount + 1 > (clientData.variants.get(clientData.display) || 0)) {
+            clientData.display = display;
           }
           addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
@@ -112,166 +130,182 @@ export function SummaryPanel({
     }
 
     const clients = Array.from(byClient.entries())
-      .map(([client, data]) => ({ client, data }))
+      .map(([, data]) => ({
+        client: data.display,
+        variantCount: data.variants.size,
+        variants: Array.from(data.variants.keys()),
+        data,
+      }))
       .sort((a, b) => b.data.total - a.data.total);
 
     const clientDays = clients.reduce((sum, c) => sum + c.data.total, 0);
     const worked = clientDays + internal.total + event.total;
     const otherActivities = [
-      { key: "internal", label: "Internal", data: internal, dotClassName: "bg-slate-400 dark:bg-slate-500" },
-      { key: "vacation", label: "Ferie", data: vacation, dotClassName: "bg-emerald-400 dark:bg-emerald-500" },
-      { key: "event", label: "Eventi", data: event, dotClassName: "bg-purple-400 dark:bg-purple-500" },
+      { key: "internal", label: "Internal", data: internal, dotClassName: "bg-si-gray" },
+      { key: "vacation", label: "Ferie", data: vacation, dotClassName: "bg-si-success" },
+      { key: "event", label: "Eventi", data: event, dotClassName: "bg-si-violet" },
     ].filter((activity) => activity.data.total > 0);
 
-    return { clients, internal: internal.total, vacation: vacation.total, event: event.total, worked, workingDaysInMonth, otherActivities };
-  }, [data, year, monthIndex0, WORK_SLOTS]);
+    return { clients, internal: internal.total, vacation: vacation.total, event: event.total, worked, workingDaysInMonth, workingDaysElapsed, fullyFilledDays, otherActivities };
+  }, [data, year, monthIndex0, WORK_SLOTS, MORNING_SLOTS, AFTERNOON_SLOTS]);
+
+  const pct = totals.workingDaysElapsed > 0
+    ? Math.min(100, Math.round((totals.fullyFilledDays / totals.workingDaysElapsed) * 100))
+    : 0;
 
   return (
     <div
-      className="rounded-3xl border border-slate-200/90 bg-white/85 backdrop-blur p-4 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80"
+      className="rounded-[20px] bg-si-surface border border-si-border p-5 flex flex-col gap-5"
       onMouseLeave={() => onHoverFilterChange?.(null)}
     >
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">DailyLog</div>
-        <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Riepilogo mese</h2>
+      {/* KPI mese — riga tipografica densa */}
+      <div className="flex items-baseline gap-2 text-si-ink">
+        <span className="font-mono text-base font-semibold tabular-nums">
+          {totals.fullyFilledDays}<span className="text-si-gray">/{totals.workingDaysElapsed}</span>
+        </span>
+        <span className="text-[13px] text-si-gray">giorni compilati</span>
+        <span className="text-si-grayLight">·</span>
+        <span className="font-mono text-base font-semibold tabular-nums">{pct}<span className="text-si-gray">%</span></span>
+        <div className="relative flex-1 h-1 rounded-full bg-si-border overflow-hidden ml-1">
+          <div className="absolute inset-y-0 left-0 bg-si-ink transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="font-mono text-[11px] text-si-gray tabular-nums shrink-0">
+          {totals.workingDaysElapsed}/{totals.workingDaysInMonth} gg
+        </span>
       </div>
+
       {fixedFilter && (
         <button
           onClick={() => onFixedFilterChange?.(null)}
-          className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:text-sky-700 bg-sky-50 dark:bg-sky-500/10 px-2.5 py-1 rounded-full border border-sky-200 dark:border-sky-500/30 transition-colors"
+          className="flex items-center gap-1.5 text-[11px] font-bold text-si-accent bg-si-accentSoft px-2.5 py-1 rounded-full border-0 cursor-pointer"
         >
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Rimuovi filtro
         </button>
       )}
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni lavorativi totali</div>
-          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.workingDaysInMonth} gg</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-700/80 dark:bg-slate-800/50">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giorni compilati</div>
-          <div className="mt-1 text-lg font-bold dark:text-slate-100">{totals.worked.toFixed(1)} gg</div>
-          <div className="mt-2 h-1 rounded-full bg-slate-100 dark:bg-slate-700">
-            <div className="h-1 rounded-full bg-sky-400 dark:bg-sky-500 transition-all" style={{ width: `${Math.min(100, totals.workingDaysInMonth > 0 ? (totals.worked / totals.workingDaysInMonth) * 100 : 0)}%` }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Clienti</div>
+      {/* Clients */}
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-gray mb-2">Clienti</div>
         {totals.clients.length === 0 ? (
-          <div className="mt-2 py-2">
-            <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nessuna attività cliente questo mese</p>
-          </div>
+          <p className="text-xs text-si-grayLight italic">Nessuna attività cliente questo mese</p>
         ) : (
-          <div className="mt-2 space-y-2">
-            {totals.clients.map((c) => (
-              <div key={c.client}>
-                <div
-                  onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
-                  onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
-                  onClick={() => {
-                    if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
-                      onFixedFilterChange?.(null);
-                    } else {
-                      onFixedFilterChange?.({ kind: "client", client: c.client });
-                    }
-                  }}
-                  className={
-                    "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
-                    (isClientFilterActive(activeFilter, c.client)
-                      ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                      : "hover:border-sky-200 dark:hover:border-sky-700") +
-                    (isClientFilterFaded(fixedFilter, c.client) ? " opacity-40 dark:opacity-40" : "")
-                  }
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: getClientColor(c.client, clientColors) }} />
-                    <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{c.client}</div>
+          <div className="space-y-2">
+            {totals.clients.map((c) => {
+              const color = getClientColor(c.client, clientColors);
+              const clientPct = totals.workingDaysInMonth > 0 ? Math.min(100, (c.data.total / totals.workingDaysInMonth) * 100) : 0;
+              return (
+                <div key={c.client}>
+                  <div
+                    onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "client", client: c.client })}
+                    onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                    onClick={() => {
+                      if (fixedFilter?.kind === "client" && fixedFilter.client === c.client) {
+                        onFixedFilterChange?.(null);
+                      } else {
+                        onFixedFilterChange?.({ kind: "client", client: c.client });
+                      }
+                    }}
+                    className={`flex flex-col rounded-xl px-3 py-2.5 cursor-pointer transition-opacity border ${
+                      isFilterActive(activeFilter, "client", c.client)
+                        ? "border-si-accent bg-si-accentBg"
+                        : "border-si-border bg-si-muted hover:border-si-accent/40"
+                    }${isFilterFaded(fixedFilter, "client", c.client) ? " opacity-40" : ""}`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                        <div className="text-[13px] font-semibold text-si-ink truncate">{c.client}</div>
+                        {c.variantCount > 1 && (
+                          <span
+                            title={`${c.variantCount} grafie usate: ${c.variants.join(", ")}`}
+                            className="shrink-0 inline-flex items-center justify-center h-4 px-1 rounded-full text-[9px] font-bold uppercase tracking-wider text-si-amber bg-si-amberSoft border border-si-amber/30"
+                            aria-label="Grafia cliente inconsistente"
+                          >
+                            {c.variantCount}×
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[13px] font-bold text-si-ink ml-2 shrink-0">{c.data.total.toFixed(1)} gg</div>
+                    </div>
+                    <div className="h-1 rounded-full bg-si-border">
+                      <div className="h-1 rounded-full transition-all" style={{ width: `${clientPct}%`, backgroundColor: color }} />
+                    </div>
                   </div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.data.total.toFixed(1)} gg</div>
+                  {Object.keys(c.data.bySubtype).length > 1 || (Object.keys(c.data.bySubtype)[0] && Object.keys(c.data.bySubtype)[0] !== "generico") ? (
+                    <div className="ml-4 mt-1.5 mb-1 space-y-1 border-l-2 border-si-border pl-2">
+                      {Object.entries(c.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
+                        const stLabel = st === "generico" ? "Generico" : getSubtypeLabel("client", st, taskSubtypes);
+                        return (
+                          <div key={st} className="flex items-center justify-between">
+                            <div className="text-[11px] font-semibold uppercase tracking-wider text-si-gray">{stLabel}</div>
+                            <div className="text-[11px] font-bold text-si-inkSoft">{days.toFixed(1)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
-                {Object.keys(c.data.bySubtype).length > 1 || (Object.keys(c.data.bySubtype)[0] && Object.keys(c.data.bySubtype)[0] !== "generico") ? (
-                  <div className="ml-[22px] mt-2 mb-1 space-y-1.5 border-l-2 border-slate-100 dark:border-slate-700/50 pl-2">
-                    {Object.entries(c.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
-                      const stLabel = st === "generico" ? "Generico" : getSubtypeLabel("client", st, taskSubtypes);
-                      return (
-                        <div key={st} className="flex items-center justify-between">
-                          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{stLabel}</div>
-                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{days.toFixed(1)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div className="mt-4">
-        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Altre attività</div>
-        {totals.otherActivities.length === 0 ? (
-          <div className="mt-2 py-2">
-            <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nessuna altra attività</p>
-          </div>
-        ) : (
-          <div className="mt-2 space-y-2">
-            {totals.otherActivities.map((activity) => (
-              <div key={activity.key}>
-                <div
-                  onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "type", type: activity.key })}
-                  onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
-                  onClick={() => {
-                    if (fixedFilter?.kind === "type" && fixedFilter.type === activity.key) {
-                      onFixedFilterChange?.(null);
-                    } else {
-                      onFixedFilterChange?.({ kind: "type", type: activity.key });
-                    }
-                  }}
-                  className={
-                    "flex items-center justify-between rounded-2xl border border-slate-200/90 bg-white/90 px-3 py-2 dark:border-slate-700/80 dark:bg-slate-800/50 cursor-pointer transition-opacity " +
-                    (isTypeFilterActive(activeFilter, activity.key)
-                      ? "ring-2 ring-sky-300 dark:ring-sky-500"
-                      : "hover:border-sky-200 dark:hover:border-sky-700") +
-                    (isTypeFilterFaded(fixedFilter, activity.key) ? " opacity-40 dark:opacity-40" : "")
-                  }
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className={"h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20 " + activity.dotClassName}
-                    />
-                    <div className="text-sm font-semibold text-slate-800 truncate dark:text-slate-200">{activity.label}</div>
+      {/* Other activities */}
+      {totals.otherActivities.length > 0 && (
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-gray mb-2">Altre attività</div>
+          <div className="space-y-1.5">
+            {totals.otherActivities.map((activity) => {
+              const dotColor = activity.key === "vacation" ? "#10B981" : activity.key === "event" ? "#8B5CF6" : "#7676A0";
+              return (
+                <div key={activity.key}>
+                  <div
+                    onMouseEnter={() => !fixedFilter && onHoverFilterChange?.({ kind: "type", type: activity.key })}
+                    onMouseLeave={() => !fixedFilter && onHoverFilterChange?.(null)}
+                    onClick={() => {
+                      if (fixedFilter?.kind === "type" && fixedFilter.type === activity.key) {
+                        onFixedFilterChange?.(null);
+                      } else {
+                        onFixedFilterChange?.({ kind: "type", type: activity.key });
+                      }
+                    }}
+                    className={`flex items-center justify-between rounded-xl px-3 py-2 cursor-pointer transition-opacity border ${
+                      isFilterActive(activeFilter, "type", activity.key)
+                        ? "border-si-accent bg-si-accentBg"
+                        : "border-si-border bg-si-muted hover:border-si-accent/40"
+                    }${isFilterFaded(fixedFilter, "type", activity.key) ? " opacity-40" : ""}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
+                      <div className="text-[13px] font-semibold text-si-ink truncate">{activity.label}</div>
+                    </div>
+                    <div className="text-[13px] font-bold text-si-ink">{activity.data.total.toFixed(1)} gg</div>
                   </div>
-                  <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{activity.data.total.toFixed(1)} gg</div>
-                </div>
-                {Object.keys(activity.data.bySubtype).length > 1 || (Object.keys(activity.data.bySubtype)[0] && Object.keys(activity.data.bySubtype)[0] !== "generico") ? (
-                  <div className="ml-[22px] mt-2 mb-1 space-y-1.5 border-l-2 border-slate-100 dark:border-slate-700/50 pl-2">
-                    {Object.entries(activity.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
-                      const stLabel = st === "generico" ? "Generico" : getSubtypeLabel(activity.key, st, taskSubtypes);
-                      const subtypeColor = activity.key === "internal" ? getInternalColor(st, internalColors) : null;
-                      return (
-                        <div key={st} className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {subtypeColor && (
-                              <span className="h-2 w-2 rounded-full shrink-0 border border-black/10 dark:border-white/20" style={{ backgroundColor: subtypeColor }} />
-                            )}
-                            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">{stLabel}</div>
+                  {Object.keys(activity.data.bySubtype).length > 1 || (Object.keys(activity.data.bySubtype)[0] && Object.keys(activity.data.bySubtype)[0] !== "generico") ? (
+                    <div className="ml-4 mt-1.5 mb-1 space-y-1 border-l-2 border-si-border pl-2">
+                      {Object.entries(activity.data.bySubtype).sort((a,b) => b[1] - a[1]).map(([st, days]) => {
+                        const stLabel = st === "generico" ? "Generico" : getSubtypeLabel(activity.key, st, taskSubtypes);
+                        const subtypeColor = activity.key === "internal" ? getInternalColor(st, internalColors) : null;
+                        return (
+                          <div key={st} className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {subtypeColor && <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: subtypeColor }} />}
+                              <div className="text-[11px] font-semibold uppercase tracking-wider text-si-gray truncate">{stLabel}</div>
+                            </div>
+                            <div className="text-[11px] font-bold text-si-inkSoft shrink-0">{days.toFixed(1)}</div>
                           </div>
-                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">{days.toFixed(1)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            ))}
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

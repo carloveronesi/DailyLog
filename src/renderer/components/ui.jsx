@@ -4,9 +4,9 @@ export function Button({ children, className = "", ...props }) {
   return (
     <button
       className={
-        "inline-flex items-center justify-center rounded-2xl px-3.5 py-2.5 text-sm font-semibold tracking-tight " +
-        "border border-transparent shadow-sm transition-all duration-200 hover:-translate-y-[1px] " +
-        "focus:outline-none focus:ring-2 focus:ring-sky-300/60 disabled:opacity-50 disabled:cursor-not-allowed " +
+        "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold tracking-tight " +
+        "border-0 transition-all duration-200 " +
+        "focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed " +
         className
       }
       {...props}
@@ -335,9 +335,9 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl",
 
   if (fullscreen) {
     return (
-      <div className="fixed inset-0 lg:left-20 z-50 flex flex-col bg-white dark:bg-slate-900">
+      <div className="fixed inset-0 lg:left-[84px] z-50 flex flex-col bg-si-bg">
         <button
-          className="absolute top-4 right-4 z-10 rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+          className="absolute top-4 right-4 z-10 rounded-xl p-2 text-si-gray hover:bg-si-muted hover:text-si-ink transition-colors border-0 bg-transparent cursor-pointer"
           onClick={onClose}
           aria-label="Chiudi"
         >
@@ -352,13 +352,13 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl",
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-950/35 dark:bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${className} max-h-[calc(100svh-2rem)] flex flex-col rounded-3xl bg-white/95 dark:bg-slate-800/95 backdrop-blur border border-slate-200 dark:border-slate-700 shadow-soft dark:shadow-soft-dark`}>
+      <div className="absolute inset-0 bg-si-ink/40" onClick={onClose} />
+      <div className={`relative w-full ${className} max-h-[calc(100svh-2rem)] flex flex-col rounded-[20px] bg-si-surface border border-si-border shadow-si-lg`}>
         {title ? (
-          <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700">
-            <div className="text-base font-semibold dark:text-slate-100">{title}</div>
+          <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-si-border">
+            <div className="text-base font-semibold text-si-ink">{title}</div>
             <button
-              className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+              className="rounded-lg px-2 py-1 text-si-gray hover:bg-si-muted border-0 bg-transparent cursor-pointer"
               onClick={onClose}
               aria-label="Chiudi"
             >
@@ -367,7 +367,7 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl",
           </div>
         ) : (
           <button
-            className="absolute top-4 right-4 z-10 rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+            className="absolute top-4 right-4 z-10 rounded-lg px-2 py-1 text-si-gray hover:bg-si-muted border-0 bg-transparent cursor-pointer"
             onClick={onClose}
             aria-label="Chiudi"
           >
@@ -382,13 +382,15 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl",
 
 export function Segmented({ value, onChange, options }) {
   return (
-    <div className="inline-flex rounded-2xl border border-slate-200/90 bg-slate-100/80 p-1 dark:border-slate-700/80 dark:bg-slate-900/50">
+    <div className="inline-flex rounded-full bg-si-muted border border-si-border p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
           className={
-            "px-3 py-1.5 text-sm font-semibold rounded-xl transition " +
-            (value === opt.value ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100" : "text-slate-600 hover:bg-white/80 dark:text-slate-400 dark:hover:bg-slate-800/80")
+            "px-3 py-1.5 text-[12px] font-semibold rounded-full transition border-0 cursor-pointer " +
+            (value === opt.value
+              ? "bg-si-surface text-si-ink shadow-si"
+              : "bg-transparent text-si-gray hover:text-si-ink")
           }
           onClick={() => onChange(opt.value)}
           type="button"

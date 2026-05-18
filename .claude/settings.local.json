@@ -9,7 +9,16 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\" -Recurse -Filter \"*.jsx\")",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(python -m http.server 8080 --directory .)",
+      "Bash(Select-String -Pattern \"si-\" -Path \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\\\\components\\\\SettingsModal.jsx\")",
+      "Bash(Measure-Object)",
+      "Bash(Select-Object Count)",
+      "Bash(curl *)",
+      "Bash(python -m http.server 8080)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\" -Recurse -File)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\c.veronesi\\\\Desktop\\\\DailyLog\\\\src\\\\renderer\" -File)"
     ]
   }
 }

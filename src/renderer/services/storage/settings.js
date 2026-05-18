@@ -8,9 +8,12 @@ export const DEFAULT_SETTINGS = {
   internalColors: {},
   theme: "light",
   defaultView: "day",
+  defaultLocation: "remote",
   taskSubtypes: {},
   todoTags: [],
   recurringTasks: [],
+  editorCompact: true,
+  lastUsedByClient: {},
   workHours: {
     morningStart: 9 * 60,    // 540
     morningEnd: 13 * 60,     // 780
@@ -65,9 +68,12 @@ export function normalizeSettings(raw) {
     clientColors: normalizeClientColors(raw.clientColors),
     internalColors: normalizeInternalColors(raw.internalColors),
     defaultView: typeof raw.defaultView === "string" ? raw.defaultView : "day",
+    defaultLocation: (raw.defaultLocation === "office" || raw.defaultLocation === "client" || raw.defaultLocation === "remote") ? raw.defaultLocation : "remote",
     taskSubtypes: ensureSubtypesFormat((raw.taskSubtypes && typeof raw.taskSubtypes === "object") ? raw.taskSubtypes : {}),
     todoTags: Array.isArray(raw.todoTags) ? raw.todoTags : [],
     recurringTasks: Array.isArray(raw.recurringTasks) ? raw.recurringTasks : [],
+    editorCompact: typeof raw.editorCompact === "boolean" ? raw.editorCompact : true,
+    lastUsedByClient: (raw.lastUsedByClient && typeof raw.lastUsedByClient === "object") ? raw.lastUsedByClient : {},
     workHours: normalizeWorkHours(raw.workHours),
   };
 }

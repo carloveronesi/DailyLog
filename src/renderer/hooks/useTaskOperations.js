@@ -109,5 +109,5 @@ export function useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS = DEF
     }, "Elimina task");
   }
 
-  return { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast };
+  return { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast, showBlockedToast };
 }

@@ -5,7 +5,7 @@ import { useCalendarDrag } from "../hooks/useCalendarDrag";
 import { TaskBlock, computeBlockGeometry } from "./TaskBlock";
 import { ymd } from "../utils/date";
 import { Button, Icon } from "./ui";
-import { useWorkSlots } from "../contexts/SettingsContext";
+import { useWorkSlots, useSettings } from "../contexts/SettingsContext";
 
 const DEFAULT_ROW_HEIGHT = 35;
 const MIN_ROW_HEIGHT = 28;
@@ -50,6 +50,8 @@ export function WeekView({
 }) {
   const workSlots = useWorkSlots();
   const { DAY_SLOTS, BREAK_START, BREAK_END } = workSlots;
+  const { settings } = useSettings();
+  const defaultLocation = settings?.defaultLocation || "remote";
   const weekDays = useMemo(() => getWorkweekDays(activeDate), [activeDate]);
 
   // Create an array mapping each weekday index (0-4) to its blocks
@@ -135,40 +137,26 @@ export function WeekView({
   const needsScroll = rowHeight <= MIN_ROW_HEIGHT;
 
   return (
-    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-3xl border border-slate-200/90 bg-white/80 backdrop-blur px-5 pt-4 pb-5 shadow-soft dark:shadow-soft-dark dark:border-slate-700/50 dark:bg-slate-800/80">
+    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-[20px] bg-si-surface border border-si-border px-5 pt-4 pb-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Vista settimanale</div>
-          <div className="text-xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">{weekTitle}</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent">Vista settimanale</div>
+          <div className="text-xl lg:text-2xl font-bold tracking-tight text-si-ink">{weekTitle}</div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={goPrevWeek}
-            type="button"
-            title="Settimana precedente"
-          >
-            <Icon name="chev-left" />
-          </Button>
-          <Button
-            className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={goNextWeek}
-            type="button"
-            title="Settimana successiva"
-          >
-            <Icon name="chev-right" />
-          </Button>
-          <Button
-            className="bg-white/95 border border-slate-200 text-slate-800 hover:bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-700"
-            onClick={goToday}
-            type="button"
-          >
-            Oggi
-          </Button>
+          <div className="flex items-center gap-0.5 p-1 bg-si-muted border border-si-border rounded-full">
+            <Button className="w-8 h-8 !px-0 !py-0 bg-transparent text-si-ink hover:bg-si-surface" onClick={goPrevWeek} type="button" title="Settimana precedente">
+              <Icon name="chev-left" className="w-4 h-4" />
+            </Button>
+            <Button className="h-8 !px-3 bg-transparent text-si-ink text-[12.5px] hover:bg-si-surface" onClick={goToday} type="button">Oggi</Button>
+            <Button className="w-8 h-8 !px-0 !py-0 bg-transparent text-si-ink hover:bg-si-surface" onClick={goNextWeek} type="button" title="Settimana successiva">
+              <Icon name="chev-right" className="w-4 h-4" />
+            </Button>
+          </div>
           {onNewTask && (
             <Button
-              className="bg-sky-500 text-white hover:bg-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500 font-semibold"
+              className="h-9 !px-4 bg-si-ink hover:bg-si-inkSoft text-white text-[13px] font-semibold transition-colors"
               onClick={onNewTask}
               type="button"
             >
@@ -184,7 +172,7 @@ export function WeekView({
           {/* Time axis */}
           <div className="pt-[40px]">
             <div
-              className="relative grid text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+              className="relative grid text-[11px] font-semibold text-si-gray"
               style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${rowHeight}px)` }}
             >
               {DAY_SLOTS.map((slot) => (
@@ -212,11 +200,11 @@ export function WeekView({
                     {/* Day Header */}
                     <div className="flex flex-col items-center justify-center h-[40px] mb-2 cursor-pointer group" onClick={() => pasteMode ? onPasteDay?.(date) : onOpenSlot?.({ date, slot: null })}>
                        <div className="flex items-center gap-1.5">
-                         <div className={`text-[11px] lg:text-xs font-semibold uppercase ${isToday ? 'text-sky-600 dark:text-sky-400 font-bold' : pasteMode ? 'text-sky-500 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-800'}`}>{WEEKDAY_NAMES[colIdx]}</div>
+                         <div className={`text-[11px] lg:text-xs font-semibold uppercase ${isToday ? 'text-si-accent font-bold' : pasteMode ? 'text-si-accent' : 'text-si-gray group-hover:text-si-ink'}`}>{WEEKDAY_NAMES[colIdx]}</div>
                          {pasteMode ? (
                            <button
                              onClick={(e) => { e.stopPropagation(); onPasteDay?.(date); }}
-                             className="flex items-center justify-center rounded-lg p-0.5 text-sky-500 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-500/20 transition-all"
+                             className="flex items-center justify-center rounded-lg p-0.5 text-si-accent hover:bg-si-accentBg transition-all"
                              title="Incolla qui"
                            >
                              <Icon name="clipboard" className="w-3.5 h-3.5" />
@@ -225,50 +213,55 @@ export function WeekView({
                            <>
                              <button
                                onClick={(e) => { e.stopPropagation(); onCopyDay?.(date); }}
-                               className="flex items-center justify-center rounded-lg p-0.5 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all"
+                               className="flex items-center justify-center rounded-lg p-0.5 text-si-grayLight opacity-0 group-hover:opacity-100 hover:bg-si-muted transition-all"
                                title="Copia questo giorno"
                              >
                                <Icon name="clipboard" className="w-3.5 h-3.5" />
                              </button>
-                             <button
-                               onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
-                               className={`flex items-center justify-center rounded-lg p-0.5 transition-all ${
-                                 monthDataByDate[ymd(date)]?.location && monthDataByDate[ymd(date)].location !== "remote"
-                                   ? "text-sky-500 bg-sky-50 dark:bg-sky-500/10 dark:text-sky-400 opacity-100"
-                                   : "text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                               }`}
-                               title={monthDataByDate[ymd(date)]?.location === "office" ? "In Ufficio" : monthDataByDate[ymd(date)]?.location === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
-                             >
-                               <Icon name={monthDataByDate[ymd(date)]?.location === "office" ? "building" : "home"} className="w-3.5 h-3.5" />
-                             </button>
+                             {(() => {
+                               const dayLoc = monthDataByDate[ymd(date)]?.location || defaultLocation;
+                               return (
+                                 <button
+                                   onClick={(e) => { e.stopPropagation(); onToggleLocation?.(date); }}
+                                   className={`flex items-center justify-center rounded-lg p-0.5 transition-all ${
+                                     dayLoc !== "remote"
+                                       ? "text-si-accent bg-si-accentSoft opacity-100"
+                                       : "text-si-grayLight opacity-0 group-hover:opacity-100 hover:bg-si-muted"
+                                   }`}
+                                   title={dayLoc === "office" ? "In Ufficio" : dayLoc === "client" ? "Sede Cliente" : "Imposta sede (Remoto)"}
+                                 >
+                                   <Icon name={dayLoc === "office" ? "building" : "home"} className="w-3.5 h-3.5" />
+                                 </button>
+                               );
+                             })()}
                            </>
                          )}
                        </div>
-                       <div className={`text-lg lg:text-xl font-bold ${isToday ? 'text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/30 rounded-full w-8 h-8 flex items-center justify-center' : pasteMode ? 'text-sky-500 dark:text-sky-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                       <div className={`text-lg lg:text-xl font-bold ${isToday ? 'text-white bg-si-accent rounded-full w-8 h-8 flex items-center justify-center text-[14px]' : pasteMode ? 'text-si-accent' : 'text-si-ink'}`}>
                          {date.getDate()}
                        </div>
                     </div>
 
                     {/* Day Grid */}
                     <div
-                      className="relative grid flex-1 rounded-xl border border-slate-200/80 bg-white/70 dark:border-slate-700/70 dark:bg-slate-900/40 opacity-95 hover:opacity-100 transition-opacity"
+                      className="relative grid flex-1 rounded-xl border border-si-border bg-si-muted/60"
                       style={{ gridTemplateRows: `repeat(${DAY_SLOTS.length}, ${rowHeight}px)` }}
                     >
                         {DAY_SLOTS.map((slot, idx) => (
                           <div
                             key={`line-${slot}`}
-                            className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
+                            className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-si-border"
                             style={{ top: `${idx * rowHeight}px` }}
                           />
                         ))}
                         <div
-                          className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-slate-300/80 dark:border-slate-600/70"
+                          className="pointer-events-none absolute left-0 right-0 z-0 border-t border-dashed border-si-border"
                           style={{ top: `${DAY_SLOTS.length * rowHeight}px` }}
                         />
 
                         {selection && activeDragCol === colIdx ? (
                           <div
-                            className="pointer-events-none absolute left-1 right-1 z-10 rounded-xl border border-sky-400/70 bg-sky-200/30 dark:border-sky-500/60 dark:bg-sky-500/10"
+                            className="pointer-events-none absolute left-1 right-1 z-10 rounded-xl border border-si-accent/60 bg-si-accentBg"
                             style={{
                               top: `${selection.startIndex * rowHeight + 6}px`,
                               height: `${selection.span * rowHeight - 12}px`,
@@ -282,7 +275,7 @@ export function WeekView({
                             return (
                                 <div
                                     key={`slot-${slot}`}
-                                    className={`relative z-10 w-full h-full cursor-pointer hover:bg-slate-100/60 dark:hover:bg-slate-800/60 ${isBreak ? 'bg-slate-50/50 dark:bg-slate-900/30 cursor-default' : ''}`}
+                                    className={`relative z-10 w-full h-full cursor-pointer hover:bg-si-accentBg/60 ${isBreak ? 'bg-si-border/40 cursor-default' : ''}`}
                                     style={{ gridRow: idx + 1 }}
                                     onMouseDown={(e) => {
                                         if (isBreak) return;
@@ -308,7 +301,13 @@ export function WeekView({
                                             }
                                         }
                                     }}
-                                />
+                                >
+                                    {isBreak && slot === BREAK_START && (
+                                        <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.12em] text-si-grayLight pointer-events-none select-none">
+                                            Pausa
+                                        </span>
+                                    )}
+                                </div>
                             );
                         })}
 

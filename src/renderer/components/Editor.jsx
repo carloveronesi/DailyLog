@@ -1,20 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LOCATION_TYPES,
   SLOT_MINUTES,
   defaultEntry,
-  displayLabel,
   hourKey,
   hourLabel,
   isSameTaskEntry,
+  normalizeClientKey,
+  normalizeForType,
   slotMinutes,
 } from "../domain/tasks";
 import { Button, Icon } from "./ui";
 import { EntryForm } from "./EntryForm";
+import { RecurringTaskSection } from "./RecurringTaskSection";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
-import { dowMon0, ymd } from "../utils/date";
-
-const DOW_NAMES_IT = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
 
 function hasMeaning(e) {
   if (!e) return false;
@@ -28,26 +27,31 @@ function hasMeaning(e) {
   );
 }
 
-function normalizeForType(e) {
-  const t = e.type;
-  const out = { ...e };
-  if (t !== "client") out.client = "";
-  if (t === "vacation" && !out.title.trim()) out.title = "Ferie";
-  if (t === "internal" && !out.title.trim()) out.title = "Internal";
-  if (t === "event" && !out.title.trim()) out.title = "Evento";
-  return out;
+
+function seedDefaultEntry(topClients, lastUsedByClient) {
+  const base = defaultEntry();
+  const topClient = topClients?.[0];
+  if (!topClient) return base;
+  const key = normalizeClientKey(topClient);
+  const last = lastUsedByClient?.[key] || {};
+  return {
+    ...base,
+    client: topClient,
+    subtypeId: last.subtypeId ?? null,
+    milestone: last.milestone ?? null,
+  };
 }
 
-function initFromExisting(existingEntries, workSlots) {
+function initFromExisting(existingEntries, workSlots, seed) {
   const hours = existingEntries?.hours || {};
-  const entryAM = existingEntries?.AM ? { ...defaultEntry(), ...existingEntries.AM } : defaultEntry();
-  const entryPM = existingEntries?.PM ? { ...defaultEntry(), ...existingEntries.PM } : defaultEntry();
+  const entryAM = existingEntries?.AM ? { ...defaultEntry(), ...existingEntries.AM } : seed();
+  const entryPM = existingEntries?.PM ? { ...defaultEntry(), ...existingEntries.PM } : seed();
 
   const allHourEntries = {};
   for (const h of workSlots) {
     const k = hourKey(h);
     const existing = hours[k];
-    allHourEntries[k] = existing ? { ...defaultEntry(), ...existing } : defaultEntry();
+    allHourEntries[k] = existing ? { ...defaultEntry(), ...existing } : seed();
   }
 
   const fullDay =
@@ -71,8 +75,13 @@ function buildEndOptions(startMinute, sectionBoundaries) {
   return options;
 }
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [] }) {
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [], onDirtyChange }) {
   const { settings, setSettings } = useSettings();
+  const compact = settings?.editorCompact !== false;
+  const toggleCompact = () => setSettings(prev => ({ ...prev, editorCompact: !(prev?.editorCompact !== false) }));
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  const markDirty = useCallback(() => { setDirty(true); }, []);
   const { MORNING_SLOTS, AFTERNOON_SLOTS, WORK_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -93,17 +102,19 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [rangeStartMin, setRangeStartMin] = useState(MORNING_SLOTS[0]);
   const [rangeEndMin, setRangeEndMin] = useState(MORNING_SLOTS[0] + SLOT_MINUTES);
   const [fullDay, setFullDay] = useState(false);
-  const [location, setLocation] = useState(existingEntries?.location || LOCATION_TYPES.REMOTE);
+  const [location, setLocation] = useState(existingEntries?.location || settings?.defaultLocation || LOCATION_TYPES.REMOTE);
   const [autoAdjusted, setAutoAdjusted] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    const init = initFromExisting(existingEntries, WORK_SLOTS);
+    const lastUsedByClient = settings?.lastUsedByClient || {};
+    const seed = () => seedDefaultEntry(topClients, lastUsedByClient);
+    const init = initFromExisting(existingEntries, WORK_SLOTS, seed);
     setEntryAM(init.entryAM);
     setEntryPM(init.entryPM);
     setHourEntries(init.hourEntries);
     setFullDay(init.fullDay);
-    setLocation(existingEntries?.location || LOCATION_TYPES.REMOTE);
+    setLocation(existingEntries?.location || settings?.defaultLocation || LOCATION_TYPES.REMOTE);
 
     const hourKeys = Object.keys(existingEntries?.hours || {}).map(slotMinutes).filter((v) => Number.isFinite(v));
     let start = MORNING_SLOTS[0];
@@ -125,6 +136,17 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     } else if (existingEntries?.PM && !existingEntries?.AM) {
       start = AFTERNOON_SLOTS[0];
       end = AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES;
+    } else {
+      const now = new Date();
+      const isToday = date && new Date(date).toDateString() === now.toDateString();
+      if (isToday) {
+        const nowMin = now.getHours() * 60 + Math.floor(now.getMinutes() / SLOT_MINUTES) * SLOT_MINUTES;
+        const candidate = WORK_SLOTS.find((s) => s >= nowMin) ?? WORK_SLOTS[0];
+        if (candidate !== undefined) {
+          start = candidate;
+          end = candidate + SLOT_MINUTES;
+        }
+      }
     }
 
     isInitializingRef.current = true;
@@ -132,8 +154,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setRangeEndMin(end);
     lastRangeRef.current = { start, end };
 
-    const seedEntry = init.fullDay ? init.entryAM : (init.hourEntries[hourKey(start)] || defaultEntry());
+    const seedEntry = init.fullDay ? init.entryAM : (init.hourEntries[hourKey(start)] || seed());
     setDraftEntry(seedEntry);
+    setDirty(false);
   }, [existingEntries, initialRangeStart, initialRangeEnd]);
 
   const activeEntry = fullDay ? entryAM : draftEntry;
@@ -189,6 +212,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   }, [rangeStartMin, rangeEndMin, draftEntry, fullDay]);
 
   function handleEntryChange(newEntry) {
+    markDirty();
     setDraftEntry(newEntry);
     if (fullDay) {
       setEntryAM(newEntry);
@@ -218,6 +242,21 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
   }
 
+  function rememberLastUsed(entries) {
+    const updates = {};
+    for (const e of entries) {
+      if (!e || e.type !== "client" || !e.client?.trim()) continue;
+      const key = normalizeClientKey(e.client);
+      if (!key) continue;
+      updates[key] = { subtypeId: e.subtypeId ?? null, milestone: e.milestone ?? null };
+    }
+    if (Object.keys(updates).length === 0) return;
+    setSettings(prev => ({
+      ...prev,
+      lastUsedByClient: { ...(prev?.lastUsedByClient || {}), ...updates },
+    }));
+  }
+
   function handleSave() {
     setSaveError(null);
     try {
@@ -228,6 +267,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
             setSaveError("Il titolo è obbligatorio");
             return;
           }
+          rememberLastUsed([cleanAM]);
           onSave({ AM: cleanAM, PM: cleanAM, location, hours: undefined });
           return;
         }
@@ -246,6 +286,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
         nextHours[key] = normalized;
       }
 
+      rememberLastUsed(Object.values(nextHours));
       onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
     } catch (err) {
       setSaveError(err?.message || "Errore durante il salvataggio");
@@ -257,245 +298,99 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const activeNormalized = normalizeForType(activeEntry);
   const isSaveDisabled = !activeNormalized.title?.trim();
 
-  // Recurring task logic
-  const dow = dowMon0(date);
-  const recurringTasks = settings?.recurringTasks || [];
-  const [recurringOpen, setRecurringOpen] = useState(false);
-  const [recurringFeedback, setRecurringFeedback] = useState(false);
-  const [recurringFreq, setRecurringFreq] = useState("weekly");
-  const [recurringDow, setRecurringDow] = useState(dow);
-  const [recurringDom, setRecurringDom] = useState(date.getDate());
-  const [recurringEndYmd, setRecurringEndYmd] = useState(() => {
-    const tasks = settings?.recurringTasks || [];
-    const existing = tasks.find(t => {
-      const freq = t.frequency || "weekly";
-      if (freq === "daily") return true;
-      if (freq === "monthly") return t.dayOfMonth === date.getDate();
-      return (t.dowMon0 ?? 0) === dowMon0(date);
-    });
-    return existing?.endYmd || "";
-  });
-
-  // Trova il task ricorrente che corrisponde alla configurazione attuale
-  const existingRecurring = recurringTasks.find(t => {
-    const freq = t.frequency || "weekly";
-    if (freq !== recurringFreq) return false;
-    if (freq === "daily") return true;
-    if (freq === "monthly") return t.dayOfMonth === recurringDom;
-    return (t.dowMon0 ?? 0) === recurringDow;
-  }) || null;
-
-  const existingRecurringLabel = existingRecurring
-    ? displayLabel(existingRecurring.AM || existingRecurring.PM ||
-        (existingRecurring.hours ? Object.values(existingRecurring.hours)[0] : null))
-    : null;
-
-  function samePatternFilter(t) {
-    const freq = t.frequency || "weekly";
-    if (freq !== recurringFreq) return true;
-    if (freq === "daily") return false;
-    if (freq === "monthly") return t.dayOfMonth !== recurringDom;
-    return (t.dowMon0 ?? 0) !== recurringDow;
-  }
-
-  function handleSaveRecurring() {
-    let content;
-    if (fullDay) {
-      const cleanAM = normalizeForType(entryAM);
-      if (!cleanAM.title?.trim()) return;
-      content = { AM: cleanAM, PM: cleanAM, hours: null };
-    } else {
-      const cleanEntry = normalizeForType(draftEntry);
-      if (!cleanEntry.title?.trim()) return;
-      const hours = {};
-      const start = Math.min(rangeStartMin, rangeEndMin);
-      const end = Math.max(rangeStartMin, rangeEndMin);
-      for (let m = start; m < end; m += SLOT_MINUTES) {
-        hours[hourKey(m)] = cleanEntry;
-      }
-      content = { AM: null, PM: null, hours };
-    }
-    const needsAnchor = recurringFreq === "biweekly" || recurringFreq === "triweekly";
-    const newTask = {
-      id: Date.now().toString(),
-      frequency: recurringFreq,
-      dowMon0: recurringFreq !== "daily" && recurringFreq !== "monthly" ? recurringDow : null,
-      dayOfMonth: recurringFreq === "monthly" ? recurringDom : null,
-      anchorYmd: needsAnchor ? ymd(date) : null,
-      endYmd: recurringEndYmd || null,
-      ...content,
-    };
-    setSettings(prev => ({
-      ...prev,
-      recurringTasks: [...(prev.recurringTasks || []).filter(samePatternFilter), newTask],
-    }));
-    setRecurringFeedback(true);
-    setTimeout(() => setRecurringFeedback(false), 2000);
-  }
-
-  function handleRemoveRecurring() {
-    setSettings(prev => ({
-      ...prev,
-      recurringTasks: (prev.recurringTasks || []).filter(samePatternFilter),
-    }));
-  }
-
-  const recurringSection = (
-    <div className={`rounded-2xl border px-4 py-3 flex flex-col gap-2.5 transition-colors ${recurringFeedback ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/50 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700/50 dark:bg-slate-800/50'}`}>
-      {/* Header — sempre visibile */}
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={() => setRecurringOpen(v => !v)}
-          className="flex items-center gap-2 min-w-0"
-        >
-          <Icon name="repeat" className={`w-4 h-4 shrink-0 transition-colors ${recurringFeedback ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'}`} />
-          <span className={`text-xs font-semibold transition-colors ${recurringFeedback ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-700 dark:text-slate-300'}`}>
-            {recurringFeedback ? 'Modello salvato!' : 'Ripeti'}
-          </span>
-          {existingRecurring && !recurringOpen && !recurringFeedback && (
-            <span className="text-xs font-normal text-slate-400 dark:text-slate-500 italic truncate">— {existingRecurringLabel}</span>
-          )}
-          <Icon name={recurringOpen ? "chev-up" : "chev-down"} className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-        </button>
-        {recurringOpen && (
-          <div className="flex items-center gap-3 shrink-0">
-            {existingRecurring ? (
-              <>
-                <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Aggiorna</button>
-                <button type="button" onClick={handleRemoveRecurring} className="text-xs font-semibold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">Rimuovi</button>
-              </>
-            ) : (
-              <button type="button" onClick={handleSaveRecurring} className="text-xs font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 transition-colors">Salva modello</button>
-            )}
-          </div>
-        )}
-      </div>
-      {/* Corpo collassabile */}
-      {recurringOpen && (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={recurringFreq}
-              onChange={e => setRecurringFreq(e.target.value)}
-              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
-            >
-              <option value="daily">Ogni giorno (lun-ven)</option>
-              <option value="weekly">Ogni settimana</option>
-              <option value="biweekly">Ogni 2 settimane</option>
-              <option value="triweekly">Ogni 3 settimane</option>
-              <option value="monthly">Ogni mese</option>
-            </select>
-            {(recurringFreq === "weekly" || recurringFreq === "biweekly" || recurringFreq === "triweekly") && (
-              <select
-                value={recurringDow}
-                onChange={e => setRecurringDow(Number(e.target.value))}
-                className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 cursor-pointer"
-              >
-                {[["Lunedì",0],["Martedì",1],["Mercoledì",2],["Giovedì",3],["Venerdì",4]].map(([lbl, v]) => (
-                  <option key={v} value={v}>{lbl}</option>
-                ))}
-              </select>
-            )}
-            {recurringFreq === "monthly" && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-500 dark:text-slate-400">giorno</span>
-                <input
-                  type="number" min={1} max={28}
-                  value={recurringDom}
-                  onChange={e => setRecurringDom(Math.max(1, Math.min(28, Number(e.target.value))))}
-                  className="text-xs w-14 rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-                />
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">Fino al</span>
-            <input
-              type="date"
-              value={recurringEndYmd}
-              onChange={e => setRecurringEndYmd(e.target.value)}
-              min={ymd(date)}
-              className="text-xs rounded-lg border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-            />
-            {recurringEndYmd && (
-              <button type="button" onClick={() => setRecurringEndYmd("")} className="text-xs text-slate-400 hover:text-red-500 transition-colors">Rimuovi</button>
-            )}
-            {!recurringEndYmd && (
-              <span className="text-xs text-slate-400 dark:text-slate-500 italic">nessuna scadenza</span>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-
+  const wrapDirty = (setter) => (val) => { markDirty(); setter(val); };
   const entryFormProps = {
     entry: activeEntry,
     onChange: handleEntryChange,
     topClients, allClients, allPeople, onSavePeople,
-    fullDay, setFullDay,
-    rangeStartMin, setRangeStartMin,
-    rangeEndMin, setRangeEndMin,
+    fullDay, setFullDay: wrapDirty(setFullDay),
+    rangeStartMin, setRangeStartMin: wrapDirty(setRangeStartMin),
+    rangeEndMin, setRangeEndMin: wrapDirty(setRangeEndMin),
     startSection, endOptions, rangeDuration, autoAdjusted, hourLabel,
-    location, setLocation,
+    location, setLocation: wrapDirty(setLocation),
+    compact,
   };
 
-  const TYPE_GRADIENT = {
-    client:   "from-sky-400 to-cyan-300",
-    internal: "from-slate-400 to-slate-300",
-    vacation: "from-emerald-400 to-green-300",
-    event:    "from-purple-400 to-violet-300",
-  };
+  useEffect(() => {
+    const onKey = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key === "Enter" && !isSaveDisabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isSaveDisabled, fullDay, entryAM, hourEntries, location]);
 
   return (
-    <div className="flex flex-col min-h-0 flex-1">
+    <div className="flex flex-col min-h-0 flex-1 max-w-screen-xl w-full mx-auto">
+      {/* Titolo full-width */}
+      <div className="flex flex-col gap-1 pb-4 border-b border-si-border mb-4 shrink-0">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent">Voce</div>
+        <input
+          className="bg-transparent text-2xl font-bold text-si-ink placeholder:text-si-grayLight focus:outline-none"
+          value={activeEntry.title}
+          onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
+          placeholder="Titolo del task..."
+          autoFocus
+        />
+      </div>
+
       {/* Body: due colonne scrollabili */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_minmax(240px,1fr)] gap-x-8 items-start pb-4">
-          {/* Colonna sinistra: titolo, note, link, blockers/next steps, ricorrenza */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,1fr)_1.6fr] gap-x-8 items-start pb-4">
+          {/* Colonna sinistra: metadata + ricorrenza */}
           <div className="flex flex-col gap-4">
-            {/* Titolo */}
-            <div className="border-b-2 border-transparent focus-within:border-slate-200 dark:focus-within:border-slate-700 transition-colors pb-1">
-              <input
-                className="w-full bg-transparent text-2xl font-bold text-slate-900 placeholder:text-slate-300 dark:text-white dark:placeholder:text-slate-600 focus:outline-none"
-                value={activeEntry.title}
-                onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
-                placeholder="Titolo del task..."
-                autoFocus
+            <EntryForm {...entryFormProps} section="meta" />
+            {!compact && (
+              <RecurringTaskSection
+                date={date}
+                fullDay={fullDay}
+                entryAM={entryAM}
+                draftEntry={draftEntry}
+                rangeStartMin={rangeStartMin}
+                rangeEndMin={rangeEndMin}
               />
-            </div>
-            <EntryForm {...entryFormProps} column="left" />
-            {recurringSection}
+            )}
           </div>
-          {/* Colonna destra: metadata sidebar */}
-          <div className="flex flex-col gap-6 lg:border-l lg:border-slate-100 dark:lg:border-slate-700/50 lg:pl-8">
-            <EntryForm {...entryFormProps} column="right" />
+          {/* Colonna destra: note, feedback, trascrizione */}
+          <div className="flex flex-col gap-4 lg:border-l lg:border-si-border lg:pl-8">
+            <EntryForm {...entryFormProps} section="notes" />
           </div>
+        </div>
+        <div className="pb-2">
+          <button
+            type="button"
+            onClick={toggleCompact}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-si-gray hover:text-si-ink transition-colors border-0 bg-transparent cursor-pointer px-0"
+          >
+            <Icon name={compact ? "chev-down" : "chev-up"} className="w-3.5 h-3.5" />
+            {compact ? "Mostra dettagli" : "Nascondi dettagli"}
+          </button>
         </div>
       </div>
 
-      {/* Scroll fade indicator */}
-      <div className="shrink-0 -mx-5 h-8 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none" />
 
       {/* Footer sticky */}
-      <div className="shrink-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-white/95 dark:bg-slate-800/95 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3 rounded-b-3xl">
+      <div className="shrink-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-si-bg/95 border-t border-si-border flex items-center justify-between gap-3 rounded-b-[20px]">
         <div className="flex items-center gap-3">
-          <Button
-            className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500 px-8 py-2.5 text-base font-bold shadow-lg shadow-slate-900/10 dark:shadow-blue-500/10 disabled:opacity-30 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+          <button
+            className="px-8 py-2.5 text-base font-semibold text-white rounded-full bg-si-ink hover:bg-si-inkSoft disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-si-ink border-0 cursor-pointer transition-colors"
             onClick={handleSave}
             type="button"
             disabled={isSaveDisabled}
           >
             Salva
-          </Button>
+          </button>
           {saveError && (
-            <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>
+            <span className="text-sm text-si-rose">{saveError}</span>
           )}
         </div>
         {fullDay ? (
           <Button
-            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            className="bg-transparent text-si-gray border border-si-border hover:bg-si-rose/10 hover:text-si-rose hover:border-si-rose/30 transition-all font-medium"
             onClick={onDeleteDay}
             type="button"
           >
@@ -504,7 +399,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
           </Button>
         ) : (
           <Button
-            className="bg-white text-slate-500 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:bg-transparent dark:border-slate-700 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400 dark:hover:border-red-800 transition-all font-medium"
+            className="bg-transparent text-si-gray border border-si-border hover:bg-si-rose/10 hover:text-si-rose hover:border-si-rose/30 transition-all font-medium"
             onClick={handleDeleteSlot}
             type="button"
           >

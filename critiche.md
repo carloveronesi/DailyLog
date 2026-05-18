@@ -1,0 +1,17 @@
+Ho analizzato la repository di **DailyLog**. Il progetto è molto interessante e ben strutturato: l'idea di una PWA serverless basata interamente sul browser che funga da work log quotidiano senza la pesantezza di strumenti come Jira è ottima ed in linea con le tue recenti preferenze per un'interfaccia pulita e minimale. La suddivisione in cartelle (`domain`, `hooks`, `services`, `components`) dimostra una solida progettazione architetturale. [perplexity](https://www.perplexity.ai/search/ed002349-0459-4c2f-abdd-21e308386c6f)
+
+Ecco alcune critiche costruttive e migliorie che potresti valutare per il futuro del progetto:
+
+### Stack Tecnologico e Manutenibilità
+- **Assenza di TypeScript:** Al momento il progetto è interamente in JavaScript. Dato che hai un data model strutturato (`DayData`, `Entry`) con diverse varianti (es. `type: "internal" | "client" | "vacation"`), migrare a TypeScript ti salverebbe da molti errori a runtime e migliorerebbe l'autocompletamento nel tuo IDE .
+- **Mancanza di Test Automatizzati:** Non ci sono test nel progetto. Anche se testare l'intera UI può essere oneroso, ti consiglio vivamente di introdurre **Vitest** per testare almeno la business logic pura, come i file in `src/domain/calendar.js` (es. `buildBlocks`, `matchesRecurringPattern`). Le logiche di ricorrenza e gestione delle date tendono a generare bug difficili da scovare.
+
+### Gestione dei Dati e Storage
+- **Limiti del `localStorage`:** Utilizzare `localStorage` come storage primario è comodo all'inizio, ma ha due grandi difetti: è sincrono (blocca il thread principale della UI durante la lettura/scrittura di grandi JSON) e ha un limite di spazio ridotto (solitamente circa 5MB). Se scrivi note lunghe ogni giorno, potresti saturarlo. Ti consiglio di migrare lo storage primario su **IndexedDB** (magari usando un wrapper leggero come `localForage` o `Dexie.js`), mantenendo un'architettura asincrona senza toccare il paradigma "no backend".
+- **Rischio Perdita Dati:** Essendo tutto nel browser, se pulisci la cache o i dati di navigazione per sbaglio, perdi l'intero storico. Hai già un backup automatico basato su file handle (File System Access API), ma potresti implementare una sincronizzazione cloud opzionale "Bring Your Own Storage" (es. salvataggio automatico su un Gist di GitHub privato, Google Drive, o WebDAV). In questo modo manterresti l'app serverless, ma azzereresti il rischio di perdere i dati.
+
+### Gestione dello Stato e UI
+- **State Management:** Attualmente usi un mix di `App.jsx` per lo stato globale e vari custom hooks (`useCalendarData`, `useTodos`, ecc.). Se l'applicazione dovesse crescere o dovessi aggiungere funzionalità complesse (come la gestione dei link esterni e milestone che stavi ipotizzando), potresti valutare l'adozione di un gestore di stato leggero come **Zustand**. Questo ti aiuterebbe a separare meglio lo stato dell'UI dalla logica dei dati.
+- **Componenti UI Condivisi:** Hai una cartella `ui.jsx` con componenti base (Button, Modal, ecc.) gestiti con Tailwind inline. Per evitare che i file diventino troppo disordinati con decine di classi utility, potresti adottare un pattern come `clsx` + `tailwind-merge` (classico approccio di *shadcn/ui*), che rende la composizione delle varianti dei pulsanti e dei form molto più elegante e manutenibile.
+
+Quale di queste aree tecniche (es. migrazione a TypeScript, cambio di database, o test) pensi possa darti più valore nel breve termine?

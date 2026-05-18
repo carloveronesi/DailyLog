@@ -87,7 +87,6 @@ export function buildWorkSlots(workHours) {
 export const MORNING_SLOTS = buildSlots(9 * 60, 13 * 60); // 09:00 -> 12:30
 export const AFTERNOON_SLOTS = buildSlots(14 * 60, 18 * 60); // 14:00 -> 17:30
 export const WORK_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS];
-export const HOURS_PER_DAY = WORK_SLOTS.length / 2; // 8
 
 export function hourKey(h) {
   return slotKey(h);
@@ -97,15 +96,6 @@ export function hourLabel(h) {
   return slotLabel(h);
 }
 
-export function hasMorningHours(dayData) {
-  if (!dayData?.hours) return false;
-  return MORNING_SLOTS.some((h) => dayData.hours[slotKey(h)]);
-}
-
-export function hasAfternoonHours(dayData) {
-  if (!dayData?.hours) return false;
-  return AFTERNOON_SLOTS.some((h) => dayData.hours[slotKey(h)]);
-}
 
 export function defaultEntry() {
   return {
@@ -121,6 +111,16 @@ export function defaultEntry() {
     links: [],
     milestone: null,
   };
+}
+
+export function normalizeForType(e) {
+  const t = e.type;
+  const out = { ...e };
+  if (t !== "client") out.client = "";
+  if (t === "vacation" && !out.title.trim()) out.title = "Ferie";
+  if (t === "internal" && !out.title.trim()) out.title = "Internal";
+  if (t === "event" && !out.title.trim()) out.title = "Evento";
+  return out;
 }
 
 export function badgeStyle(type) {
@@ -253,43 +253,35 @@ export function ensureSubtypesFormat(settingsSubtypes) {
   return migrated;
 }
 
-export function getSubtypeLabel(type, subtypeId, taskSubtypes, clientName = null) {
+export function getSubtypeLabel(type, subtypeId, taskSubtypes, clientName = null, projects = null) {
   if (!subtypeId) return "Generico";
   const list = taskSubtypes?.[type] || [];
   let found = list.find((st) => (st.id || st) === subtypeId);
   if (found) return found.label || found;
 
   if (type === "client" && clientName) {
-    try {
-      const raw = localStorage.getItem("dailylog__projects");
-      if (raw) {
-        const obj = JSON.parse(raw);
-        const pid = "client::" + clientName.trim().toLocaleLowerCase("it-IT");
-        const pSubtasks = obj[pid]?.subtasks || [];
-        found = pSubtasks.find((st) => st.id === subtypeId);
-        if (found) return found.label;
-      }
-    } catch {
-      // ignore
+    const obj = projects ?? (() => {
+      try { return JSON.parse(localStorage.getItem("dailylog__projects") || "null"); } catch { return null; }
+    })();
+    if (obj) {
+      const pid = "client::" + clientName.trim().toLocaleLowerCase("it-IT");
+      found = (obj[pid]?.subtasks || []).find((st) => st.id === subtypeId);
+      if (found) return found.label;
     }
   }
 
   return "Generico";
 }
 
-export function getInternalSubtaskLabel(projectName, subtaskId) {
+export function getInternalSubtaskLabel(projectName, subtaskId, projects = null) {
   if (!subtaskId) return "Generico";
-  try {
-    const raw = localStorage.getItem("dailylog__projects");
-    if (raw) {
-      const obj = JSON.parse(raw);
-      const pid = "internal::" + projectName.trim().toLocaleLowerCase("it-IT");
-      const pSubtasks = obj[pid]?.subtasks || [];
-      const found = pSubtasks.find((st) => st.id === subtaskId);
-      if (found) return found.label;
-    }
-  } catch {
-    // ignore
+  const obj = projects ?? (() => {
+    try { return JSON.parse(localStorage.getItem("dailylog__projects") || "null"); } catch { return null; }
+  })();
+  if (obj) {
+    const pid = "internal::" + projectName.trim().toLocaleLowerCase("it-IT");
+    const found = (obj[pid]?.subtasks || []).find((st) => st.id === subtaskId);
+    if (found) return found.label;
   }
   return subtaskId;
 }

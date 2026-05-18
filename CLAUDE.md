@@ -9,7 +9,7 @@ PWA per il tracciamento giornaliero delle attività lavorative. Calendario mensi
 
 ## Stack
 - **React 18** + **Vite 6** (no TypeScript)
-- **Tailwind CSS** (classi JSX inline, nessun file CSS separato, no Tailwind config file visibile)
+- **Tailwind CSS v3** buildato via PostCSS (`tailwind.config.js` + `postcss.config.js` in root). Classi JSX inline; entry CSS in `src/renderer/styles.css` con `@tailwind base/components/utilities` + token `--si-*` (light/dark) + body font Geist.
 - **localStorage** come storage primario (chiave `dailylog:v1:<YYYY-MM>`)
 - **IndexedDB** solo per persistere il file handle del backup automatico
 - **Firebase Hosting** per il deploy (`npm run deploy:web`)
@@ -192,3 +192,8 @@ Completare un todo lo sposta automaticamente in "FATTI"; de-spuntarlo lo riporta
 
 ## Branch git attivo
 Il branch `main` è usato come base per le PR.
+
+## Design context
+- `PRODUCT.md` (root) — register, utenti, personalità, anti-reference, principi strategici.
+- `DESIGN.md` (root) — formato Stitch: token YAML in frontmatter (palette `si-*`, Geist/Geist Mono, radius, shadow) + sezioni Overview / Colors / Typography / Elevation / Components / Do's and Don'ts. North Star: *"The Quiet Spreadsheet"*.
+Leggerli prima di lavori UI per restare on-brand.

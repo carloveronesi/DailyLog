@@ -65,20 +65,20 @@ function DatePicker({ value, onChange, isOverdue = false }) {
     <div
       ref={popupRef}
       style={{ position: "fixed", top: popupPos.top, left: popupPos.left, zIndex: 9999 }}
-      className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-3 w-[240px]"
+      className="bg-si-surface rounded-2xl shadow-si-lg border border-si-border p-3 w-[240px]"
     >
       <div className="flex items-center justify-between mb-3">
-        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-si-muted text-si-gray transition border-0 bg-transparent cursor-pointer">
           <Icon name="chev-left" className="w-4 h-4" />
         </button>
-        <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{MONTHS_IT[viewMonth]} {viewYear}</span>
-        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition">
+        <span className="text-sm font-bold text-si-ink">{MONTHS_IT[viewMonth]} {viewYear}</span>
+        <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-si-muted text-si-gray transition border-0 bg-transparent cursor-pointer">
           <Icon name="chev-right" className="w-4 h-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 mb-1">
-        {DAYS_IT.map(d => <div key={d} className="text-center text-[9px] font-bold uppercase text-slate-400 py-1">{d}</div>)}
+        {DAYS_IT.map(d => <div key={d} className="text-center text-[9px] font-bold uppercase text-si-gray py-1">{d}</div>)}
       </div>
 
       <div className="grid grid-cols-7 gap-y-0.5">
@@ -93,10 +93,10 @@ function DatePicker({ value, onChange, isOverdue = false }) {
               onClick={() => selectDay(day)}
               className={`w-full aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition
                 ${isSelected
-                  ? "bg-sky-500 text-white font-bold shadow-sm"
+                  ? "bg-si-accent text-white font-bold shadow-sm"
                   : isToday
-                    ? "border border-sky-400 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20"
-                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    ? "border border-si-accent text-si-accent hover:bg-si-accentBg"
+                    : "text-si-ink hover:bg-si-muted"
                 }`}
             >
               {day}
@@ -108,7 +108,7 @@ function DatePicker({ value, onChange, isOverdue = false }) {
       {value && (
         <button
           onClick={() => { onChange({ target: { value: "" } }); setOpen(false); }}
-          className="mt-2 w-full text-xs text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/10 transition font-medium"
+          className="mt-2 w-full text-xs text-si-gray hover:text-si-rose py-1.5 rounded-lg hover:bg-si-rose/5 transition font-medium border-0 bg-transparent cursor-pointer"
         >
           Rimuovi data
         </button>
@@ -123,12 +123,12 @@ function DatePicker({ value, onChange, isOverdue = false }) {
         ref={buttonRef}
         type="button"
         onClick={openPicker}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition min-w-[110px] border
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium transition min-w-[110px] border cursor-pointer
           ${!value
-            ? "text-slate-400 dark:text-slate-500 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+            ? "text-si-grayLight border-transparent hover:bg-si-muted hover:border-si-border"
             : isOverdue
-              ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 font-semibold"
-              : "bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+              ? "bg-si-rose/10 text-si-rose border-si-rose/30 hover:bg-si-rose/20 font-semibold"
+              : "bg-si-muted text-si-inkSoft border-si-border hover:bg-si-border"
           }`}
       >
         <Icon name="calendar" className="w-3.5 h-3.5 shrink-0 opacity-60" />
@@ -231,9 +231,9 @@ export function TodoView({
     setNewTagInput("");
   }
 
-  const containerClass = isEmbedded 
-    ? "flex h-full bg-white/80 backdrop-blur dark:bg-slate-800/80 rounded-3xl overflow-hidden relative border border-slate-200 dark:border-slate-700"
-    : "flex h-full bg-white dark:bg-slate-950 rounded-3xl overflow-hidden relative shadow-soft dark:shadow-none border border-slate-200 dark:border-slate-800";
+  const containerClass = isEmbedded
+    ? "flex h-full bg-si-surface rounded-[20px] overflow-hidden relative shadow-si"
+    : "flex h-full bg-si-surface rounded-[20px] overflow-hidden relative shadow-si";
 
   return (
     <div className={containerClass}>
@@ -242,8 +242,8 @@ export function TodoView({
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         <div className="p-6">
           <div className="mb-6">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">DailyLog</div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">Attività</h2>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent mb-1">To-do</div>
+            <h2 className="text-[28px] font-bold tracking-[-0.03em] text-si-ink">Attività</h2>
           </div>
           
           {[
@@ -252,20 +252,19 @@ export function TodoView({
           ].map(({ groupName, groupTodos, showAdd }) => (
             <div key={groupName} className="mb-8">
               <div className="flex items-center gap-3 mb-4">
-                <Icon name="list-check" className="w-5 h-5 text-slate-400" />
-                <h3 className="font-semibold text-sm tracking-wide text-slate-500 dark:text-slate-400 uppercase">{groupName}</h3>
-                <span className="text-sm text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{groupTodos.length}</span>
+                <h3 className="font-semibold text-[11px] tracking-[0.06em] text-si-gray uppercase">{groupName}</h3>
+                <span className="text-[11px] text-si-gray bg-si-muted px-2 py-0.5 rounded-full border border-si-border">{groupTodos.length}</span>
               </div>
 
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                <div className="grid grid-cols-[1fr_auto_auto_64px] lg:grid-cols-[1fr_120px_120px_64px] gap-2 lg:gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              <div className="border border-si-border rounded-2xl overflow-hidden">
+                <div className="grid grid-cols-[1fr_auto_auto_64px] lg:grid-cols-[1fr_120px_120px_64px] gap-2 lg:gap-4 p-3 bg-si-muted border-b border-si-border text-[10px] font-semibold text-si-gray uppercase tracking-wider">
                   <div>Nome / Progetto</div>
                   <div className="hidden sm:block text-center">Inizio</div>
                   <div className="hidden sm:block text-center">Scadenza</div>
                   <div></div>
                 </div>
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="divide-y divide-si-border">
                   {groupTodos.map(todo => {
                     const doneSubtasks = (todo.subtasks || []).filter(s => s.isDone).length;
                     const totalSubtasks = (todo.subtasks || []).length;
@@ -273,40 +272,40 @@ export function TodoView({
                     const isOverdue = !todo.isDone && !!todo.endDate && todo.endDate < today;
 
                     return (
-                      <div key={todo.id} className={`grid grid-cols-[1fr_auto_auto_64px] lg:grid-cols-[1fr_120px_120px_64px] gap-2 lg:gap-4 p-2 items-center transition group/row ${isOverdue ? "bg-red-50 dark:bg-red-900/10 hover:bg-red-100/70 dark:hover:bg-red-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"}`}>
+                      <div key={todo.id} className={`grid grid-cols-[1fr_auto_auto_64px] lg:grid-cols-[1fr_120px_120px_64px] gap-2 lg:gap-4 p-2 items-center transition group/row ${isOverdue ? "bg-si-rose/5 hover:bg-si-rose/10" : "hover:bg-si-muted"}`}>
                         <div className="flex items-center gap-3 overflow-hidden">
                           <button 
                             onClick={() => toggleDone(todo.id)}
-                            className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${todo.isDone ? "bg-emerald-400 border-emerald-400 text-white" : "border-slate-300 dark:border-slate-600 text-transparent hover:border-slate-400"}`}
+                            className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer ${todo.isDone ? "bg-si-success border-si-success text-white" : "border-si-grayLight text-transparent hover:border-si-accent"}`}
                           >
                             <Icon name="check" className="w-3.5 h-3.5" />
                           </button>
                           <div className="flex flex-col min-w-0">
                             <button 
                               onClick={() => setSelectedTodoId(todo.id)}
-                              className={`truncate font-medium text-sm text-left outline-none ${todo.isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}
+                              className={`truncate font-medium text-sm text-left outline-none bg-transparent border-0 cursor-pointer ${todo.isDone ? "text-si-grayLight line-through" : "text-si-ink hover:text-si-accent"}`}
                             >
                               {todo.title || <span className="opacity-40 italic font-normal">Senza titolo...</span>}
                             </button>
                             <div className="flex items-center gap-2 mt-0.5">
                               {todo.project && (
                                 <span className={
-                                  "text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tight " +
-                                  (todo.project.toLowerCase() === "interno" 
-                                    ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                                    : "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400")
+                                  "text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-tight " +
+                                  (todo.project.toLowerCase() === "interno"
+                                    ? "bg-si-muted text-si-gray border border-si-border"
+                                    : "bg-si-accentSoft text-si-accent")
                                 }>
                                   {todo.project}
                                 </span>
                               )}
                               {hasSubtasks && (
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 flex items-center gap-1 ${todo.isDone ? "opacity-50" : ""}`}>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-si-amberSoft text-si-amber flex items-center gap-1 ${todo.isDone ? "opacity-50" : ""}`}>
                                   <Icon name="list-check" className="w-3 h-3" />
                                   {doneSubtasks}/{totalSubtasks}
                                 </span>
                               )}
                               {(todo.tags || []).map(tag => (
-                                <span key={tag} className="text-[9px] font-bold px-1 py-0.5 rounded border border-slate-200 text-slate-400 dark:border-slate-700 uppercase tracking-tighter">
+                                <span key={tag} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-si-border text-si-gray uppercase tracking-tighter">
                                   {tag}
                                 </span>
                               ))}
@@ -330,10 +329,10 @@ export function TodoView({
                         </div>
                         
                         <div className="flex justify-end items-center gap-0.5">
-                          <button onClick={() => setSelectedTodoId(todo.id)} className="p-1 text-slate-300 hover:text-sky-500 dark:text-slate-600 dark:hover:text-sky-400 rounded transition-colors" title="Modifica">
+                          <button onClick={() => setSelectedTodoId(todo.id)} className="p-1 text-si-grayLight hover:text-si-accent rounded transition-colors cursor-pointer border-0 bg-transparent" title="Modifica">
                             <Icon name="pencil" className="w-4 h-4" />
                           </button>
-                          <button onClick={() => deleteTodo(todo.id)} className="p-1 text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 rounded transition-colors opacity-0 group-hover/row:opacity-100 transition" title="Elimina">
+                          <button onClick={() => deleteTodo(todo.id)} className="p-1 text-si-grayLight hover:text-si-rose rounded transition-colors opacity-0 group-hover/row:opacity-100 cursor-pointer border-0 bg-transparent" title="Elimina">
                             <Icon name="trash" className="w-4 h-4" />
                           </button>
                         </div>
@@ -355,18 +354,18 @@ export function TodoView({
                               if (e.key === "Escape") handleCancelNew();
                             }}
                             placeholder="Titolo attività..."
-                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-sky-400"
+                            className="flex-1 rounded-lg border border-si-border bg-si-muted px-3 py-1.5 text-sm text-si-ink placeholder-si-grayLight outline-none focus:ring-2 focus:ring-si-accent/40"
                           />
                           <button
                             onClick={handleSaveNew}
                             disabled={!newTodoTitle.trim()}
-                            className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            className="px-3 py-1.5 rounded-lg bg-si-ink hover:bg-si-inkSoft text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors border-0 cursor-pointer"
                           >
                             Salva
                           </button>
                           <button
                             onClick={handleCancelNew}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition"
+                            className="p-1.5 rounded-lg text-si-grayLight hover:text-si-ink transition border-0 bg-transparent cursor-pointer"
                           >
                             <Icon name="x" className="w-4 h-4" />
                           </button>
@@ -374,9 +373,9 @@ export function TodoView({
                       ) : (
                         <button
                           onClick={handleAddNew}
-                          className="flex items-center gap-2 text-sm font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition"
+                          className="flex items-center gap-2 text-sm font-semibold text-si-accent hover:text-si-accentDark transition border-0 bg-transparent cursor-pointer"
                         >
-                          <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-500/20 flex items-center justify-center shrink-0">
+                          <span className="w-5 h-5 rounded-full bg-si-accentSoft flex items-center justify-center shrink-0">
                             <Icon name="plus" className="w-3.5 h-3.5" />
                           </span>
                           Aggiungi Attività
@@ -393,61 +392,61 @@ export function TodoView({
 
       {/* Todo Detail Internal Overlay */}
       {selectedTodo && (
-        <div className="absolute inset-0 z-30 flex flex-col bg-white dark:bg-slate-800 animate-in fade-in slide-in-from-right-6 duration-300">
+        <div className="absolute inset-0 z-30 flex flex-col bg-si-surface">
           {/* Header with Back Button */}
-          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/50">
+          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-si-border">
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 onClick={() => setSelectedTodoId(null)}
-                className="flex items-center gap-1.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition group"
+                className="flex items-center gap-1.5 text-si-gray hover:text-si-ink transition group border-0 bg-transparent cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 group-hover:bg-slate-100 dark:group-hover:bg-slate-700 transition">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-si-muted group-hover:bg-si-border transition">
                   <Icon name="chev-left" className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-semibold">Torna alla lista</span>
               </button>
-              <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
-              <div className="text-sm font-bold text-slate-800 dark:text-slate-200">Dettaglio Attività</div>
+              <div className="h-4 w-px bg-si-border mx-1" />
+              <div className="text-sm font-bold text-si-ink">Dettaglio Attività</div>
             </div>
           </div>
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 pb-10">
             <div className="flex items-center justify-between">
-              <button 
+              <button
                 onClick={() => toggleDone(selectedTodo.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition ${selectedTodo.isDone ? "bg-emerald-100/50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-white border border-slate-200 dark:border-slate-700 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition ${selectedTodo.isDone ? "bg-si-success/10 text-si-success" : "bg-si-surface border border-si-border text-si-inkSoft hover:bg-si-muted"}`}
               >
-                <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedTodo.isDone ? "bg-emerald-400 border-emerald-400 text-white" : "border-slate-300 dark:border-slate-500"}`}>
+                <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedTodo.isDone ? "bg-si-success border-si-success text-white" : "border-si-border"}`}>
                   {selectedTodo.isDone && <Icon name="check" className="w-2.5 h-2.5" />}
                 </span>
                 {selectedTodo.isDone ? "Completato" : "Segna come completato"}
               </button>
               
-              <button onClick={() => { deleteTodo(selectedTodo.id); setSelectedTodoId(null); }} className="text-sm flex items-center gap-2 text-rose-500 hover:text-rose-600 font-medium">
+              <button onClick={() => { deleteTodo(selectedTodo.id); setSelectedTodoId(null); }} className="text-sm flex items-center gap-2 text-si-rose hover:opacity-80 font-medium">
                 <Icon name="trash" className="w-4 h-4" /> Elimina
               </button>
             </div>
 
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Titolo</label>
-                <input 
+                <label className="text-[10px] font-bold uppercase tracking-wider text-si-grayLight">Titolo</label>
+                <input
                   type="text"
                   value={selectedTodo.title}
                   onChange={(e) => updateTodo(selectedTodo.id, { title: e.target.value })}
                   placeholder="Titolo attività"
-                  className="w-full text-xl font-bold bg-transparent border-none outline-none text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-700 focus:ring-0 px-0"
+                  className="w-full text-xl font-bold bg-transparent border-none outline-none text-si-ink placeholder:text-si-grayLight focus:ring-0 px-0"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progetto</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-si-grayLight">Progetto</label>
                   <select
                     value={selectedTodo.project || ""}
                     onChange={(e) => updateTodo(selectedTodo.id, { project: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:bg-slate-900/50 dark:border-slate-700 dark:text-slate-200 outline-none hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                    className="w-full rounded-xl border border-si-border bg-si-muted px-3 py-2.5 text-sm font-semibold text-si-inkSoft outline-none hover:bg-si-border transition"
                   >
                     <option value="">Nessuno</option>
                     <option value="Interno">Interno</option>
@@ -458,8 +457,8 @@ export function TodoView({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tag</label>
-                  <div className="flex flex-wrap gap-1 min-h-[42px] p-2 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-700">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-si-grayLight">Tag</label>
+                  <div className="flex flex-wrap gap-1 min-h-[42px] p-2 rounded-xl border border-si-border bg-si-muted">
                     {availableTags.map(tag => {
                       const isSelected = (selectedTodo.tags || []).includes(tag);
                       return (
@@ -468,19 +467,19 @@ export function TodoView({
                           onClick={() => toggleTag(tag)}
                           className={
                             "px-2 py-0.5 rounded-full text-[10px] font-bold transition-all " +
-                            (isSelected 
-                              ? "bg-sky-600 text-white shadow-sm" 
-                              : "bg-white text-slate-400 hover:text-slate-600 dark:bg-slate-800 dark:text-slate-500 dark:hover:text-slate-300 border border-slate-100 dark:border-slate-700")
+                            (isSelected
+                              ? "bg-si-accent text-white shadow-sm"
+                              : "bg-si-surface text-si-grayLight hover:text-si-inkSoft border border-si-border")
                           }
                         >
                           {tag}
                         </button>
                       );
                     })}
-                    <input 
+                    <input
                       type="text"
                       placeholder="+ Tag..."
-                      className="bg-transparent text-[10px] font-bold text-slate-600 dark:text-slate-400 outline-none px-2 py-0.5 w-16 focus:w-24 transition-all"
+                      className="bg-transparent text-[10px] font-bold text-si-inkSoft outline-none px-2 py-0.5 w-16 focus:w-24 transition-all"
                       value={newTagInput}
                       onChange={(e) => setNewTagInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -496,16 +495,16 @@ export function TodoView({
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Inizio</span>
+              <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-si-muted border border-si-border">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-si-gray">Inizio</span>
                 <DatePicker
                   value={selectedTodo.startDate}
                   onChange={(e) => updateTodo(selectedTodo.id, { startDate: e.target.value })}
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Scadenza</span>
+              <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-si-muted border border-si-border">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-si-gray">Scadenza</span>
                 <DatePicker
                   value={selectedTodo.endDate}
                   onChange={(e) => updateTodo(selectedTodo.id, { endDate: e.target.value })}
@@ -514,47 +513,47 @@ export function TodoView({
               </div>
             </div>
             
-            <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-6 pt-4 border-t border-si-border">
               <div className="space-y-4">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Descrizione</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-si-grayLight">Descrizione</label>
                 <textarea
                   value={selectedTodo.description}
                   onChange={(e) => updateTodo(selectedTodo.id, { description: e.target.value })}
                   placeholder="Aggiungi una descrizione dettagliata..."
-                  className="w-full min-h-[120px] bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 text-sm text-slate-600 dark:text-slate-400 placeholder-slate-400 dark:placeholder-slate-600 focus:ring-2 focus:ring-sky-500/10 outline-none transition"
+                  className="w-full min-h-[120px] bg-si-surface border border-si-border rounded-2xl p-4 text-sm text-si-inkSoft placeholder:text-si-grayLight focus:ring-2 focus:ring-si-accent/10 focus:border-si-accent outline-none transition"
                 />
               </div>
 
               <div className="space-y-4 pt-4">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Sotto-task</label>
-                <div className="space-y-2 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4 bg-slate-50/30 dark:bg-slate-900/10">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-si-grayLight mb-2">Sotto-task</label>
+                <div className="space-y-2 border border-si-border rounded-2xl p-4 bg-si-muted">
                   {(selectedTodo.subtasks || []).map(st => (
                     <div key={st.id} className="flex items-center gap-3 group/st pr-2">
-                      <button 
+                      <button
                         onClick={() => toggleSubtask(st.id)}
-                        className={`shrink-0 w-4.5 h-4.5 rounded-lg border flex items-center justify-center transition-all ${st.isDone ? "bg-sky-500 border-sky-500 text-white" : "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent hover:border-sky-400"}`}
+                        className={`shrink-0 w-4.5 h-4.5 rounded-lg border flex items-center justify-center transition-all ${st.isDone ? "bg-si-accent border-si-accent text-white" : "bg-si-surface border-si-border text-transparent hover:border-si-accent"}`}
                       >
                         <Icon name="check" className="w-3 h-3" />
                       </button>
-                      <span className={`text-sm flex-1 ${st.isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
+                      <span className={`text-sm flex-1 ${st.isDone ? "text-si-grayLight line-through" : "text-si-inkSoft"}`}>
                         {st.title}
                       </span>
-                      <button 
+                      <button
                         onClick={() => deleteSubtask(st.id)}
-                        className="opacity-0 group-hover/st:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity"
+                        className="opacity-0 group-hover/st:opacity-100 p-1 text-si-grayLight hover:text-si-rose transition-opacity"
                       >
                         <Icon name="trash" className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
                   <div className="flex items-center gap-3 pt-2">
-                    <div className="w-4.5 h-4.5 flex items-center justify-center text-slate-300">
+                    <div className="w-4.5 h-4.5 flex items-center justify-center text-si-grayLight">
                       <Icon name="plus" className="w-3.5 h-3.5" />
                     </div>
-                    <input 
+                    <input
                       type="text"
                       placeholder="Aggiungi sotto-task..."
-                      className="bg-transparent text-sm text-slate-600 dark:text-slate-400 outline-none flex-1 border-b border-transparent focus:border-slate-200 dark:focus:border-slate-700 pb-0.5 transition-colors"
+                      className="bg-transparent text-sm text-si-inkSoft outline-none flex-1 border-b border-transparent focus:border-si-border pb-0.5 transition-colors"
                       value={newSubtaskTitle}
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       onKeyDown={(e) => {
