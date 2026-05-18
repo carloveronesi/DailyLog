@@ -206,96 +206,77 @@ export function EntryForm({
 
         {/* COSA È ANDATO STORTO */}
         {!compact && (
-        <div className={`rounded-xl border overflow-hidden transition-colors ${hasWentWrong ? "border-si-rose/40 bg-si-rose/5" : "border-si-border bg-si-muted"}`}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-si-border">
-            <div className="flex items-center gap-2">
-              <Icon name="alert-triangle" className={`w-3.5 h-3.5 shrink-0 ${hasWentWrong ? "text-si-rose" : "text-si-gray"}`} />
-              <span className={`text-xs font-bold uppercase tracking-wider ${hasWentWrong ? "text-si-rose" : "text-si-gray"}`}>Cosa è andato storto</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label className={`text-xs font-bold uppercase tracking-wider ${hasWentWrong ? "text-si-rose" : "text-si-gray"}`}>
+                Cosa è andato storto
+              </label>
+              {isSpeechSupported && micBtn("wentWrong")}
             </div>
-            {isSpeechSupported && micBtn("wentWrong")}
+            <textarea
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm resize-none outline-none transition-colors ${hasWentWrong ? "border-si-rose/40 bg-si-rose/5 text-si-rose placeholder:text-si-rose/40" : "border-si-border bg-si-muted text-si-inkSoft placeholder:text-si-grayLight"}`}
+              rows={3}
+              value={entry.wentWrong || ""}
+              onChange={(e) => setField("wentWrong", e.target.value)}
+              placeholder={listeningField === "wentWrong" ? "Sto ascoltando..." : "Blockers, problemi, rallentamenti..."}
+            />
           </div>
-          <textarea
-            className={`w-full px-4 py-3 text-sm resize-none outline-none bg-transparent ${hasWentWrong ? "text-si-rose italic placeholder:text-si-rose/40" : "text-si-inkSoft placeholder:text-si-grayLight"}`}
-            rows={3}
-            value={entry.wentWrong || ""}
-            onChange={(e) => setField("wentWrong", e.target.value)}
-            placeholder={listeningField === "wentWrong" ? "Sto ascoltando..." : "Blockers, problemi, rallentamenti..."}
-          />
-        </div>
         )}
 
         {/* PROSSIMI PASSI */}
         {!compact && (
-        <div className={`rounded-xl border overflow-hidden transition-colors ${hasNextSteps ? "border-si-success/40 bg-si-success/5" : "border-si-border bg-si-muted"}`}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-si-border">
-            <div className="flex items-center gap-2">
-              <Icon name="zap" className={`w-3.5 h-3.5 shrink-0 ${hasNextSteps ? "text-si-success" : "text-si-gray"}`} />
-              <span className={`text-xs font-bold uppercase tracking-wider ${hasNextSteps ? "text-si-success" : "text-si-gray"}`}>Prossimi passi</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label className={`text-xs font-bold uppercase tracking-wider ${hasNextSteps ? "text-si-success" : "text-si-gray"}`}>
+                Prossimi passi
+              </label>
+              {isSpeechSupported && micBtn("nextSteps")}
             </div>
-            {isSpeechSupported && micBtn("nextSteps")}
+            <textarea
+              className={`w-full rounded-xl border px-3 py-2.5 text-sm resize-none outline-none transition-colors ${hasNextSteps ? "border-si-success/40 bg-si-success/5 text-si-success placeholder:text-si-success/40" : "border-si-border bg-si-muted text-si-inkSoft placeholder:text-si-grayLight"}`}
+              rows={3}
+              value={entry.nextSteps || ""}
+              onChange={(e) => setField("nextSteps", e.target.value)}
+              placeholder={listeningField === "nextSteps" ? "Sto ascoltando..." : "Azioni da intraprendere..."}
+            />
           </div>
-          <textarea
-            className={`w-full px-4 py-3 text-sm resize-none outline-none bg-transparent ${hasNextSteps ? "text-si-success italic placeholder:text-si-success/40" : "text-si-inkSoft placeholder:text-si-grayLight"}`}
-            rows={3}
-            value={entry.nextSteps || ""}
-            onChange={(e) => setField("nextSteps", e.target.value)}
-            placeholder={listeningField === "nextSteps" ? "Sto ascoltando..." : "Azioni da intraprendere..."}
-          />
-        </div>
-        )}
-
-        {/* TRASCRIZIONE VOCALE */}
-        {!compact && isSpeechSupported && (
-          <button
-            type="button"
-            onClick={() => toggleSpeech("notes", (text) => appendText("notes", text))}
-            className={`w-full rounded-xl py-5 flex flex-col items-center gap-2 border transition-colors ${listeningField === "notes" ? "bg-si-rose/10 border-si-rose text-si-rose" : "bg-si-accentBg border-si-accentSoft text-si-accent hover:bg-si-accent/10"}`}
-          >
-            <Icon name="mic" className="w-6 h-6" />
-            <span className="text-xs font-bold uppercase tracking-wider">
-              {listeningField === "notes" ? "Ferma dettatura" : "Trascrizione vocale"}
-            </span>
-          </button>
         )}
 
         {/* LINK E RISORSE */}
         {!compact && (
-        <div className="rounded-xl border border-dashed border-si-border overflow-hidden">
-          <div className="bg-si-muted/50 px-4 py-2.5 border-b border-dashed border-si-border flex items-center gap-2">
-            <Icon name="link" className="w-3.5 h-3.5 text-si-gray shrink-0" />
-            <span className="text-xs font-bold uppercase tracking-wider text-si-gray flex-1">Link e Risorse</span>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Link e risorse</label>
+            <div className="flex flex-col gap-1.5">
+              {(entry.links || []).map((link, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    className="w-28 shrink-0 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-xs text-si-inkSoft outline-none focus:border-si-accent transition"
+                    placeholder="Etichetta"
+                    value={link.label}
+                    onChange={(e) => { const n = [...(entry.links||[])]; n[i]={...n[i],label:e.target.value}; setField("links",n); }}
+                  />
+                  <input
+                    className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-xs text-si-inkSoft outline-none focus:border-si-accent transition"
+                    placeholder="https://..."
+                    type="url"
+                    value={link.url}
+                    onChange={(e) => { const n = [...(entry.links||[])]; n[i]={...n[i],url:e.target.value}; setField("links",n); }}
+                  />
+                  <button type="button" onClick={() => setField("links",(entry.links||[]).filter((_,j)=>j!==i))} className="text-si-gray hover:text-si-rose transition-colors p-1">
+                    <Icon name="x" className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setField("links",[...(entry.links||[]),{label:"",url:""}])}
+                className="flex items-center gap-1 text-xs font-semibold text-si-accent hover:text-si-accentDark w-fit transition-colors"
+              >
+                <Icon name="plus" className="w-3.5 h-3.5" />
+                Aggiungi link
+              </button>
+            </div>
           </div>
-          <div className="bg-si-surface p-3 flex flex-col gap-2">
-            {(entry.links || []).map((link, i) => (
-              <div key={i} className="flex gap-2 items-center">
-                <input
-                  className="w-28 shrink-0 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-xs text-si-inkSoft outline-none focus:border-si-accent transition"
-                  placeholder="Etichetta"
-                  value={link.label}
-                  onChange={(e) => { const n = [...(entry.links||[])]; n[i]={...n[i],label:e.target.value}; setField("links",n); }}
-                />
-                <input
-                  className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-xs text-si-inkSoft outline-none focus:border-si-accent transition"
-                  placeholder="https://..."
-                  type="url"
-                  value={link.url}
-                  onChange={(e) => { const n = [...(entry.links||[])]; n[i]={...n[i],url:e.target.value}; setField("links",n); }}
-                />
-                <button type="button" onClick={() => setField("links",(entry.links||[]).filter((_,j)=>j!==i))} className="text-si-gray hover:text-si-rose transition-colors p-1">
-                  <Icon name="x" className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setField("links",[...(entry.links||[]),{label:"",url:""}])}
-              className="flex items-center gap-1 text-xs font-semibold text-si-accent hover:text-si-accentDark w-fit px-1 py-0.5 rounded transition-colors"
-            >
-              <Icon name="plus" className="w-3.5 h-3.5" />
-              Aggiungi link
-            </button>
-          </div>
-        </div>
         )}
       </div>
     );
@@ -315,17 +296,17 @@ export function EntryForm({
       <div className="flex flex-col gap-5">
         {/* TIPO */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Tipo di voce</label>
-          <div className="grid grid-cols-2 gap-1.5">
+          <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Tipo</label>
+          <div className="inline-flex rounded-full bg-si-muted border border-si-border p-0.5 w-fit">
             {TASK_TYPES.map(t => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setField("type", t.id)}
-                className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide border transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors border-0 cursor-pointer ${
                   entry.type === t.id
-                    ? "bg-si-accentBg border-si-accentSoft text-si-accent"
-                    : "bg-si-muted border-si-border text-si-gray hover:bg-si-border hover:text-si-inkSoft"
+                    ? "bg-si-surface text-si-ink shadow-si"
+                    : "bg-transparent text-si-gray hover:text-si-ink"
                 }`}
               >
                 {t.label}
@@ -486,10 +467,7 @@ export function EntryForm({
         {/* MILESTONE */}
         {!compact && (
         <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-si-gray">
-            <Icon name="flag" className="w-3.5 h-3.5" />
-            Milestone <span className="font-normal normal-case tracking-normal text-si-grayLight">(opz.)</span>
-          </label>
+          <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Milestone</label>
           <input
             className="w-full rounded-xl border border-si-border bg-si-surface px-3 py-2.5 text-sm font-medium text-si-ink placeholder:text-si-grayLight outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
             placeholder="es. Sprint 42"
@@ -501,51 +479,44 @@ export function EntryForm({
 
         {/* REGISTRAZIONE TEMPO */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Registrazione tempo</label>
-          <div className="rounded-xl border border-si-border p-4 bg-si-surface flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-si-inkSoft">Giornata intera</span>
-              <button
-                type="button"
-                onClick={() => setFullDay(prev => !prev)}
-                className={"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none " + (fullDay ? "bg-si-accent" : "bg-si-border")}
-              >
-                <span className={"inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform " + (fullDay ? "translate-x-6" : "translate-x-1")} />
-              </button>
-            </div>
-            {!fullDay && (
-              <div className="flex items-center gap-2">
-                <select
-                  className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
-                  value={rangeStartMin}
-                  onChange={(e) => setRangeStartMin(Number(e.target.value))}
-                >
-                  {(startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS).map(s => (
-                    <option key={s} value={s}>{hourLabel(s)}</option>
-                  ))}
-                </select>
-                <span className="text-si-gray font-bold">→</span>
-                <select
-                  className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
-                  value={rangeEndMin}
-                  onChange={(e) => setRangeEndMin(Number(e.target.value))}
-                >
-                  {endOptions.map(end => (
-                    <option key={end} value={end}>{hourLabel(end)}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {autoAdjusted && (
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-si-success">
-                <Icon name="check" className="w-3 h-3" />
-                Fine aggiornata
-              </div>
-            )}
-            <div className="rounded-lg bg-si-accentSoft border border-si-accentSoft py-2.5 text-center text-sm font-bold text-si-accent">
-              {fullDay ? "8h registrate" : `${rangeDuration}h registrate`}
-            </div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Orario</label>
+            <button
+              type="button"
+              onClick={() => setFullDay(!fullDay)}
+              className={`text-[11px] font-semibold uppercase tracking-wider border-0 bg-transparent cursor-pointer transition-colors ${fullDay ? "text-si-accent" : "text-si-gray hover:text-si-ink"}`}
+            >
+              {fullDay ? "✓ Giornata intera" : "Giornata intera"}
+            </button>
           </div>
+          {!fullDay ? (
+            <div className="flex items-center gap-2">
+              <select
+                className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 font-mono text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
+                value={rangeStartMin}
+                onChange={(e) => setRangeStartMin(Number(e.target.value))}
+              >
+                {(startSection === "AM" ? MORNING_SLOTS : AFTERNOON_SLOTS).map(s => (
+                  <option key={s} value={s}>{hourLabel(s)}</option>
+                ))}
+              </select>
+              <span className="text-si-grayLight">→</span>
+              <select
+                className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 font-mono text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
+                value={rangeEndMin}
+                onChange={(e) => setRangeEndMin(Number(e.target.value))}
+              >
+                {endOptions.map(end => (
+                  <option key={end} value={end}>{hourLabel(end)}</option>
+                ))}
+              </select>
+              <span className={`font-mono text-sm font-semibold tabular-nums shrink-0 ${autoAdjusted ? "text-si-success" : "text-si-gray"}`}>
+                {rangeDuration}h
+              </span>
+            </div>
+          ) : (
+            <div className="font-mono text-sm font-semibold text-si-gray">8h</div>
+          )}
         </div>
       </div>
     );
