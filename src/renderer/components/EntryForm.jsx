@@ -492,7 +492,7 @@ export function EntryForm({
           {!fullDay ? (
             <div className="flex items-center gap-2">
               <select
-                className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 font-mono text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
+                className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
                 value={rangeStartMin}
                 onChange={(e) => setRangeStartMin(Number(e.target.value))}
               >
@@ -502,7 +502,7 @@ export function EntryForm({
               </select>
               <span className="text-si-grayLight">→</span>
               <select
-                className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 font-mono text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
+                className="flex-1 rounded-lg border border-si-border bg-si-surface px-2 py-1.5 text-sm font-semibold text-center text-si-ink outline-none focus:ring-2 focus:ring-si-accent/20 focus:border-si-accent transition"
                 value={rangeEndMin}
                 onChange={(e) => setRangeEndMin(Number(e.target.value))}
               >
@@ -510,12 +510,12 @@ export function EntryForm({
                   <option key={end} value={end}>{hourLabel(end)}</option>
                 ))}
               </select>
-              <span className={`font-mono text-sm font-semibold tabular-nums shrink-0 ${autoAdjusted ? "text-si-success" : "text-si-gray"}`}>
+              <span className={`text-sm font-semibold shrink-0 ${autoAdjusted ? "text-si-success" : "text-si-gray"}`}>
                 {rangeDuration}h
               </span>
             </div>
           ) : (
-            <div className="font-mono text-sm font-semibold text-si-gray">8h</div>
+            <div className="text-sm font-semibold text-si-gray">8h</div>
           )}
         </div>
       </div>
