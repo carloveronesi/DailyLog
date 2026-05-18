@@ -155,7 +155,7 @@ export function SummaryPanel({
 
   return (
     <div
-      className="rounded-[20px] bg-si-surface shadow-si p-5 flex flex-col gap-5"
+      className="rounded-[20px] bg-si-surface border border-si-border p-5 flex flex-col gap-5"
       onMouseLeave={() => onHoverFilterChange?.(null)}
     >
       {/* KPI mese — riga tipografica densa */}

@@ -38,10 +38,6 @@
 
 body {
   font-family: "Geist", system-ui, sans-serif;
-  background: linear-gradient(180deg, #F6F5FC 0%, #F1F0FA 100%);
+  background: var(--si-bg);
   min-height: 100vh;
-}
-
-.dark body {
-  background: #0E0E1A;
 }

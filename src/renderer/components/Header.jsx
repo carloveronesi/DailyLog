@@ -60,24 +60,24 @@ export function Header({ view = "month", year, month, activeDate, onPrev, onNext
 
       <div className="flex items-center gap-2 shrink-0">
         {showNav && (
-          <div className="flex items-center gap-0.5 p-1 bg-si-surface rounded-full shadow-si">
+          <div className="flex items-center gap-0.5 p-1 bg-si-muted border border-si-border rounded-full">
             <button type="button" onClick={onPrev}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-si-ink hover:bg-si-muted transition-colors border-0 bg-transparent cursor-pointer">
+              className="w-8 h-8 rounded-full flex items-center justify-center text-si-ink hover:bg-si-surface transition-colors border-0 bg-transparent cursor-pointer">
               <Icon name="chev-left" className="w-[15px] h-[15px]" />
             </button>
             <button type="button" onClick={onToday}
-              className="h-8 px-3.5 rounded-full text-si-ink text-[12.5px] font-medium hover:bg-si-muted transition-colors border-0 bg-transparent cursor-pointer">
+              className="h-8 px-3.5 rounded-full text-si-ink text-[12.5px] font-medium hover:bg-si-surface transition-colors border-0 bg-transparent cursor-pointer">
               Oggi
             </button>
             <button type="button" onClick={onNext}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-si-ink hover:bg-si-muted transition-colors border-0 bg-transparent cursor-pointer">
+              className="w-8 h-8 rounded-full flex items-center justify-center text-si-ink hover:bg-si-surface transition-colors border-0 bg-transparent cursor-pointer">
               <Icon name="chev-right" className="w-[15px] h-[15px]" />
             </button>
           </div>
         )}
         {onFillMonth && (
           <button type="button" onClick={onFillMonth}
-            className="h-10 px-4 rounded-full bg-si-surface shadow-si text-si-ink text-[13px] font-medium flex items-center gap-1.5 border-0 cursor-pointer hover:shadow-si-lg transition-shadow"
+            className="h-10 px-4 rounded-full bg-si-muted border border-si-border hover:bg-si-border text-si-ink text-[13px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
             title="Applica modelli ricorrenti ai giorni vuoti del mese">
             <Icon name="repeat" className="w-3.5 h-3.5" />
             Riempi
@@ -87,7 +87,7 @@ export function Header({ view = "month", year, month, activeDate, onPrev, onNext
           <button type="button" onClick={onNewTask}
             className="h-10 px-4 rounded-full bg-si-ink hover:bg-si-inkSoft text-white text-[13px] font-semibold flex items-center gap-1.5 border-0 cursor-pointer transition-colors">
             <Icon name="plus" className="w-3.5 h-3.5" />
-            Nuova voce
+            Nuovo
           </button>
         )}
       </div>

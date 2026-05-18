@@ -137,7 +137,7 @@ export function WeekView({
   const needsScroll = rowHeight <= MIN_ROW_HEIGHT;
 
   return (
-    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-[20px] bg-si-surface shadow-si px-5 pt-4 pb-5">
+    <section className="flex flex-col lg:flex-1 lg:min-h-0 rounded-[20px] bg-si-surface border border-si-border px-5 pt-4 pb-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent">Vista settimanale</div>
@@ -145,7 +145,7 @@ export function WeekView({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 p-1 bg-si-muted rounded-full shadow-si">
+          <div className="flex items-center gap-0.5 p-1 bg-si-muted border border-si-border rounded-full">
             <Button className="w-8 h-8 !px-0 !py-0 bg-transparent text-si-ink hover:bg-si-surface" onClick={goPrevWeek} type="button" title="Settimana precedente">
               <Icon name="chev-left" className="w-4 h-4" />
             </Button>
