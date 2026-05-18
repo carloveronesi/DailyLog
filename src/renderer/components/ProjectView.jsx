@@ -376,8 +376,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="px-3 py-1.5 text-sm font-semibold rounded-xl text-white transition-colors border-0 cursor-pointer"
-                  style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+                  className="px-3 py-1.5 text-sm font-semibold rounded-xl bg-si-ink hover:bg-si-inkSoft text-white transition-colors border-0 cursor-pointer"
                 >
                   Salva
                 </button>
@@ -668,8 +667,7 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
                 onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
               />
               <Button
-                className="text-white rounded-xl px-4 py-2 shrink-0"
-                style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+                className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 py-2 shrink-0 transition-colors"
                 onClick={handleAddSubtask}
               >
                 Aggiungi

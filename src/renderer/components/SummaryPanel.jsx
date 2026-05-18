@@ -158,23 +158,20 @@ export function SummaryPanel({
       className="rounded-[20px] bg-si-surface shadow-si p-5 flex flex-col gap-5"
       onMouseLeave={() => onHoverFilterChange?.(null)}
     >
-      {/* KPI: avanzamento mese + completamento */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl p-4 border border-si-border bg-si-muted">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-gray mb-1">Avanzamento mese</div>
-          <div className="font-mono text-3xl font-bold leading-none mb-3 text-si-ink">
-            {totals.workingDaysElapsed}<span className="text-lg text-si-gray">/{totals.workingDaysInMonth}</span>
-          </div>
-          <div className="text-[11px] text-si-gray">giorni lavorativi</div>
+      {/* KPI mese — riga tipografica densa */}
+      <div className="flex items-baseline gap-2 text-si-ink">
+        <span className="font-mono text-base font-semibold tabular-nums">
+          {totals.fullyFilledDays}<span className="text-si-gray">/{totals.workingDaysElapsed}</span>
+        </span>
+        <span className="text-[13px] text-si-gray">giorni compilati</span>
+        <span className="text-si-grayLight">·</span>
+        <span className="font-mono text-base font-semibold tabular-nums">{pct}<span className="text-si-gray">%</span></span>
+        <div className="relative flex-1 h-1 rounded-full bg-si-border overflow-hidden ml-1">
+          <div className="absolute inset-y-0 left-0 bg-si-ink transition-all" style={{ width: `${pct}%` }} />
         </div>
-        <div className="rounded-2xl p-4 border border-si-border bg-si-muted">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-gray mb-1">Giorni compilati</div>
-          <div className="font-mono text-3xl font-bold leading-none mb-3 text-si-ink">{pct}<span className="text-lg text-si-gray">%</span></div>
-          <div className="h-1.5 rounded-full bg-si-border">
-            <div className="h-1.5 rounded-full bg-si-ink transition-all" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="mt-2 text-[11px] text-si-gray font-mono">{totals.fullyFilledDays} / {totals.workingDaysElapsed} compilati</div>
-        </div>
+        <span className="font-mono text-[11px] text-si-gray tabular-nums shrink-0">
+          {totals.workingDaysElapsed}/{totals.workingDaysInMonth} gg
+        </span>
       </div>
 
       {fixedFilter && (

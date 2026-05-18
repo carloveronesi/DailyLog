@@ -224,8 +224,7 @@ export function TaskDetailPanel({ date, entry, start, end, slot, onClose, onEdit
           <button
             type="button"
             onClick={onEdit}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white font-semibold text-sm transition-colors border-0 cursor-pointer"
-            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 4px 12px rgba(99,102,241,0.28)" }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-si-ink hover:bg-si-inkSoft text-white font-semibold text-sm transition-colors border-0 cursor-pointer"
           >
             <Icon name="pencil" className="w-4 h-4" />
             Modifica

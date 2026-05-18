@@ -327,10 +327,10 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   return (
     <div className="flex flex-col min-h-0 flex-1 max-w-screen-xl w-full mx-auto">
       {/* Titolo full-width */}
-      <div className="flex items-center gap-3 pb-4 border-b border-si-border mb-4 shrink-0">
-        <div className="w-[3px] self-stretch rounded-full bg-si-accent shrink-0" />
+      <div className="flex flex-col gap-1 pb-4 border-b border-si-border mb-4 shrink-0">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-accent">Voce</div>
         <input
-          className="flex-1 bg-transparent text-2xl font-bold text-si-ink placeholder:text-si-grayLight focus:outline-none"
+          className="bg-transparent text-2xl font-bold text-si-ink placeholder:text-si-grayLight focus:outline-none"
           value={activeEntry.title}
           onChange={(e) => handleEntryChange({ ...activeEntry, title: e.target.value })}
           placeholder="Titolo del task..."

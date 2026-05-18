@@ -359,8 +359,7 @@ export function TodoView({
                           <button
                             onClick={handleSaveNew}
                             disabled={!newTodoTitle.trim()}
-                            className="px-3 py-1.5 rounded-lg text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition border-0 cursor-pointer"
-                            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+                            className="px-3 py-1.5 rounded-lg bg-si-ink hover:bg-si-inkSoft text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors border-0 cursor-pointer"
                           >
                             Salva
                           </button>

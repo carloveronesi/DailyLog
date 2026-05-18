@@ -156,8 +156,7 @@ export function WeekView({
           </div>
           {onNewTask && (
             <Button
-              className="h-9 !px-4 text-white text-[13px] font-semibold"
-              style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 4px 12px rgba(99,102,241,0.28)" }}
+              className="h-9 !px-4 bg-si-ink hover:bg-si-inkSoft text-white text-[13px] font-semibold transition-colors"
               onClick={onNewTask}
               type="button"
             >

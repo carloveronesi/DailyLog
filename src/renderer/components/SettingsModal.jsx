@@ -583,8 +583,7 @@ export function SettingsModal({
                             onKeyDown={(e) => { if (e.key === "Enter") addSubtype(t.id); }}
                           />
                           <Button
-                            className="text-white rounded-xl px-4 shrink-0"
-                            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+                            className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 shrink-0 transition-colors"
                             onClick={() => addSubtype(t.id)}
                             type="button"
                           >
@@ -666,8 +665,7 @@ export function SettingsModal({
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTodoTag(); } }}
                       />
                       <Button
-                        className="text-white rounded-xl px-4 shrink-0"
-                        style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+                        className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 shrink-0 transition-colors"
                         onClick={addTodoTag}
                         type="button"
                       >
@@ -744,7 +742,7 @@ export function SettingsModal({
                       <div className="text-sm font-semibold text-si-inkSoft">Tutti i dati</div>
                       <div className="text-xs text-si-gray mt-0.5">Esporta l&apos;intero archivio</div>
                     </div>
-                    <Button className="text-white rounded-xl px-4 shrink-0" style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }} onClick={exportAll} type="button">
+                    <Button className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-4 shrink-0 transition-colors" onClick={exportAll} type="button">
                       <Icon name="download" className="mr-2 w-4 h-4" />
                       Esporta tutto
                     </Button>
@@ -849,8 +847,7 @@ export function SettingsModal({
                         </Button>
                       ) : (
                         <Button
-                          className="text-white rounded-xl px-6"
-                          style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+                          className="bg-si-ink hover:bg-si-inkSoft text-white rounded-xl px-6 transition-colors"
                           onClick={enableAutoBackup}
                           type="button"
                         >
