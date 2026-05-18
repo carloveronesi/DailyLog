@@ -51,7 +51,7 @@ export function EntryForm({
         type="button"
         title={active ? "Ferma dettatura" : "Dettatura vocale"}
         onClick={() => toggleSpeech(fieldName, (text) => appendText(fieldName, text))}
-        className={"p-1 rounded-lg transition-colors " + (active ? "text-red-500 animate-pulse" : "text-si-gray hover:text-si-accent")}
+        className={"p-1 rounded-lg transition-colors " + (active ? "text-si-rose animate-pulse" : "text-si-gray hover:text-si-accent")}
       >
         <Icon name="mic" className="w-4 h-4" />
       </button>
@@ -206,7 +206,7 @@ export function EntryForm({
 
         {/* COSA È ANDATO STORTO */}
         {!compact && (
-        <div className={`rounded-xl border-l-[3px] overflow-hidden transition-colors ${hasWentWrong ? "border-si-rose bg-si-rose/5" : "border-si-border bg-si-muted"}`}>
+        <div className={`rounded-xl border overflow-hidden transition-colors ${hasWentWrong ? "border-si-rose/40 bg-si-rose/5" : "border-si-border bg-si-muted"}`}>
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-si-border">
             <div className="flex items-center gap-2">
               <Icon name="alert-triangle" className={`w-3.5 h-3.5 shrink-0 ${hasWentWrong ? "text-si-rose" : "text-si-gray"}`} />
@@ -226,7 +226,7 @@ export function EntryForm({
 
         {/* PROSSIMI PASSI */}
         {!compact && (
-        <div className={`rounded-xl border-l-[3px] overflow-hidden transition-colors ${hasNextSteps ? "border-si-success bg-si-success/5" : "border-si-border bg-si-muted"}`}>
+        <div className={`rounded-xl border overflow-hidden transition-colors ${hasNextSteps ? "border-si-success/40 bg-si-success/5" : "border-si-border bg-si-muted"}`}>
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-si-border">
             <div className="flex items-center gap-2">
               <Icon name="zap" className={`w-3.5 h-3.5 shrink-0 ${hasNextSteps ? "text-si-success" : "text-si-gray"}`} />

@@ -423,7 +423,7 @@ export function TodoView({
                 {selectedTodo.isDone ? "Completato" : "Segna come completato"}
               </button>
               
-              <button onClick={() => { deleteTodo(selectedTodo.id); setSelectedTodoId(null); }} className="text-sm flex items-center gap-2 text-rose-500 hover:text-rose-600 font-medium">
+              <button onClick={() => { deleteTodo(selectedTodo.id); setSelectedTodoId(null); }} className="text-sm flex items-center gap-2 text-si-rose hover:opacity-80 font-medium">
                 <Icon name="trash" className="w-4 h-4" /> Elimina
               </button>
             </div>

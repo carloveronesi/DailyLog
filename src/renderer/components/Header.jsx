@@ -32,8 +32,8 @@ export function Header({ view = "month", year, month, activeDate, onPrev, onNext
     const ms = IT_MONTHS[mon.getMonth()].slice(0,3);
     const ss = IT_MONTHS[sun.getMonth()].slice(0,3);
     sub = mon.getMonth() === sun.getMonth()
-      ? `${mon.getDate()} — ${sun.getDate()} ${ms} ${sun.getFullYear()}`
-      : `${mon.getDate()} ${ms} — ${sun.getDate()} ${ss} ${sun.getFullYear()}`;
+      ? `${mon.getDate()}–${sun.getDate()} ${ms} ${sun.getFullYear()}`
+      : `${mon.getDate()} ${ms}–${sun.getDate()} ${ss} ${sun.getFullYear()}`;
   } else if (view === "day") {
     title = `${IT_DAYS[d.getDay()]} ${d.getDate()} ${IT_MONTHS[d.getMonth()]}`;
     sub = d.getFullYear().toString();

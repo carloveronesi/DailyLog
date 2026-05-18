@@ -29,8 +29,10 @@ export function Combobox({
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const optionRefs = useRef([]);
 
   // Sync internal input value with external value if needed
   useEffect(() => {
@@ -66,10 +68,21 @@ export function Combobox({
         return label.toLowerCase().includes(inputValue.toLowerCase());
       });
 
-  const exactMatch = options.find((opt) => {
+  const showCustomAdd = allowCustom && (inputValue || "").trim() && !options.find((opt) => {
     const label = typeof opt === "string" ? opt : opt.label;
-    return label.toLowerCase() === (inputValue || "").toLowerCase();
+    return label.toLowerCase() === inputValue.toLowerCase();
   });
+  const navMaxIndex = filteredOptions.length - 1 + (showCustomAdd ? 1 : 0);
+
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [inputValue, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const node = optionRefs.current[highlightedIndex];
+    node?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex, isOpen]);
 
   const handleSelect = (opt) => {
     const optId = typeof opt === "string" ? opt : opt.id;
@@ -105,13 +118,20 @@ export function Combobox({
           }}
           onBlur={onBlur}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && isOpen) {
-              if (filteredOptions.length > 0) {
-                handleSelect(filteredOptions[0]);
-              } else if (allowCustom && inputValue.trim()) {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              if (!isOpen) setIsOpen(true);
+              setHighlightedIndex((i) => Math.min(i + 1, navMaxIndex));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setHighlightedIndex((i) => Math.max(i - 1, 0));
+            } else if (e.key === "Enter" && isOpen) {
+              e.preventDefault();
+              if (highlightedIndex < filteredOptions.length) {
+                handleSelect(filteredOptions[highlightedIndex]);
+              } else if (showCustomAdd) {
                 handleCustomAdd();
               }
-              e.preventDefault();
             } else if (e.key === "Escape") {
               setIsOpen(false);
             }
@@ -134,17 +154,22 @@ export function Combobox({
                 const optId = typeof opt === "string" ? opt : opt.id;
                 const label = typeof opt === "string" ? opt : opt.label;
                 const isSelected = optId === value;
+                const isHighlighted = idx === highlightedIndex;
 
                 return (
                   <button
                     key={typeof opt === "string" ? opt : opt.id || idx}
+                    ref={(el) => (optionRefs.current[idx] = el)}
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
                     onClick={() => handleSelect(opt)}
                     className={`w-full text-left px-3 py-2 text-sm font-semibold rounded-xl transition-colors flex items-center justify-between group border-0 cursor-pointer ${
                       isSelected
                         ? "bg-si-accentBg text-si-accent"
-                        : "text-si-inkSoft hover:bg-si-muted bg-transparent"
+                        : isHighlighted
+                          ? "bg-si-muted text-si-ink"
+                          : "text-si-inkSoft hover:bg-si-muted bg-transparent"
                     }`}
                   >
                     {renderItem ? renderItem(opt) : label}
@@ -154,13 +179,19 @@ export function Combobox({
               })
             )}
 
-            {allowCustom && inputValue.trim() && !exactMatch && (
+            {showCustomAdd && (
               <div className="border-t border-si-border mt-1 pt-1">
                 <button
+                  ref={(el) => (optionRefs.current[filteredOptions.length] = el)}
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setHighlightedIndex(filteredOptions.length)}
                   onClick={handleCustomAdd}
-                  className="w-full text-left px-3 py-2 text-xs font-bold text-si-accent hover:bg-si-accentBg rounded-xl transition-colors border-0 bg-transparent cursor-pointer"
+                  className={`w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors border-0 cursor-pointer ${
+                    highlightedIndex === filteredOptions.length
+                      ? "bg-si-accentBg text-si-accent"
+                      : "text-si-accent hover:bg-si-accentBg bg-transparent"
+                  }`}
                 >
                   Crea nuovo: <span className="underline">{inputValue}</span>
                 </button>
