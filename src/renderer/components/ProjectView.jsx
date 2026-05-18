@@ -144,10 +144,10 @@ function SubTabItem({ label, icon, isSelected, onClick }) {
 // ─── StatusBadge ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  active: { label: "Attivo", className: "bg-si-success/10 text-si-success" },
-  completed: { label: "Completato", className: "bg-si-accentSoft text-si-accent" },
-  paused: { label: "In pausa", className: "bg-si-amberSoft text-si-amber" },
-  archived: { label: "Archiviato", className: "bg-si-muted text-si-gray border border-si-border" },
+  active: { label: "Attivo", className: "bg-si-muted text-si-ink border border-si-border" },
+  completed: { label: "Completato", className: "bg-si-muted text-si-gray border border-si-border" },
+  paused: { label: "In pausa", className: "bg-si-muted text-si-gray border border-si-border" },
+  archived: { label: "Archiviato", className: "bg-transparent text-si-grayLight border border-si-borderSoft" },
 };
 
 function StatusBadge({ status }) {
@@ -461,56 +461,23 @@ function ProjectDetail({ projectId, projectName, isClient, meta, stats, allPeopl
         {(currentTab === "overview" || isEditing) && (
           <div className="space-y-8">
             {stats && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Ore Totali */}
-                <div className="flex flex-col p-3.5 rounded-2xl bg-si-accentBg border border-si-accentSoft shadow-si">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 rounded-xl bg-si-accentSoft text-si-accent">
-                      <Icon name="clock" className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-si-accent">
-                      Ore Totali
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-2 mt-auto">
-                    <span className="text-2xl font-black text-si-ink">
-                      {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)}
-                    </span>
-                    <span className="text-xs font-semibold text-si-gray">
-                      ({(stats.totalHours / 8).toFixed(1)} gg)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Prima Attività */}
-                <div className="flex flex-col p-3.5 rounded-2xl bg-si-violetSoft border border-si-violet/20 shadow-si">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 rounded-xl bg-si-violet/20 text-si-violet">
-                      <Icon name="calendar" className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-si-violet">
-                      Prima Attività
-                    </span>
-                  </div>
-                  <span className="text-base font-bold text-si-ink mt-auto">
-                    {stats.firstDate ? formatDate(stats.firstDate) : "—"}
+              <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-si-ink">
+                <span>
+                  <span className="text-base font-semibold tabular-nums">
+                    {stats.totalHours % 1 === 0 ? stats.totalHours : stats.totalHours.toFixed(1)}h
                   </span>
-                </div>
-
-                {/* Ultima Attività */}
-                <div className="flex flex-col p-3.5 rounded-2xl bg-si-success/8 border border-si-success/20 shadow-si">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1 rounded-xl bg-si-success/20 text-si-success">
-                      <Icon name="calendar" className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-si-success">
-                      Ultima Attività
-                    </span>
-                  </div>
-                  <span className="text-base font-bold text-si-ink mt-auto">
-                    {stats.lastDate ? formatDate(stats.lastDate) : "—"}
+                  <span className="ml-1.5 text-[13px] text-si-gray">
+                    ({(stats.totalHours / 8).toFixed(1)} gg)
                   </span>
-                </div>
+                </span>
+                <span className="text-si-grayLight">·</span>
+                <span className="text-[13px] text-si-gray">
+                  Prima: <span className="text-si-ink font-medium">{stats.firstDate ? formatDate(stats.firstDate) : "–"}</span>
+                </span>
+                <span className="text-si-grayLight">·</span>
+                <span className="text-[13px] text-si-gray">
+                  Ultima: <span className="text-si-ink font-medium">{stats.lastDate ? formatDate(stats.lastDate) : "–"}</span>
+                </span>
               </div>
             )}
 
