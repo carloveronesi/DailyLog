@@ -108,11 +108,11 @@ function ProjectItem({ label, color, isSelected, onClick, subTabs }) {
       >
         {color ? (
           <span
-            className="h-2.5 w-2.5 rounded-full shrink-0 border border-black/10"
+            className="h-2.5 w-2.5 rounded-full shrink-0 border border-si-border"
             style={{ backgroundColor: color }}
           />
         ) : (
-          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-si-grayLight border border-black/10" />
+          <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-si-grayLight border border-si-border" />
         )}
         <span className="text-sm font-medium truncate">{label}</span>
       </button>

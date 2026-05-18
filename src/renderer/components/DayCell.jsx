@@ -38,8 +38,19 @@ function hasMissingNotes(entry) {
   return !(entry.notes || "").trim();
 }
 
-function Pill({ entry, color, period, full }) {
+function Pill({ entry, color, period, full, isHole }) {
   if (!entry) {
+    if (isHole) {
+      return (
+        <div
+          className={`flex-1 rounded-lg flex items-center pl-2 text-[10px] font-semibold border border-dashed ${full ? "min-h-[44px]" : "min-h-[22px]"}`}
+          style={{ color: "#A16207", borderColor: "#F59E0B", background: "rgba(245,158,11,0.08)" }}
+          title="Metà giornata vuota"
+        >
+          + {period}
+        </div>
+      );
+    }
     return (
       <div className={`flex-1 rounded-lg flex items-center pl-2 text-[10px] font-medium text-si-grayLight border border-dashed border-si-border ${full ? "min-h-[44px]" : "min-h-[22px]"}`}>
         + {period}
@@ -139,23 +150,23 @@ export const DayCell = memo(function DayCell({
     overflow: "hidden",
     minHeight: 0,
     cursor: isClickable ? "pointer" : "default",
-    transition: "box-shadow 0.2s, transform 0.15s",
+    transition: "border-color 0.2s, transform 0.15s",
     userSelect: "none",
-    border: "2px solid transparent",
+    border: "1px solid transparent",
   };
 
   if (!isCurrentMonth) {
     cellStyle.background = "transparent";
-    cellStyle.border = "2px solid transparent";
+    cellStyle.border = "1px solid transparent";
   } else if (isHoliday) {
     cellStyle.background = "#FEF3C7";
   } else if (isWeekendDay) {
     cellStyle.background = "#EFEEF7";
   } else {
-    cellStyle.background = "#FFFFFF";
-    cellStyle.boxShadow = "0 1px 2px rgba(40,40,80,0.04), 0 4px 12px rgba(40,40,80,0.04)";
-    if (isToday) cellStyle.border = "2px solid #6366F1";
-    if (pasteMode) cellStyle.border = "2px solid #6366F1";
+    cellStyle.background = "var(--si-surface)";
+    cellStyle.border = "1px solid var(--si-border)";
+    if (isToday) cellStyle.border = "1px solid #6366F1";
+    if (pasteMode) cellStyle.border = "1px solid #6366F1";
   }
 
   // ── date number ─────────────────────────────────────────────────────────────
@@ -271,28 +282,38 @@ export const DayCell = memo(function DayCell({
             })()
           ) : (
             <>
-              {morningHoursActive ? (
-                <div className="flex flex-1 flex-col gap-0.5">
-                  {MORNING_SLOTS.map(h => {
-                    const e = entries?.hours?.[hourKey(h)] || null;
-                    const color = getEntryColor(e, clientColors);
-                    return <HourChip key={h} entry={e} color={color} label={displayLabel(e)} />;
-                  })}
-                </div>
-              ) : (
-                <Pill entry={am} color={getEntryColor(am, clientColors)} period="AM" />
-              )}
-              {afternoonHoursActive ? (
-                <div className="flex flex-1 flex-col gap-0.5">
-                  {AFTERNOON_SLOTS.map(h => {
-                    const e = entries?.hours?.[hourKey(h)] || null;
-                    const color = getEntryColor(e, clientColors);
-                    return <HourChip key={h} entry={e} color={color} label={displayLabel(e)} />;
-                  })}
-                </div>
-              ) : (
-                <Pill entry={pm} color={getEntryColor(pm, clientColors)} period="PM" />
-              )}
+              {(() => {
+                const amFilled = morningHoursActive || !!am;
+                const pmFilled = afternoonHoursActive || !!pm;
+                const amHole = !amFilled && pmFilled;
+                const pmHole = !pmFilled && amFilled;
+                return (
+                  <>
+                    {morningHoursActive ? (
+                      <div className="flex flex-1 flex-col gap-0.5">
+                        {MORNING_SLOTS.map(h => {
+                          const e = entries?.hours?.[hourKey(h)] || null;
+                          const color = getEntryColor(e, clientColors);
+                          return <HourChip key={h} entry={e} color={color} label={displayLabel(e)} />;
+                        })}
+                      </div>
+                    ) : (
+                      <Pill entry={am} color={getEntryColor(am, clientColors)} period="AM" isHole={amHole} />
+                    )}
+                    {afternoonHoursActive ? (
+                      <div className="flex flex-1 flex-col gap-0.5">
+                        {AFTERNOON_SLOTS.map(h => {
+                          const e = entries?.hours?.[hourKey(h)] || null;
+                          const color = getEntryColor(e, clientColors);
+                          return <HourChip key={h} entry={e} color={color} label={displayLabel(e)} />;
+                        })}
+                      </div>
+                    ) : (
+                      <Pill entry={pm} color={getEntryColor(pm, clientColors)} period="PM" isHole={pmHole} />
+                    )}
+                  </>
+                );
+              })()}
             </>
           )}
         </div>

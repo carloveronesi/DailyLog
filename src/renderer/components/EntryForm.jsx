@@ -27,7 +27,8 @@ export function EntryForm({
   hourLabel,
   location,
   setLocation,
-  column = "all", // "left" | "right" | "all"
+  section = "all", // "meta" | "notes" | "all"  (meta = tipo/cliente/range; notes = note/feedback)
+  compact = false,
 }) {
   const { settings, setSettings } = useSettings();
   const { MORNING_SLOTS, AFTERNOON_SLOTS } = useWorkSlots();
@@ -183,7 +184,7 @@ export function EntryForm({
     }
   };
 
-  if (column === "left") {
+  if (section === "notes") {
     const hasWentWrong = !!(entry.wentWrong || "").trim();
     const hasNextSteps = !!(entry.nextSteps || "").trim();
 
@@ -204,8 +205,9 @@ export function EntryForm({
         </div>
 
         {/* COSA È ANDATO STORTO */}
+        {!compact && (
         <div className={`rounded-xl border-l-[3px] overflow-hidden transition-colors ${hasWentWrong ? "border-si-rose bg-si-rose/5" : "border-si-border bg-si-muted"}`}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-black/5">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-si-border">
             <div className="flex items-center gap-2">
               <Icon name="alert-triangle" className={`w-3.5 h-3.5 shrink-0 ${hasWentWrong ? "text-si-rose" : "text-si-gray"}`} />
               <span className={`text-xs font-bold uppercase tracking-wider ${hasWentWrong ? "text-si-rose" : "text-si-gray"}`}>Cosa è andato storto</span>
@@ -220,10 +222,12 @@ export function EntryForm({
             placeholder={listeningField === "wentWrong" ? "Sto ascoltando..." : "Blockers, problemi, rallentamenti..."}
           />
         </div>
+        )}
 
         {/* PROSSIMI PASSI */}
+        {!compact && (
         <div className={`rounded-xl border-l-[3px] overflow-hidden transition-colors ${hasNextSteps ? "border-si-success bg-si-success/5" : "border-si-border bg-si-muted"}`}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-black/5">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-si-border">
             <div className="flex items-center gap-2">
               <Icon name="zap" className={`w-3.5 h-3.5 shrink-0 ${hasNextSteps ? "text-si-success" : "text-si-gray"}`} />
               <span className={`text-xs font-bold uppercase tracking-wider ${hasNextSteps ? "text-si-success" : "text-si-gray"}`}>Prossimi passi</span>
@@ -238,9 +242,10 @@ export function EntryForm({
             placeholder={listeningField === "nextSteps" ? "Sto ascoltando..." : "Azioni da intraprendere..."}
           />
         </div>
+        )}
 
         {/* TRASCRIZIONE VOCALE */}
-        {isSpeechSupported && (
+        {!compact && isSpeechSupported && (
           <button
             type="button"
             onClick={() => toggleSpeech("notes", (text) => appendText("notes", text))}
@@ -254,6 +259,7 @@ export function EntryForm({
         )}
 
         {/* LINK E RISORSE */}
+        {!compact && (
         <div className="rounded-xl border border-dashed border-si-border overflow-hidden">
           <div className="bg-si-muted/50 px-4 py-2.5 border-b border-dashed border-si-border flex items-center gap-2">
             <Icon name="link" className="w-3.5 h-3.5 text-si-gray shrink-0" />
@@ -290,11 +296,12 @@ export function EntryForm({
             </button>
           </div>
         </div>
+        )}
       </div>
     );
   }
 
-  if (column === "right") {
+  if (section === "meta") {
     const subtypesForType = [
       { id: "", label: "Generico" },
       ...currentSubtypes.map(st => typeof st === "string" ? { id: st, label: st } : st)
@@ -342,7 +349,7 @@ export function EntryForm({
         )}
 
         {/* REFERENTE CLIENTE */}
-        {entry.type === "client" && (
+        {entry.type === "client" && !compact && (
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Referente cliente</label>
             <div className="flex flex-wrap gap-1.5 items-center p-2 rounded-xl border border-si-border bg-si-muted min-h-[40px]">
@@ -367,7 +374,7 @@ export function EntryForm({
         )}
 
         {/* SOTTOTIPO */}
-        {subtypesForType.length > 1 && (
+        {subtypesForType.length > 1 && !compact && (
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold uppercase tracking-wider text-si-gray">
               {entry.type === "internal" ? "Attività interna" : "Sottotipo"}
@@ -392,7 +399,7 @@ export function EntryForm({
         )}
 
         {/* INTERNAL SUBTASK */}
-        {entry.type === "internal" && projectSpecificSubtasks.length > 0 && (
+        {entry.type === "internal" && projectSpecificSubtasks.length > 0 && !compact && (
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Subtask</label>
             <div className="flex flex-wrap gap-1.5">
@@ -418,7 +425,7 @@ export function EntryForm({
         )}
 
         {/* SEDE */}
-        {setLocation && (
+        {setLocation && !compact && (
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Sede</label>
             <div className="grid grid-cols-3 gap-2">
@@ -446,6 +453,7 @@ export function EntryForm({
         )}
 
         {/* COLLABORATORI */}
+        {!compact && (
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold uppercase tracking-wider text-si-gray">Collaboratori</label>
           <div className="flex flex-wrap gap-2 items-center">
@@ -473,8 +481,10 @@ export function EntryForm({
             />
           </div>
         </div>
+        )}
 
         {/* MILESTONE */}
+        {!compact && (
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-si-gray">
             <Icon name="flag" className="w-3.5 h-3.5" />
@@ -487,6 +497,7 @@ export function EntryForm({
             onChange={(e) => setField("milestone", e.target.value || null)}
           />
         </div>
+        )}
 
         {/* REGISTRAZIONE TEMPO */}
         <div className="flex flex-col gap-2">

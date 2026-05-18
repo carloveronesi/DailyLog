@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getClientColor, getInternalColor, SLOT, getSubtypeLabel, slotKey } from "../domain/tasks";
+import { getClientColor, getInternalColor, SLOT, getSubtypeLabel, slotKey, normalizeClientKey } from "../domain/tasks";
 import { useSettings, useWorkSlots } from "../contexts/SettingsContext";
 import { getItalianHolidays } from "../utils/holidays";
 
@@ -81,11 +81,17 @@ export function SummaryPanel({
         if (!e) continue;
         const weight = 0.5;
         if (e.type === "client") {
-          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          let clientData = byClient.get(c);
+          const display = (e.client || "(senza nome)").trim() || "(senza nome)";
+          const k = normalizeClientKey(display) || display.toLowerCase();
+          let clientData = byClient.get(k);
           if (!clientData) {
-            clientData = { total: 0, bySubtype: {} };
-            byClient.set(c, clientData);
+            clientData = { display, variants: new Map(), total: 0, bySubtype: {} };
+            byClient.set(k, clientData);
+          }
+          const vCount = clientData.variants.get(display) || 0;
+          clientData.variants.set(display, vCount + 1);
+          if (vCount + 1 > (clientData.variants.get(clientData.display) || 0)) {
+            clientData.display = display;
           }
           addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
@@ -100,11 +106,17 @@ export function SummaryPanel({
         if (!e) continue;
         const weight = 1 / WORK_SLOTS.length;
         if (e.type === "client") {
-          const c = (e.client || "(senza nome)").trim() || "(senza nome)";
-          let clientData = byClient.get(c);
+          const display = (e.client || "(senza nome)").trim() || "(senza nome)";
+          const k = normalizeClientKey(display) || display.toLowerCase();
+          let clientData = byClient.get(k);
           if (!clientData) {
-            clientData = { total: 0, bySubtype: {} };
-            byClient.set(c, clientData);
+            clientData = { display, variants: new Map(), total: 0, bySubtype: {} };
+            byClient.set(k, clientData);
+          }
+          const vCount = clientData.variants.get(display) || 0;
+          clientData.variants.set(display, vCount + 1);
+          if (vCount + 1 > (clientData.variants.get(clientData.display) || 0)) {
+            clientData.display = display;
           }
           addTime(clientData, weight, e.subtypeId);
         } else if (e.type === "internal") {
@@ -118,7 +130,12 @@ export function SummaryPanel({
     }
 
     const clients = Array.from(byClient.entries())
-      .map(([client, data]) => ({ client, data }))
+      .map(([, data]) => ({
+        client: data.display,
+        variantCount: data.variants.size,
+        variants: Array.from(data.variants.keys()),
+        data,
+      }))
       .sort((a, b) => b.data.total - a.data.total);
 
     const clientDays = clients.reduce((sum, c) => sum + c.data.total, 0);
@@ -141,28 +158,22 @@ export function SummaryPanel({
       className="rounded-[20px] bg-si-surface shadow-si p-5 flex flex-col gap-5"
       onMouseLeave={() => onHoverFilterChange?.(null)}
     >
-      {/* Hero KPI: avanzamento mese + completamento */}
+      {/* KPI: avanzamento mese + completamento */}
       <div className="grid grid-cols-2 gap-3">
-        <div
-          className="rounded-2xl p-4 text-white"
-          style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
-        >
-          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-75 mb-1">Avanzamento mese</div>
-          <div className="text-3xl font-bold leading-none mb-3">
-            {totals.workingDaysElapsed}<span className="text-lg opacity-75">/{totals.workingDaysInMonth}</span>
+        <div className="rounded-2xl p-4 border border-si-border bg-si-muted">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-gray mb-1">Avanzamento mese</div>
+          <div className="font-mono text-3xl font-bold leading-none mb-3 text-si-ink">
+            {totals.workingDaysElapsed}<span className="text-lg text-si-gray">/{totals.workingDaysInMonth}</span>
           </div>
-          <div className="text-[11px] opacity-70">giorni lavorativi</div>
+          <div className="text-[11px] text-si-gray">giorni lavorativi</div>
         </div>
-        <div
-          className="rounded-2xl p-4 text-white"
-          style={{ background: "linear-gradient(135deg,#10B981,#06B6D4)" }}
-        >
-          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] opacity-75 mb-1">Giorni compilati</div>
-          <div className="text-3xl font-bold leading-none mb-3">{pct}%</div>
-          <div className="h-1.5 rounded-full bg-white/30">
-            <div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
+        <div className="rounded-2xl p-4 border border-si-border bg-si-muted">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-si-gray mb-1">Giorni compilati</div>
+          <div className="font-mono text-3xl font-bold leading-none mb-3 text-si-ink">{pct}<span className="text-lg text-si-gray">%</span></div>
+          <div className="h-1.5 rounded-full bg-si-border">
+            <div className="h-1.5 rounded-full bg-si-ink transition-all" style={{ width: `${pct}%` }} />
           </div>
-          <div className="mt-2 text-[11px] opacity-70">{totals.fullyFilledDays} / {totals.workingDaysElapsed} compilati</div>
+          <div className="mt-2 text-[11px] text-si-gray font-mono">{totals.fullyFilledDays} / {totals.workingDaysElapsed} compilati</div>
         </div>
       </div>
 
@@ -208,6 +219,15 @@ export function SummaryPanel({
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                         <div className="text-[13px] font-semibold text-si-ink truncate">{c.client}</div>
+                        {c.variantCount > 1 && (
+                          <span
+                            title={`${c.variantCount} grafie usate: ${c.variants.join(", ")}`}
+                            className="shrink-0 inline-flex items-center justify-center h-4 px-1 rounded-full text-[9px] font-bold uppercase tracking-wider text-si-amber bg-si-amberSoft border border-si-amber/30"
+                            aria-label="Grafia cliente inconsistente"
+                          >
+                            {c.variantCount}×
+                          </span>
+                        )}
                       </div>
                       <div className="text-[13px] font-bold text-si-ink ml-2 shrink-0">{c.data.total.toFixed(1)} gg</div>
                     </div>

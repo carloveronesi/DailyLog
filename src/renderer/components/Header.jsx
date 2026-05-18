@@ -39,7 +39,7 @@ export function Header({ view = "month", year, month, activeDate, onPrev, onNext
     sub = d.getFullYear().toString();
   } else if (view === "todo") {
     title = "Da fare";
-    sub = pendingTodoCount !== undefined ? `${pendingTodoCount} attivit${pendingTodoCount === 1 ? "à" : "à"} in sospeso` : "";
+    sub = pendingTodoCount !== undefined ? `${pendingTodoCount} attività in sospeso` : "";
   } else if (view === "projects") {
     title = "Clienti & Progetti";
   }
@@ -85,8 +85,7 @@ export function Header({ view = "month", year, month, activeDate, onPrev, onNext
         )}
         {onNewTask && (
           <button type="button" onClick={onNewTask}
-            className="h-10 px-[18px] rounded-full text-white text-[13px] font-semibold flex items-center gap-1.5 border-0 cursor-pointer"
-            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 6px 16px rgba(99,102,241,0.32)" }}>
+            className="h-10 px-4 rounded-full bg-si-ink hover:bg-si-inkSoft text-white text-[13px] font-semibold flex items-center gap-1.5 border-0 cursor-pointer transition-colors">
             <Icon name="plus" className="w-3.5 h-3.5" />
             Nuova voce
           </button>

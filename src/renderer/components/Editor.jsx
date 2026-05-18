@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LOCATION_TYPES,
   SLOT_MINUTES,
@@ -6,6 +6,7 @@ import {
   hourKey,
   hourLabel,
   isSameTaskEntry,
+  normalizeClientKey,
   normalizeForType,
   slotMinutes,
 } from "../domain/tasks";
@@ -27,16 +28,30 @@ function hasMeaning(e) {
 }
 
 
-function initFromExisting(existingEntries, workSlots) {
+function seedDefaultEntry(topClients, lastUsedByClient) {
+  const base = defaultEntry();
+  const topClient = topClients?.[0];
+  if (!topClient) return base;
+  const key = normalizeClientKey(topClient);
+  const last = lastUsedByClient?.[key] || {};
+  return {
+    ...base,
+    client: topClient,
+    subtypeId: last.subtypeId ?? null,
+    milestone: last.milestone ?? null,
+  };
+}
+
+function initFromExisting(existingEntries, workSlots, seed) {
   const hours = existingEntries?.hours || {};
-  const entryAM = existingEntries?.AM ? { ...defaultEntry(), ...existingEntries.AM } : defaultEntry();
-  const entryPM = existingEntries?.PM ? { ...defaultEntry(), ...existingEntries.PM } : defaultEntry();
+  const entryAM = existingEntries?.AM ? { ...defaultEntry(), ...existingEntries.AM } : seed();
+  const entryPM = existingEntries?.PM ? { ...defaultEntry(), ...existingEntries.PM } : seed();
 
   const allHourEntries = {};
   for (const h of workSlots) {
     const k = hourKey(h);
     const existing = hours[k];
-    allHourEntries[k] = existing ? { ...defaultEntry(), ...existing } : defaultEntry();
+    allHourEntries[k] = existing ? { ...defaultEntry(), ...existing } : seed();
   }
 
   const fullDay =
@@ -60,8 +75,13 @@ function buildEndOptions(startMinute, sectionBoundaries) {
   return options;
 }
 
-export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [] }) {
-  const { settings } = useSettings();
+export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients = [], initialSlot, initialRange, allPeople = [], onSavePeople, allClients = [], onDirtyChange }) {
+  const { settings, setSettings } = useSettings();
+  const compact = settings?.editorCompact !== false;
+  const toggleCompact = () => setSettings(prev => ({ ...prev, editorCompact: !(prev?.editorCompact !== false) }));
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  const markDirty = useCallback(() => { setDirty(true); }, []);
   const { MORNING_SLOTS, AFTERNOON_SLOTS, WORK_SLOTS } = useWorkSlots();
   const clientColors = settings?.clientColors || {};
   const taskSubtypes = settings?.taskSubtypes || {};
@@ -87,7 +107,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    const init = initFromExisting(existingEntries, WORK_SLOTS);
+    const lastUsedByClient = settings?.lastUsedByClient || {};
+    const seed = () => seedDefaultEntry(topClients, lastUsedByClient);
+    const init = initFromExisting(existingEntries, WORK_SLOTS, seed);
     setEntryAM(init.entryAM);
     setEntryPM(init.entryPM);
     setHourEntries(init.hourEntries);
@@ -114,6 +136,17 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     } else if (existingEntries?.PM && !existingEntries?.AM) {
       start = AFTERNOON_SLOTS[0];
       end = AFTERNOON_SLOTS[AFTERNOON_SLOTS.length - 1] + SLOT_MINUTES;
+    } else {
+      const now = new Date();
+      const isToday = date && new Date(date).toDateString() === now.toDateString();
+      if (isToday) {
+        const nowMin = now.getHours() * 60 + Math.floor(now.getMinutes() / SLOT_MINUTES) * SLOT_MINUTES;
+        const candidate = WORK_SLOTS.find((s) => s >= nowMin) ?? WORK_SLOTS[0];
+        if (candidate !== undefined) {
+          start = candidate;
+          end = candidate + SLOT_MINUTES;
+        }
+      }
     }
 
     isInitializingRef.current = true;
@@ -121,8 +154,9 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     setRangeEndMin(end);
     lastRangeRef.current = { start, end };
 
-    const seedEntry = init.fullDay ? init.entryAM : (init.hourEntries[hourKey(start)] || defaultEntry());
+    const seedEntry = init.fullDay ? init.entryAM : (init.hourEntries[hourKey(start)] || seed());
     setDraftEntry(seedEntry);
+    setDirty(false);
   }, [existingEntries, initialRangeStart, initialRangeEnd]);
 
   const activeEntry = fullDay ? entryAM : draftEntry;
@@ -178,6 +212,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   }, [rangeStartMin, rangeEndMin, draftEntry, fullDay]);
 
   function handleEntryChange(newEntry) {
+    markDirty();
     setDraftEntry(newEntry);
     if (fullDay) {
       setEntryAM(newEntry);
@@ -207,6 +242,21 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
     onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
   }
 
+  function rememberLastUsed(entries) {
+    const updates = {};
+    for (const e of entries) {
+      if (!e || e.type !== "client" || !e.client?.trim()) continue;
+      const key = normalizeClientKey(e.client);
+      if (!key) continue;
+      updates[key] = { subtypeId: e.subtypeId ?? null, milestone: e.milestone ?? null };
+    }
+    if (Object.keys(updates).length === 0) return;
+    setSettings(prev => ({
+      ...prev,
+      lastUsedByClient: { ...(prev?.lastUsedByClient || {}), ...updates },
+    }));
+  }
+
   function handleSave() {
     setSaveError(null);
     try {
@@ -217,6 +267,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
             setSaveError("Il titolo è obbligatorio");
             return;
           }
+          rememberLastUsed([cleanAM]);
           onSave({ AM: cleanAM, PM: cleanAM, location, hours: undefined });
           return;
         }
@@ -235,6 +286,7 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
         nextHours[key] = normalized;
       }
 
+      rememberLastUsed(Object.values(nextHours));
       onSave({ AM: null, PM: null, location, hours: Object.keys(nextHours).length > 0 ? nextHours : undefined });
     } catch (err) {
       setSaveError(err?.message || "Errore durante il salvataggio");
@@ -246,16 +298,31 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
   const activeNormalized = normalizeForType(activeEntry);
   const isSaveDisabled = !activeNormalized.title?.trim();
 
+  const wrapDirty = (setter) => (val) => { markDirty(); setter(val); };
   const entryFormProps = {
     entry: activeEntry,
     onChange: handleEntryChange,
     topClients, allClients, allPeople, onSavePeople,
-    fullDay, setFullDay,
-    rangeStartMin, setRangeStartMin,
-    rangeEndMin, setRangeEndMin,
+    fullDay, setFullDay: wrapDirty(setFullDay),
+    rangeStartMin, setRangeStartMin: wrapDirty(setRangeStartMin),
+    rangeEndMin, setRangeEndMin: wrapDirty(setRangeEndMin),
     startSection, endOptions, rangeDuration, autoAdjusted, hourLabel,
-    location, setLocation,
+    location, setLocation: wrapDirty(setLocation),
+    compact,
   };
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key === "Enter" && !isSaveDisabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isSaveDisabled, fullDay, entryAM, hourEntries, location]);
 
   return (
     <div className="flex flex-col min-h-0 flex-1 max-w-screen-xl w-full mx-auto">
@@ -276,32 +343,41 @@ export function Editor({ date, existingEntries, onSave, onDeleteDay, topClients 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,1fr)_1.6fr] gap-x-8 items-start pb-4">
           {/* Colonna sinistra: metadata + ricorrenza */}
           <div className="flex flex-col gap-4">
-            <EntryForm {...entryFormProps} column="right" />
-            <RecurringTaskSection
-              date={date}
-              fullDay={fullDay}
-              entryAM={entryAM}
-              draftEntry={draftEntry}
-              rangeStartMin={rangeStartMin}
-              rangeEndMin={rangeEndMin}
-            />
+            <EntryForm {...entryFormProps} section="meta" />
+            {!compact && (
+              <RecurringTaskSection
+                date={date}
+                fullDay={fullDay}
+                entryAM={entryAM}
+                draftEntry={draftEntry}
+                rangeStartMin={rangeStartMin}
+                rangeEndMin={rangeEndMin}
+              />
+            )}
           </div>
           {/* Colonna destra: note, feedback, trascrizione */}
           <div className="flex flex-col gap-4 lg:border-l lg:border-si-border lg:pl-8">
-            <EntryForm {...entryFormProps} column="left" />
+            <EntryForm {...entryFormProps} section="notes" />
           </div>
+        </div>
+        <div className="pb-2">
+          <button
+            type="button"
+            onClick={toggleCompact}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-si-gray hover:text-si-ink transition-colors border-0 bg-transparent cursor-pointer px-0"
+          >
+            <Icon name={compact ? "chev-down" : "chev-up"} className="w-3.5 h-3.5" />
+            {compact ? "Mostra dettagli" : "Nascondi dettagli"}
+          </button>
         </div>
       </div>
 
-      {/* Scroll fade indicator */}
-      <div className="shrink-0 -mx-5 h-8 bg-gradient-to-t from-si-bg to-transparent pointer-events-none" />
 
       {/* Footer sticky */}
       <div className="shrink-0 -mx-5 -mb-5 px-5 pb-5 pt-4 bg-si-bg/95 border-t border-si-border flex items-center justify-between gap-3 rounded-b-[20px]">
         <div className="flex items-center gap-3">
           <button
-            className="px-8 py-2.5 text-base font-bold text-white rounded-full disabled:opacity-30 disabled:cursor-not-allowed border-0 cursor-pointer"
-            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)", boxShadow: "0 6px 16px rgba(99,102,241,0.32)" }}
+            className="px-8 py-2.5 text-base font-semibold text-white rounded-full bg-si-ink hover:bg-si-inkSoft disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-si-ink border-0 cursor-pointer transition-colors"
             onClick={handleSave}
             type="button"
             disabled={isSaveDisabled}

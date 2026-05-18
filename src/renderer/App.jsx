@@ -33,8 +33,8 @@ function SidebarBtn({ icon, label, onClick, disabled, isActive = false }) {
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       } ${
         isActive
-          ? "bg-white text-si-accent"
-          : "bg-transparent text-si-gray hover:text-si-ink hover:bg-white/60"
+          ? "bg-si-surface text-si-accent"
+          : "bg-transparent text-si-gray hover:text-si-ink hover:bg-si-surface/60"
       }`}
       style={isActive ? { boxShadow: "0 1px 2px rgba(40,40,80,0.06), 0 4px 12px rgba(40,40,80,0.08)" } : {}}
     >
@@ -94,7 +94,7 @@ export default function App() {
   const [allPeople, setAllPeople] = useState(() => listStoredPeople());
 
   const { WORK_SLOTS } = useWorkSlots(settings);
-  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
+  const { onMoveTask, onResizeTask, handleSlotDeletion, blockedToast, showBlockedToast } = useTaskOperations({ monthDataByDate, upsertDay, WORK_SLOTS });
 
   const {
     selectedDate, selectedSlot, selectedRange,
@@ -175,7 +175,13 @@ export default function App() {
       freeCount++;
     }
     const slotsToWrite = Math.min(val.slotCount, freeCount);
-    if (slotsToWrite === 0) return;
+    if (slotsToWrite === 0) {
+      showBlockedToast("Nessuno slot libero qui per incollare.");
+      return;
+    }
+    if (slotsToWrite < val.slotCount) {
+      showBlockedToast(`Incollati ${slotsToWrite}/${val.slotCount} slot (spazio insufficiente).`);
+    }
 
     for (let i = 0; i < slotsToWrite; i++) {
       newHours[hourKey(slotStart + i * SLOT_MINUTES)] = { ...val.entry };
@@ -249,6 +255,11 @@ export default function App() {
   useEffect(() => () => { if (savedToastTimerRef.current) clearTimeout(savedToastTimerRef.current); }, []);
 
   const [showHistory, setShowHistory] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const gPrefixRef = useRef(0);
+  const editorDirtyRef = useRef(false);
+  const [pendingNavView, setPendingNavView] = useState(null);
+  const handleEditorDirtyChange = useCallback((d) => { editorDirtyRef.current = d; }, []);
 
   function handleUndo() {
     undoLastChange();
@@ -263,33 +274,127 @@ export default function App() {
     redoLastChange();
   }
 
-  // Ctrl+Z shortcut + ESC per annullare paste mode
+  // Global keyboard shortcuts
   useEffect(() => {
+    function isEditableTarget(t) {
+      if (!t) return false;
+      const tag = t.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+      if (t.isContentEditable) return true;
+      return false;
+    }
+    function anyModalOpen() {
+      return editorOpen || settingsOpen || searchOpen || showShortcuts;
+    }
+    function goPrev() {
+      if (viewMode === "month") prevMonth();
+      else goPrevDay();
+    }
+    function goNext() {
+      if (viewMode === "month") nextMonth();
+      else goNextDay();
+    }
+    function goNow() {
+      if (viewMode === "month") goToday();
+      else goTodayDay();
+    }
     function onKeyDown(e) {
+      // Undo / Redo (always allowed except when inside a modal that handles its own)
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        if (editorOpen || settingsOpen || searchOpen) return;
+        if (anyModalOpen()) return;
         e.preventDefault();
         handleUndo();
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-        if (editorOpen || settingsOpen || searchOpen) return;
-        e.preventDefault();
-        handleRedo();
-      }
-      if (e.key === "Escape" && detailOpen && !editorOpen && !settingsOpen && !searchOpen) {
-        closeDetail();
         return;
       }
-      if (e.key === "Escape" && (copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
-        setCopiedDay(null);
-        copiedEntryRef.current = null;
-        setCopiedEntry(null);
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        if (anyModalOpen()) return;
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      // Cmd/Ctrl+K → search (works even with detail open)
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+        if (editorOpen || settingsOpen) return;
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+
+      // Escape handlers
+      if (e.key === "Escape") {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (detailOpen && !editorOpen && !settingsOpen && !searchOpen) { closeDetail(); return; }
+        if ((copiedDay || copiedEntry) && !editorOpen && !settingsOpen && !searchOpen) {
+          setCopiedDay(null);
+          copiedEntryRef.current = null;
+          setCopiedEntry(null);
+          return;
+        }
+      }
+
+      // From here on, only typeable single-key shortcuts. Skip if modifier or inside input.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isEditableTarget(e.target)) return;
+      if (anyModalOpen()) return;
+
+      // `g` prefix for jump-to-view (g d / g w / g m / g p / g l)
+      if (gPrefixRef.current && Date.now() - gPrefixRef.current < 1500) {
+        const map = { d: "day", w: "week", m: "month", p: "projects", l: "todo" };
+        const view = map[e.key.toLowerCase()];
+        gPrefixRef.current = 0;
+        if (view) { e.preventDefault(); navigate(view); return; }
+      }
+
+      if (e.key === "?") {
+        e.preventDefault();
+        setShowShortcuts(true);
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        openEditor(activeDate, null);
+        return;
+      }
+      if (e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        goNow();
+        return;
+      }
+      if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
+        e.preventDefault();
+        goNext();
+        return;
+      }
+      if (e.key === "h" || e.key === "H" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        goPrev();
+        return;
+      }
+      if (e.key === "l" || e.key === "L" || e.key === "ArrowRight") {
+        e.preventDefault();
+        goNext();
+        return;
+      }
+      if (e.key === "k" || e.key === "K" || e.key === "ArrowUp") {
+        e.preventDefault();
+        goPrev();
+        return;
+      }
+      if (e.key === "g" || e.key === "G") {
+        gPrefixRef.current = Date.now();
+        return;
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorOpen, settingsOpen, searchOpen, hasUndo, hasRedo, copiedDay, copiedEntry, detailOpen]);
+  }, [editorOpen, settingsOpen, searchOpen, showShortcuts, hasUndo, hasRedo, copiedDay, copiedEntry, detailOpen, viewMode, activeDate]);
 
   const handleToggleLocation = useCallback((date) => {
     const key = ymd(date);
@@ -304,6 +409,21 @@ export default function App() {
   }, [monthDataByDate, upsertDay, settings.defaultLocation]);
 
   function navigate(view) {
+    if (editorOpen && editorDirtyRef.current) {
+      setPendingNavView(view);
+      return;
+    }
+    setViewMode(view);
+    setSettingsOpen(false);
+    closeEditor();
+    closeDetail();
+    setSearchOpen(false);
+  }
+
+  function confirmDiscardAndNavigate() {
+    const view = pendingNavView;
+    setPendingNavView(null);
+    editorDirtyRef.current = false;
     setViewMode(view);
     setSettingsOpen(false);
     closeEditor();
@@ -325,12 +445,12 @@ export default function App() {
     <SettingsContext.Provider value={{ settings, setSettings }}>
       <div className="min-h-screen lg:h-screen flex flex-col-reverse lg:flex-row overflow-hidden" style={{ background: "transparent" }}>
         {blockedToast ? (
-          <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-si-rose/20 bg-si-rose/5 px-4 py-2 text-sm font-semibold text-si-rose shadow-si backdrop-blur">
+          <div className="fixed top-4 right-4 z-[120] rounded-2xl border border-si-rose/20 bg-si-surface px-4 py-2 text-sm font-semibold text-si-rose shadow-si-lg">
             {blockedToast}
           </div>
         ) : null}
         {(copiedDay || copiedEntry) && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-si-accentSoft bg-si-accentBg px-4 py-2.5 shadow-si backdrop-blur">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-si-accentSoft bg-si-surface px-4 py-2.5 shadow-si-lg">
             <Icon name="clipboard" className="w-4 h-4 text-si-accent shrink-0" />
             <span className="text-sm font-semibold text-si-accent">
               {copiedEntry ? "Clicca su uno slot vuoto per incollare" : "Clicca un giorno per incollare"}
@@ -343,7 +463,7 @@ export default function App() {
           </div>
         )}
         {savedToast ? (
-          <div className={`fixed ${(copiedDay || copiedEntry) ? "bottom-20" : "bottom-6"} left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-si-success/20 bg-si-success/8 px-4 py-2.5 shadow-si backdrop-blur`}>
+          <div className={`fixed ${(copiedDay || copiedEntry) ? "bottom-20" : "bottom-6"} left-1/2 -translate-x-1/2 z-[120] flex items-center gap-3 rounded-2xl border border-si-success/20 bg-si-surface px-4 py-2.5 shadow-si-lg`}>
             <span className="text-sm font-semibold text-si-success">Salvato</span>
           </div>
         ) : null}
@@ -408,12 +528,14 @@ export default function App() {
         <nav className="shrink-0 flex lg:flex-col items-center justify-between lg:w-[84px] z-50 px-2 lg:px-0 py-2 lg:py-4 overflow-visible relative border-t lg:border-t-0 border-si-border">
 
           {/* Logo (desktop only) */}
-          <div
-            className="hidden lg:flex items-center justify-center w-[44px] h-[44px] rounded-[14px] mb-3 shrink-0"
-            style={{ background: "linear-gradient(135deg,#6366F1,#8B5CF6)" }}
+          <button
+            type="button"
+            onClick={() => navigate("day")}
+            className="hidden lg:flex items-center justify-center w-[44px] h-[44px] rounded-[14px] mb-3 shrink-0 bg-si-surface border border-si-border hover:border-si-ink transition-colors cursor-pointer"
+            title="Vai a oggi"
           >
-            <span className="text-white font-bold text-[18px] tracking-tight">D</span>
-          </div>
+            <span className="text-si-ink font-extrabold text-[17px] tracking-[-0.04em]">DL</span>
+          </button>
 
           {/* Middle nav */}
           <div className="flex flex-1 lg:flex-none justify-center lg:flex-col items-center gap-1 px-2 lg:px-0">
@@ -436,7 +558,7 @@ export default function App() {
                 disabled={!supportsAutoBackup && !backupFileHandle}
                 title={backupFileHandle ? "Backup automatico attivo" : supportsAutoBackup ? "Backup non attivo" : "Backup non supportato"}
                 className={`flex flex-col items-center justify-center w-[60px] h-[52px] rounded-xl border-0 transition-all ${
-                  !supportsAutoBackup && !backupFileHandle ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-white/60"
+                  !supportsAutoBackup && !backupFileHandle ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-si-surface/60"
                 }`}
               >
                 <Icon
@@ -649,6 +771,7 @@ export default function App() {
               initialSlot={selectedSlot}
               initialRange={selectedRange}
               existingEntries={existingEntries}
+              onDirtyChange={handleEditorDirtyChange}
               onSave={(entries) => {
                 const prev = monthDataByDate[ymd(selectedDate)];
                 const prevSlots = Object.keys(prev?.hours || {}).length;
@@ -770,8 +893,111 @@ export default function App() {
             </div>
           </div>
         </Modal>
+
+        <Modal
+          open={showShortcuts}
+          title="Scorciatoie da tastiera"
+          onClose={() => setShowShortcuts(false)}
+        >
+          <ShortcutsSheet />
+        </Modal>
+
+        <Modal
+          open={!!pendingNavView}
+          title="Modifiche non salvate"
+          onClose={() => setPendingNavView(null)}
+          className="max-w-md"
+        >
+          <div className="space-y-4">
+            <p className="text-si-inkSoft text-sm">
+              Hai modifiche non salvate nell'editor. Cosa vuoi fare?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                className="bg-si-muted border border-si-border text-si-ink hover:bg-si-border"
+                onClick={() => setPendingNavView(null)}
+              >
+                Resta nell'editor
+              </Button>
+              <Button
+                className="bg-si-ink text-white hover:bg-si-inkSoft"
+                onClick={confirmDiscardAndNavigate}
+              >
+                Scarta modifiche
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </SettingsContext.Provider>
+  );
+}
+
+function Kbd({ children }) {
+  return (
+    <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-md border border-si-border bg-si-muted text-[11px] font-mono font-semibold text-si-inkSoft">
+      {children}
+    </kbd>
+  );
+}
+
+function ShortcutsSheet() {
+  const sections = [
+    {
+      title: "Navigazione",
+      rows: [
+        { keys: ["g", "d"], label: "Vai a Giorno" },
+        { keys: ["g", "w"], label: "Vai a Settimana" },
+        { keys: ["g", "m"], label: "Vai a Mese" },
+        { keys: ["g", "p"], label: "Vai a Progetti" },
+        { keys: ["g", "l"], label: "Vai a To-do" },
+        { keys: ["t"], label: "Oggi" },
+        { keys: ["h", "←"], label: "Periodo precedente" },
+        { keys: ["l", "→"], label: "Periodo successivo" },
+        { keys: ["j", "↓"], label: "Periodo successivo" },
+        { keys: ["k", "↑"], label: "Periodo precedente" },
+      ],
+    },
+    {
+      title: "Azioni",
+      rows: [
+        { keys: ["N"], label: "Nuova voce sul giorno attivo" },
+        { keys: ["/"], label: "Cerca" },
+        { keys: ["Ctrl", "K"], label: "Cerca" },
+        { keys: ["Ctrl", "Enter"], label: "Salva (nell'editor)" },
+        { keys: ["Ctrl", "Z"], label: "Annulla" },
+        { keys: ["Ctrl", "Y"], label: "Ripristina" },
+        { keys: ["Esc"], label: "Chiudi pannello / annulla incolla" },
+        { keys: ["?"], label: "Mostra questa lista" },
+      ],
+    },
+  ];
+  return (
+    <div className="flex flex-col gap-5 text-sm">
+      {sections.map((s) => (
+        <div key={s.title}>
+          <div className="text-xs font-bold uppercase tracking-wider text-si-gray mb-2">{s.title}</div>
+          <div className="grid grid-cols-1 gap-y-1.5">
+            {s.rows.map((r, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <span className="text-si-inkSoft">{r.label}</span>
+                <span className="flex items-center gap-1">
+                  {r.keys.map((k, j) => (
+                    <span key={j} className="flex items-center gap-1">
+                      {j > 0 && <span className="text-si-gray text-xs">+</span>}
+                      <Kbd>{k}</Kbd>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-si-gray pt-2 border-t border-si-border">
+        Le scorciatoie sono disattivate mentre stai scrivendo in un campo.
+      </p>
+    </div>
   );
 }
 

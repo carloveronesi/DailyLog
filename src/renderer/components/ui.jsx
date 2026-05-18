@@ -352,7 +352,7 @@ export function Modal({ open, title, children, onClose, className = "max-w-2xl",
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-si-ink/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-si-ink/40" onClick={onClose} />
       <div className={`relative w-full ${className} max-h-[calc(100svh-2rem)] flex flex-col rounded-[20px] bg-si-surface border border-si-border shadow-si-lg`}>
         {title ? (
           <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-si-border">
@@ -389,7 +389,7 @@ export function Segmented({ value, onChange, options }) {
           className={
             "px-3 py-1.5 text-[12px] font-semibold rounded-full transition border-0 cursor-pointer " +
             (value === opt.value
-              ? "bg-white text-si-ink shadow-si"
+              ? "bg-si-surface text-si-ink shadow-si"
               : "bg-transparent text-si-gray hover:text-si-ink")
           }
           onClick={() => onChange(opt.value)}
